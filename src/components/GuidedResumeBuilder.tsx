@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw } from 'lucide-react';
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -171,6 +171,10 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [aiGeneratedOptions, setAIGeneratedOptions] = useState<string[]>([]);
   const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
   // --- End AI Objective/Summary Generation States ---
+
+  // --- Review Section State ---
+  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
+  // --- End Review Section State ---
 
   const handleStartNewResume = useCallback(() => { // Memoize
     setOptimizedResume({
@@ -1234,6 +1238,33 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   };
   // --- End Objective/Summary AI Generation Handlers ---
 
+  // --- Review Section State ---
+  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
+
+  const toggleReviewSection = (sectionKey: string) => {
+    setExpandedReviewSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionKey)) {
+        newSet.delete(sectionKey);
+      } else {
+        newSet.add(sectionKey);
+      }
+      return newSet;
+    });
+  };
+
+  const reviewSectionMap: { [key: string]: number } = {
+    'profile': 1,
+    'objective_summary': 2,
+    'education': 3,
+    'work_experience': 4,
+    'projects': 5,
+    'skills': 6,
+    'certifications': 7,
+    'additional_sections': 8,
+  };
+  // --- End Review Section State ---
+
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
     if (!optimizedResume) {
@@ -1243,7 +1274,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     switch (resumeSections[currentSectionIndex]) {
       case 'experience_level':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Briefcase className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
               Experience Level
@@ -1295,7 +1326,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'profile':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <User className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Contact Information
@@ -1375,7 +1406,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'objective_summary':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <FileText className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
               {userType === 'experienced' ? 'Professional Summary' : 'Career Objective'}
@@ -1415,7 +1446,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'education':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <GraduationCap className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
               Education
@@ -1497,7 +1528,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'work_experience':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Briefcase className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Work Experience
@@ -1597,7 +1628,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'projects':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Code className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Projects
@@ -1675,7 +1706,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'skills':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Lightbulb className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Skills
@@ -1753,7 +1784,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'certifications':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Award className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Certifications
@@ -1817,7 +1848,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'additional_sections':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Plus className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Additional Sections (Optional)
@@ -1895,7 +1926,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'review':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <CheckCircle className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
               Review Your Resume
@@ -1904,69 +1935,187 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               Take a moment to review all the information you've entered. Ensure everything is accurate and complete before generating the final optimized resume.
             </p>
             <div className="space-y-4">
-              {/* Display summary of each section */}
-              <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Contact Information</h3>
-                <p className="text-gray-700 dark:text-gray-300">Name: {optimizedResume.name}</p>
-                <p className="text-gray-700 dark:text-gray-300">Email: {optimizedResume.email}</p>
-                {optimizedResume.phone && <p className="text-gray-700 dark:text-gray-300">Phone: {optimizedResume.phone}</p>}
-                {optimizedResume.linkedin && <p className="text-gray-700 dark:text-gray-300">LinkedIn: {optimizedResume.linkedin}</p>}
-                {optimizedResume.github && <p className="text-gray-700 dark:text-gray-300">GitHub: {optimizedResume.github}</p>}
-              </div>
-              <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Objective/Summary</h3>
-                {userType === 'experienced' ? (
-                  <p className="text-gray-700 dark:text-gray-300">{optimizedResume.summary || 'Not provided'}</p>
-                ) : (
-                  <p className="text-gray-700 dark:text-gray-300">{optimizedResume.careerObjective || 'Not provided'}</p>
+              {/* Review Section: Contact Information */}
+              <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                <button
+                  onClick={() => toggleReviewSection('profile')}
+                  className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                >
+                  <span>Contact Information</span>
+                  <div className="flex items-center space-x-2">
+                    <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['profile']); }} />
+                    {expandedReviewSections.has('profile') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  </div>
+                </button>
+                {expandedReviewSections.has('profile') && (
+                  <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                    <p>Name: {optimizedResume.name}</p>
+                    <p>Email: {optimizedResume.email}</p>
+                    {optimizedResume.phone && <p>Phone: {optimizedResume.phone}</p>}
+                    {optimizedResume.linkedin && <p>LinkedIn: {optimizedResume.linkedin}</p>}
+                    {optimizedResume.github && <p>GitHub: {optimizedResume.github}</p>}
+                  </div>
                 )}
               </div>
+
+              {/* Review Section: Objective/Summary */}
+              <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                <button
+                  onClick={() => toggleReviewSection('objective_summary')}
+                  className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                >
+                  <span>Objective/Summary</span>
+                  <div className="flex items-center space-x-2">
+                    <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['objective_summary']); }} />
+                    {expandedReviewSections.has('objective_summary') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  </div>
+                </button>
+                {expandedReviewSections.has('objective_summary') && (
+                  <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                    {userType === 'experienced' ? (
+                      <p>{optimizedResume.summary || 'Not provided'}</p>
+                    ) : (
+                      <p>{optimizedResume.careerObjective || 'Not provided'}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Review Section: Education */}
               {optimizedResume.education && optimizedResume.education.length > 0 && (
-                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Education ({optimizedResume.education.length} entries)</h3>
-                  {optimizedResume.education.map((edu, idx) => (
-                    <p key={idx} className="text-gray-700 dark:text-gray-300">{edu.degree} from {edu.school} ({edu.year})</p>
-                  ))}
+                <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                  <button
+                    onClick={() => toggleReviewSection('education')}
+                    className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                  >
+                    <span>Education ({optimizedResume.education.length} entries)</span>
+                    <div className="flex items-center space-x-2">
+                      <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['education']); }} />
+                      {expandedReviewSections.has('education') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+                  {expandedReviewSections.has('education') && (
+                    <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                      {optimizedResume.education.map((edu, idx) => (
+                        <p key={idx}>{edu.degree} from {edu.school} ({edu.year})</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Review Section: Work Experience */}
               {optimizedResume.workExperience && optimizedResume.workExperience.length > 0 && (
-                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Work Experience ({optimizedResume.workExperience.length} entries)</h3>
-                  {optimizedResume.workExperience.map((work, idx) => (
-                    <p key={idx} className="text-gray-700 dark:text-gray-300">{work.role} at {work.company} ({work.year})</p>
-                  ))}
+                <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                  <button
+                    onClick={() => toggleReviewSection('work_experience')}
+                    className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                  >
+                    <span>Work Experience ({optimizedResume.workExperience.length} entries)</span>
+                    <div className="flex items-center space-x-2">
+                      <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['work_experience']); }} />
+                      {expandedReviewSections.has('work_experience') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+                  {expandedReviewSections.has('work_experience') && (
+                    <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                      {optimizedResume.workExperience.map((work, idx) => (
+                        <p key={idx}>{work.role} at {work.company} ({work.year})</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Review Section: Projects */}
               {optimizedResume.projects && optimizedResume.projects.length > 0 && (
-                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Projects ({optimizedResume.projects.length} entries)</h3>
-                  {optimizedResume.projects.map((project, idx) => (
-                    <p key={idx} className="text-gray-700 dark:text-gray-300">{project.title}</p>
-                  ))}
+                <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                  <button
+                    onClick={() => toggleReviewSection('projects')}
+                    className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                  >
+                    <span>Projects ({optimizedResume.projects.length} entries)</span>
+                    <div className="flex items-center space-x-2">
+                      <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['projects']); }} />
+                      {expandedReviewSections.has('projects') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+                  {expandedReviewSections.has('projects') && (
+                    <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                      {optimizedResume.projects.map((project, idx) => (
+                        <p key={idx}>{project.title}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Review Section: Skills */}
               {optimizedResume.skills && optimizedResume.skills.length > 0 && (
-                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Skills ({optimizedResume.skills.length} categories)</h3>
-                  {optimizedResume.skills.map((skill, idx) => (
-                    <p key={idx} className="text-gray-700 dark:text-gray-300">{skill.category}: {skill.list.join(', ')}</p>
-                  ))}
+                <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                  <button
+                    onClick={() => toggleReviewSection('skills')}
+                    className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                  >
+                    <span>Skills ({optimizedResume.skills.length} categories)</span>
+                    <div className="flex items-center space-x-2">
+                      <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['skills']); }} />
+                      {expandedReviewSections.has('skills') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+                  {expandedReviewSections.has('skills') && (
+                    <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                      {optimizedResume.skills.map((skill, idx) => (
+                        <p key={idx}>{skill.category}: {skill.list.join(', ')}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Review Section: Certifications */}
               {optimizedResume.certifications && optimizedResume.certifications.length > 0 && (
-                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Certifications ({optimizedResume.certifications.length} entries)</h3>
-                  {optimizedResume.certifications.map((cert, idx) => (
-                    <p key={idx} className="text-gray-700 dark:text-gray-300">{(cert as any).title || cert}</p>
-                  ))}
+                <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                  <button
+                    onClick={() => toggleReviewSection('certifications')}
+                    className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                  >
+                    <span>Certifications ({optimizedResume.certifications.length} entries)</span>
+                    <div className="flex items-center space-x-2">
+                      <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['certifications']); }} />
+                      {expandedReviewSections.has('certifications') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+                  {expandedReviewSections.has('certifications') && (
+                    <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                      {optimizedResume.certifications.map((cert, idx) => (
+                        <p key={idx}>{(cert as any).title || cert}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Review Section: Additional Sections */}
               {optimizedResume.additionalSections && optimizedResume.additionalSections.length > 0 && (
-                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Additional Sections ({optimizedResume.additionalSections.length} entries)</h3>
-                  {optimizedResume.additionalSections.map((section, idx) => (
-                    <p key={idx} className="text-gray-700 dark:text-gray-300">{section.title}</p>
-                  ))}
+                <div className="border border-gray-200 rounded-lg shadow-sm dark:border-dark-300">
+                  <button
+                    onClick={() => toggleReviewSection('additional_sections')}
+                    className="w-full flex justify-between items-center p-4 font-semibold text-gray-900 dark:text-gray-100"
+                  >
+                    <span>Additional Sections ({optimizedResume.additionalSections.length} entries)</span>
+                    <div className="flex items-center space-x-2">
+                      <Edit3 className="w-4 h-4 text-blue-600 hover:text-blue-700" onClick={(e) => { e.stopPropagation(); setCurrentSectionIndex(reviewSectionMap['additional_sections']); }} />
+                      {expandedReviewSections.has('additional_sections') ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </button>
+                  {expandedReviewSections.has('additional_sections') && (
+                    <div className="p-4 border-t border-gray-200 dark:border-dark-300 text-gray-700 dark:text-gray-300">
+                      {optimizedResume.additionalSections.map((section, idx) => (
+                        <p key={idx}>{section.title}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1974,14 +2123,28 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'final_resume':
         return (
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+          <div className="card p-6 mb-6 shadow-lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
               <Sparkles className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
               Generate Optimized Resume
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Click the button below to generate your final AI-optimized resume based on all the information you've provided.
+              You're almost there! Review the checklist below to ensure everything is ready before generating your final AI-optimized resume.
             </p>
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center space-x-3 text-green-600 dark:text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span>All required sections completed.</span>
+              </div>
+              <div className="flex items-center space-x-3 text-green-600 dark:text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span>Resume preview is ready.</span>
+              </div>
+              <div className="flex items-center space-x-3 text-blue-600 dark:text-blue-400">
+                <FileText className="w-5 h-5" />
+                <span>Final review of content is recommended.</span>
+              </div>
+            </div>
             <button onClick={handleOptimize} className="btn-primary w-full flex items-center justify-center space-x-2">
               <Sparkles className="w-5 h-5" />
               <span>Generate Final Resume</span>
@@ -2003,13 +2166,24 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         <div className="max-w-7xl mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6">
           {/* Left Column: Guided Builder Sections & Navigation */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Section Header/Progress */}
+            {/* Step Progress Bar */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Guided Resume Builder
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Step {currentSectionIndex + 1} of {resumeSections.length}: {resumeSections[currentSectionIndex].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  Guided Resume Builder
+                </h2>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Step {currentSectionIndex + 1} of {resumeSections.length}
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-dark-300">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentSectionIndex + 1) / resumeSections.length) * 100}%` }}
+                />
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mt-2">
+                {resumeSections[currentSectionIndex].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </p>
             </div>
 
@@ -2058,8 +2232,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             </div>
 
             {/* Export Buttons */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Export Options</h2>
+            <div className="card p-6 mb-6 shadow-lg"> {/* Enclosed in a card */}
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Download Resume</h2> {/* Title for the card */}
               {optimizedResume ? (
                 <ExportButtons
                   resumeData={optimizedResume}
