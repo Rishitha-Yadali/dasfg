@@ -377,8 +377,31 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       }
       setIsOptimizing(true);
       try {
-        // Use the current optimizedResume state directly for optimization
-        const baseResume = optimizedResume;
+        // ⬇️ NEW LOGIC: prefer already-parsed + complete data; skip re-parsing if possible
+        let baseResume: ResumeData;
+        let processedResumeText = cleanResumeText(extractionResult.text); // Add this line to clean the text
+
+        if (parsedResumeData && checkForMissingSections(parsedResumeData).length === 0) {
+          // Already have a complete parsed resume (perhaps after user filled missing sections)
+          baseResume = parsedResumeData;
+        } else {
+          // Parse from extractionResult.text via AI as before
+          const parsedResume = await optimizeResume(
+           extractionResult.text,
+            jobDescription,
+            userType,
+            userName,
+            userEmail,
+            userPhone,
+            userLinkedin,
+            userGithub,
+            undefined,
+            undefined,
+            targetRole
+          );
+          baseResume = parsedResume;
+          setParsedResumeData(parsedResume);
+        }
 
         const missing = checkForMissingSections(baseResume);
         if (missing.length > 0) {
@@ -679,7 +702,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }));
   };
 
-  const handleUpdateEducation = (index: number, field: keyof ResumeData['education'], value: string) => {
+  const handleUpdateEducation = (index: number, field: keyof ResumeData['education'][0], value: string) => {
     setOptimizedResume(prev => {
       const updatedEducation = [...(prev?.education || [])];
       updatedEducation[index] = { ...updatedEducation[index], [field]: value };
@@ -703,7 +726,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }));
   };
 
-  const handleUpdateWorkExperience = (index: number, field: keyof ResumeData['workExperience'], value: string) => {
+  const handleUpdateWorkExperience = (index: number, field: keyof ResumeData['workExperience'][0], value: string) => {
     setOptimizedResume(prev => {
       const updatedWorkExperience = [...(prev?.workExperience || [])];
       updatedWorkExperience[index] = { ...updatedWorkExperience[index], [field]: value };
@@ -865,7 +888,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                   type="url"
                   name="linkedin"
                   value={optimizedResume?.linkedin || ''}
-                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, linkedin: e.target.value }))}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
+                      value = 'https://' + value;
+                    }
+                    setOptimizedResume(prev => ({ ...prev!, linkedin: value }));
+                  }}
                   placeholder="https://linkedin.com/in/yourprofile"
                   className="input-base"
                 />
@@ -876,7 +905,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                   type="url"
                   name="github"
                   value={optimizedResume?.github || ''}
-                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, github: e.target.value }))}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    if (value && !value.startsWith('http://') && !value.startsWith('https://')) {
+                      value = 'https://' + value;
+                    }
+                    setOptimizedResume(prev => ({ ...prev!, github: value }));
+                  }}
                   placeholder="https://github.com/yourusername"
                   className="input-base"
                 />
@@ -1263,110 +1298,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       )}
 
       {showManualProjectAdd && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus className="w-8 h-8 text-green-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Add Project Manually</h2>
-                <p className="text-gray-600">Provide project details and AI will generate a professional description</p>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Title *</label>
-                  <input
-                    type="text"
-                    value={manualProject.title}
-                    onChange={(e) => setManualProject(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="e.g., E-commerce Website"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                    <input
-                      type="month"
-                      value={manualProject.startDate}
-                      onChange={(e) => setManualProject(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
-                    <input
-                      type="month"
-                      value={manualProject.endDate}
-                      onChange={(e) => setManualProject(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tech Stack *</label>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={newTechStack}
-                      onChange={(e) => setNewTechStack(e.target.value)}
-                      placeholder="e.g., React, Node.js"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      onKeyDown={(e) => e.key === 'Enter' && addTechToStack()}
-                    />
-                    <button
-                      onClick={addTechToStack}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {manualProject.techStack.map((tech, index) => (
-                      <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                        {tech}
-                        <button onClick={() => removeTechFromStack(tech)} className="ml-2 text-green-600 hover:text-green-800">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">One-liner Description (Optional)</label>
-                  <input
-                    type="text"
-                    value={manualProject.oneLiner}
-                    onChange={(e) => setManualProject(prev => ({ ...prev, oneLiner: e.target.value }))}
-                    placeholder="Brief description of the project"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={handleManualProjectSubmit}
-                  disabled={!manualProject.title || manualProject.techStack.length === 0}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
-                >
-                  Generate & Add Project
-                </button>
-                <button onClick={() => setShowManualProjectAdd(false)} className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-xl transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showProjectEnhancement && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
