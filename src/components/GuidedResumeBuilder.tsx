@@ -700,11 +700,12 @@ const generateContent = useCallback(
               </button>
               <button
                 onClick={async () => {
-                  const generatedBullets = await generateContent('projectBullets', {
-                    title: project.title,
-                    description: project.bullets.join(' '),
-                    userType,
-                  });
+                 const generatedBullets = await generateContent('projectBullets', {
+  title: project.title,
+  description: project.bullets.join(' '),
+  userType,
+}, 'deepseek/deepseek-r1:free');
+
                   if (generatedBullets && Array.isArray(generatedBullets)) {
                     const updated = [...resumeData.projects];
                     updated[projIndex].bullets = generatedBullets;
