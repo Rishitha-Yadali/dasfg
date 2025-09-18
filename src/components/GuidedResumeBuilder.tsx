@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle } from 'lucide-react';
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw } from 'lucide-react';
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -13,7 +13,7 @@ import { SubscriptionStatus } from './payment/SubscriptionStatus';
 import { MissingSectionsModal } from './MissingSectionsModal';
 import { InputWizard } from './InputWizard';
 import { LoadingAnimation } from './LoadingAnimation';
-import { optimizeResume } from '../services/geminiService';
+import { optimizeResume, generateAtsOptimizedSection } from '../services/geminiService';
 import { generateBeforeScore, generateAfterScore, getDetailedResumeScore, reconstructResumeText } from '../services/scoringService';
 import { paymentService } from '../services/paymentService';
 import { ResumeData, UserType, MatchScore, DetailedScore, ExtractionResult, ScoringMode } from '../types/resume';
@@ -156,6 +156,14 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const userPhone = user?.phone || ''; // Correctly accesses phone from user object
   const userLinkedin = user?.linkedin || ''; // Correctly accesses linkedin from user object
   const userGithub = user?.github || ''; // Correctly accesses github from user object
+
+  // --- AI Bullet Generation States ---
+  const [showAIBulletOptions, setShowAIBulletOptions] = useState(false);
+  const [aiGeneratedBullets, setAIGeneratedBullets] = useState<string[][]>([]);
+  const [isGeneratingBullets, setIsGeneratingBullets] = useState(false);
+  const [currentBulletGenerationIndex, setCurrentBulletGenerationIndex] = useState<number | null>(null);
+  const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | null>(null);
+  // --- End AI Bullet Generation States ---
 
   const handleStartNewResume = useCallback(() => { // Memoize
     setOptimizedResume({
@@ -333,10 +341,11 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }, [pendingResumeData, handleInitialResumeProcessing]);
 
   const handleOptimize = useCallback(async () => { // Memoize
-    if (!extractionResult.text.trim() || !jobDescription.trim()) {
-      alert('Please provide both resume content and job description');
+    if (!optimizedResume) {
+      alert('Resume data is empty. Please fill in the sections.');
       return;
     }
+
     if (!user) {
       alert('User information not available. Please sign in again.');
       onShowAuth();
@@ -368,31 +377,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       }
       setIsOptimizing(true);
       try {
-        // ⬇️ NEW LOGIC: prefer already-parsed + complete data; skip re-parsing if possible
-        let baseResume: ResumeData;
-        let processedResumeText = cleanResumeText(extractionResult.text); // Add this line to clean the text
-
-        if (parsedResumeData && checkForMissingSections(parsedResumeData).length === 0) {
-          // Already have a complete parsed resume (perhaps after user filled missing sections)
-          baseResume = parsedResumeData;
-        } else {
-          // Parse from extractionResult.text via AI as before
-          const parsedResume = await optimizeResume(
-           extractionResult.text,
-            jobDescription,
-            userType,
-            userName,
-            userEmail,
-            userPhone,
-            userLinkedin,
-            userGithub,
-            undefined,
-            undefined,
-            targetRole
-          );
-          baseResume = parsedResume;
-          setParsedResumeData(parsedResume);
-        }
+        // Use the current optimizedResume state directly for optimization
+        const baseResume = optimizedResume;
 
         const missing = checkForMissingSections(baseResume);
         if (missing.length > 0) {
@@ -416,8 +402,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setIsOptimizing(false);
     }
   }, [
-    extractionResult,
-    jobDescription,
+    optimizedResume, // Now depends on optimizedResume directly
     user, // Keep user as a dependency
     onShowAuth,
     onShowPlanSelection, // Keep onShowPlanSelection as a dependency
@@ -662,6 +647,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         case 'education':
           isValid = optimizedResume.education.some(edu => edu.degree.trim() && edu.school.trim() && edu.year.trim());
           break;
+        case 'work_experience':
+          isValid = optimizedResume.workExperience.some(we => we.role.trim() && we.company.trim() && we.year.trim());
+          break;
         // Add validation for other sections as they are implemented
         default:
           isValid = true; // Assume valid for unimplemented sections
@@ -691,7 +679,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }));
   };
 
-  const handleUpdateEducation = (index: number, field: keyof ResumeData['education'][0], value: string) => {
+  const handleUpdateEducation = (index: number, field: keyof ResumeData['education'], value: string) => {
     setOptimizedResume(prev => {
       const updatedEducation = [...(prev?.education || [])];
       updatedEducation[index] = { ...updatedEducation[index], [field]: value };
@@ -706,6 +694,120 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     });
   };
   // --- End Education Section Handlers ---
+
+  // --- Work Experience Section Handlers ---
+  const handleAddWorkExperience = () => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      workExperience: [...(prev?.workExperience || []), { role: '', company: '', year: '', bullets: [''] }]
+    }));
+  };
+
+  const handleUpdateWorkExperience = (index: number, field: keyof ResumeData['workExperience'], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedWorkExperience = [...(prev?.workExperience || [])];
+      updatedWorkExperience[index] = { ...updatedWorkExperience[index], [field]: value };
+      return { ...prev!, workExperience: updatedWorkExperience };
+    });
+  };
+
+  const handleRemoveWorkExperience = (index: number) => {
+    setOptimizedResume(prev => {
+      const updatedWorkExperience = (prev?.workExperience || []).filter((_, i) => i !== index);
+      return { ...prev!, workExperience: updatedWorkExperience };
+    });
+  };
+
+  const handleAddWorkBullet = (workIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedWorkExperience = [...(prev?.workExperience || [])];
+      updatedWorkExperience[workIndex].bullets.push('');
+      return { ...prev!, workExperience: updatedWorkExperience };
+    });
+  };
+
+  const handleUpdateWorkBullet = (workIndex: number, bulletIndex: number, value: string) => {
+    setOptimizedResume(prev => {
+      const updatedWorkExperience = [...(prev?.workExperience || [])];
+      updatedWorkExperience[workIndex].bullets[bulletIndex] = value;
+      return { ...prev!, workExperience: updatedWorkExperience };
+    });
+  };
+
+  const handleRemoveWorkBullet = (workIndex: number, bulletIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedWorkExperience = [...(prev?.workExperience || [])];
+      updatedWorkExperience[workIndex].bullets = updatedWorkExperience[workIndex].bullets.filter((_, i) => i !== bulletIndex);
+      return { ...prev!, workExperience: updatedWorkExperience };
+    });
+  };
+
+  const handleGenerateWorkExperienceBullets = async (workIndex: number) => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true);
+    setCurrentBulletGenerationIndex(workIndex);
+    setCurrentBulletGenerationSection('workExperience');
+    try {
+      const currentWork = optimizedResume.workExperience[workIndex];
+      const generated = await generateAtsOptimizedSection(
+        'workExperienceBullets',
+        {
+          role: currentWork.role,
+          company: currentWork.company,
+          year: currentWork.year,
+          description: currentWork.bullets.join(' '),
+          userType: userType,
+        }
+      );
+      setAIGeneratedBullets(generated as string[][]); // Cast to string[][]
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating bullets:', error);
+      alert('Failed to generate bullets. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
+
+  const handleSelectAIBullets = (bullets: string[]) => {
+    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'workExperience') {
+      setOptimizedResume(prev => {
+        const updatedWorkExperience = [...(prev?.workExperience || [])];
+        updatedWorkExperience[currentBulletGenerationIndex].bullets = bullets;
+        return { ...prev!, workExperience: updatedWorkExperience };
+      });
+    }
+    setShowAIBulletOptions(false);
+    setAIGeneratedBullets([]);
+    setCurrentBulletGenerationIndex(null);
+    setCurrentBulletGenerationSection(null);
+  };
+
+  const handleRegenerateAIBullets = async () => {
+    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'workExperience' && optimizedResume) {
+      setIsGeneratingBullets(true);
+      try {
+        const currentWork = optimizedResume.workExperience[currentBulletGenerationIndex];
+        const generated = await generateAtsOptimizedSection(
+          'workExperienceBullets',
+          {
+            role: currentWork.role,
+            company: currentWork.company,
+            year: currentWork.year,
+            description: currentWork.bullets.join(' '),
+            userType: userType,
+          }
+        );
+        setAIGeneratedBullets(generated as string[][]);
+      } catch (error) {
+        console.error('Error regenerating bullets:', error);
+        alert('Failed to regenerate bullets. Please try again.');
+      } finally {
+        setIsGeneratingBullets(false);
+      }
+    }
+  };
+  // --- End Work Experience Section Handlers ---
 
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
@@ -901,7 +1003,105 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           </div>
         );
       case 'work_experience':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Work Experience Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Briefcase className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Work Experience
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Add your professional work experience, internships, or significant projects.
+            </p>
+            {(optimizedResume.workExperience || []).map((work, workIndex) => (
+              <div key={workIndex} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Entry #{workIndex + 1}</h3>
+                  <button
+                    onClick={() => handleRemoveWorkExperience(workIndex)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Role *</label>
+                  <input
+                    type="text"
+                    value={work.role}
+                    onChange={(e) => handleUpdateWorkExperience(workIndex, 'role', e.target.value)}
+                    placeholder="e.g., Software Engineer"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Company *</label>
+                  <input
+                    type="text"
+                    value={work.company}
+                    onChange={(e) => handleUpdateWorkExperience(workIndex, 'company', e.target.value)}
+                    placeholder="e.g., TechCorp Inc."
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Year/Duration *</label>
+                  <input
+                    type="text"
+                    value={work.year}
+                    onChange={(e) => handleUpdateWorkExperience(workIndex, 'year', e.target.value)}
+                    placeholder="e.g., Jan 2023 - Present"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
+                  {(work.bullets || []).map((bullet, bulletIndex) => (
+                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
+                      <textarea
+                        value={bullet}
+                        onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
+                        placeholder="Describe your achievement or responsibility"
+                        className="input-base flex-grow resize-y"
+                        rows={2}
+                      />
+                      <button
+                        onClick={() => handleRemoveWorkBullet(workIndex, bulletIndex)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleAddWorkBullet(workIndex)} className="btn-secondary flex items-center space-x-2">
+                      <Plus className="w-5 h-5" />
+                      <span>Add Bullet</span>
+                    </button>
+                    <button
+                      onClick={() => handleGenerateWorkExperienceBullets(workIndex)}
+                      className="btn-primary flex items-center space-x-2"
+                      disabled={isGeneratingBullets}
+                    >
+                      {isGeneratingBullets && currentBulletGenerationIndex === workIndex ? (
+                        <RotateCcw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-5 h-5" />
+                      )}
+                      <span>{isGeneratingBullets && currentBulletGenerationIndex === workIndex ? 'Generating...' : 'Generate with AI'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAddWorkExperience} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Work Experience</span>
+            </button>
+          </div>
+        );
       case 'projects':
         return <div className="p-6 bg-white rounded-xl shadow-lg">Projects Section (Coming Soon)</div>;
       case 'skills':
@@ -1166,6 +1366,110 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         </div>
       )}
 
+      {showProjectEnhancement && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Add Project Manually</h2>
+                <p className="text-gray-600">Provide project details and AI will generate a professional description</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Title *</label>
+                  <input
+                    type="text"
+                    value={manualProject.title}
+                    onChange={(e) => setManualProject(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., E-commerce Website"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                    <input
+                      type="month"
+                      value={manualProject.startDate}
+                      onChange={(e) => setManualProject(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
+                    <input
+                      type="month"
+                      value={manualProject.endDate}
+                      onChange={(e) => setManualProject(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tech Stack *</label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={newTechStack}
+                      onChange={(e) => setNewTechStack(e.target.value)}
+                      placeholder="e.g., React, Node.js"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      onKeyDown={(e) => e.key === 'Enter' && addTechToStack()}
+                    />
+                    <button
+                      onClick={addTechToStack}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {manualProject.techStack.map((tech, index) => (
+                      <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                        {tech}
+                        <button onClick={() => removeTechFromStack(tech)} className="ml-2 text-green-600 hover:text-green-800">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">One-liner Description (Optional)</label>
+                  <input
+                    type="text"
+                    value={manualProject.oneLiner}
+                    onChange={(e) => setManualProject(prev => ({ ...prev, oneLiner: e.target.value }))}
+                    placeholder="Brief description of the project"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={handleManualProjectSubmit}
+                  disabled={!manualProject.title || manualProject.techStack.length === 0}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+                >
+                  Generate & Add Project
+                </button>
+                <button onClick={() => setShowManualProjectAdd(false)} className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-xl transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ProjectEnhancement
         isOpen={showProjectEnhancement}
         onClose={() => setShowProjectEnhancement(false)}
@@ -1194,6 +1498,59 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         missingSections={missingSections}
         onSectionsProvided={handleMissingSectionsProvided}
       />
+
+      {/* AI Bullet Options Modal */}
+      {showAIBulletOptions && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-8 h-8 text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your AI-Generated Bullets</h2>
+                <p className="text-gray-600">Select the best option or regenerate for new suggestions.</p>
+              </div>
+
+              {isGeneratingBullets ? (
+                <div className="text-center py-8">
+                  <RotateCcw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Generating new options...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {aiGeneratedBullets.map((option, optionIndex) => (
+                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2">Option {optionIndex + 1}</h3>
+                      <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                        {option.map((bullet, bulletIndex) => (
+                          <li key={bulletIndex}>{bullet}</li>
+                        ))}
+                      </ul>
+                      <button
+                        onClick={() => handleSelectAIBullets(option)}
+                        className="mt-4 btn-primary w-full"
+                      >
+                        Select This Option
+                      </button>
+                    </div>
+                  ))}
+                  <button onClick={handleRegenerateAIBullets} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                    <RotateCcw className="w-5 h-5" />
+                    <span>Regenerate Options</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <button onClick={() => setShowAIBulletOptions(false)} className="btn-secondary">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
