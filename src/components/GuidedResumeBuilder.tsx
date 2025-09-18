@@ -362,15 +362,17 @@ const generateContent = useCallback(
           />
           <button
             onClick={async () => {
-              const generatedContent = await generateContent(
-                userType === 'experienced' ? 'summary' : 'careerObjective',
-                {
-                  userType,
-                  targetRole: resumeData.targetRole,
-                  experience: resumeData.workExperience,
-                  education: resumeData.education,
-                }
-              );
+             const generatedContent = await generateContent(
+  userType === 'experienced' ? 'summary' : 'careerObjective',
+  {
+    userType,
+    targetRole: resumeData.targetRole,
+    experience: resumeData.workExperience,
+    education: resumeData.education,
+  },
+  'deepseek/deepseek-r1:free' // <-- Explicit model
+);
+
               if (generatedContent) {
                 userType === 'experienced'
                   ? updateResumeData('summary', generatedContent)
