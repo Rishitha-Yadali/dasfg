@@ -1019,7 +1019,7 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
               type="button"
 onClick={handleGenerateResume}
 disabled={isGenerating}
-className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 mx-auto shadow-xl hover:shadow-2xl btn-primary"
+className="w-50 py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 mx-auto shadow-xl hover:shadow-2xl btn-primary"
 
             >
               {isGenerating ? (
