@@ -275,7 +275,7 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
           'X-Title': 'PrimoBoost AI'
         },
         body: JSON.stringify({
-          model: 'google/gemini-flash-1.5',
+          model: 'deepseek/deepseek-r1:free',
           messages: [{ role: 'user', content: promptContent }]
         })
       });
