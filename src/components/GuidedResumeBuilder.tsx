@@ -50,7 +50,7 @@ interface GuidedResumeBuilderProps {
   setToolProcessTrigger: React.Dispatch<React.SetStateAction<(() => void) | null>>;
 }
 
-const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
+export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
   isAuthenticated,
   onShowAuth,
   onShowSubscriptionPlans,
