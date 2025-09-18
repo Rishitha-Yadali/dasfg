@@ -68,7 +68,7 @@ export const optimizeResume = async (
 ): Promise<ResumeData> => {
   const getPromptForUserType = (type: UserType) => {
     if (type === 'experienced') {
-      return `You are a professional resume optimization assistant for EXPERIENCED PROFESSIONALS. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
+              return `You are a professional resume optimization assistant for EXPERIENCED PROFESSIONALS. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
 
 EXPERIENCED PROFESSIONAL REQUIREMENTS:
 1. MUST include a compelling Professional Summary (2-3 lines highlighting key experience and value proposition)
