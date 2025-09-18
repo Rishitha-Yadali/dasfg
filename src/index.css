@@ -1,0 +1,314 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles for responsive design */
+@layer base {
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    line-height: 1.6;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply text-secondary-900 bg-white dark:text-gray-100 dark:bg-dark-50 antialiased;
+    font-feature-settings: 'liga' 1, 'kern' 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  
+  /* Fluid typography for semantic headings */
+  h1 {
+    @apply text-fluid-4xl font-bold text-secondary-900 dark:text-gray-100 leading-tight;
+  }
+  
+  /* From your index.css */
+h2 {
+  @apply text-fluid-3xl font-bold text-secondary-900 dark:text-gray-100 leading-tight;
+}
+  
+  h3 {
+    @apply text-fluid-2xl font-semibold text-secondary-900 dark:text-gray-100 leading-snug;
+  }
+  
+  h4 {
+    @apply text-fluid-xl font-semibold text-secondary-800 dark:text-gray-200 leading-snug;
+  }
+  
+  h5 {
+    @apply text-fluid-lg font-medium text-secondary-800 dark:text-gray-200 leading-normal;
+  }
+  
+  h6 {
+    @apply text-fluid-base font-medium text-secondary-700 dark:text-gray-300 leading-normal;
+  }
+  
+  p {
+    @apply text-fluid-base text-secondary-700 dark:text-gray-300 leading-relaxed;
+  }
+  
+  /* Focus states for accessibility */
+  button:focus,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid theme('colors.neon.cyan.500');
+    outline-offset: 2px;
+  }
+  
+  /* Ensure all interactive elements meet minimum touch target size */
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"] {
+    @apply min-w-touch min-h-touch;
+  }
+}
+
+/* Component layer for reusable patterns */
+@layer components {
+  /* Container with responsive padding */
+  .container-responsive {
+     @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Button base styles */
+  .btn-base {
+    @apply inline-flex items-center justify-center min-w-button min-h-button px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-dark-100;
+  }
+  
+  .btn-primary {
+    @apply btn-base bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 text-white hover:from-neon-cyan-400 hover:to-neon-blue-400 active:from-neon-cyan-600 active:to-neon-blue-600 focus:ring-neon-cyan-500 shadow-md hover:shadow-neon-cyan dark:shadow-dark-lg dark:hover:shadow-neon-cyan;
+  }
+  
+  .btn-secondary {
+    @apply btn-base bg-secondary-100 text-secondary-700 hover:bg-secondary-200 active:bg-secondary-300 focus:ring-secondary-500 dark:bg-dark-200 dark:text-gray-300 dark:hover:bg-dark-300 dark:focus:ring-neon-cyan-500;
+  }
+  
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-secondary-200 overflow-hidden dark:bg-dark-50 dark:border-dark-300 dark:shadow-dark-lg; /* Changed dark:bg-dark-100 to dark:bg-dark-50 */
+  }
+  
+.card-hover {
+  @apply card transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer dark:hover:shadow-dark-xl dark:hover:shadow-neon-cyan;
+}
+
+  
+  /* Input styles */
+  .input-base {
+    @apply w-full px-3 py-2 sm:px-4 sm:py-3 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-neon-cyan-500 focus:border-neon-cyan-500 transition-all duration-200 text-secondary-900 placeholder-secondary-400 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-neon-cyan-400;
+  }
+  
+  /* Navigation styles */
+  .nav-link {
+    @apply px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium transition-all duration-200 hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-dark-200 dark:hover:text-neon-cyan-400;
+  }
+  
+  .nav-link-active {
+    @apply nav-link bg-primary-100 text-primary-700 dark:bg-dark-200 dark:text-neon-cyan-400;
+  }
+  
+  /* Loading spinner */
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-primary-200 border-t-primary-600 dark:border-dark-300 dark:border-t-neon-cyan-500;
+  }
+  
+  /* Neon glow effects */
+  .neon-glow {
+    @apply shadow-neon-cyan;
+  }
+  
+  .neon-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan-400 to-neon-blue-400;
+  }
+  
+  .neon-border {
+    @apply border border-neon-cyan-500 shadow-neon-cyan;
+  }
+
+  /* Resume Template Styles */
+  .resume-one-column {
+    @apply w-full;
+  }
+  
+  .resume-two-column {
+    @apply w-full;
+  }
+  
+  .resume-two-column-container {
+    @apply w-full;
+  }
+  
+  .resume-header-full {
+    @apply w-full mb-6;
+  }
+  
+  .resume-two-column-content {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+  }
+  
+  .resume-main-column {
+    @apply lg:col-span-2 space-y-4;
+  }
+  
+  .resume-sidebar-column {
+    @apply lg:col-span-1 space-y-4;
+  }
+  
+  .resume-minimalist {
+    @apply leading-relaxed;
+  }
+  
+  .resume-minimalist h1 {
+    @apply text-center mb-8;
+  }
+  
+  .resume-minimalist h2 {
+    @apply border-b border-gray-300 pb-2 mb-4;
+  }
+  
+  /* Template-specific spacing */
+  .template-chronological .work-experience {
+    @apply border-l-2 border-gray-200 pl-4;
+  }
+  
+  .template-functional .skills-section {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+  
+  .template-combination .projects-section {
+    @apply bg-gray-50 p-4 rounded-lg border border-gray-200;
+  }
+  
+  .template-minimalist .section-spacing {
+    @apply mb-8;
+  }
+  
+  .template-two-column .sidebar-item {
+    @apply mb-4 p-3 bg-gray-50 rounded-lg;
+  }
+
+}
+
+/* Utilities layer for specific overrides */
+@layer utilities {
+  /* Safe area insets for mobile devices */
+  .safe-area {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Text truncation helpers */
+  .text-truncate-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  
+  .text-truncate-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  
+  .text-truncate-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  
+  /* Responsive grid helpers */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+  
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6;
+  }
+  
+  /* Touch-friendly spacing */
+  .touch-spacing {
+    @apply p-3 sm:p-4 lg:p-6;
+  }
+  
+  /* Responsive text alignment */
+  .text-responsive-center {
+    @apply text-center sm:text-left;
+  }
+}
+
+/* Legacy animations (kept for backward compatibility) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  animation: marquee 15s linear infinite; /* Adjust duration as needed */
+}
+
+/* For a smoother, more controlled marquee effect that doesn't disappear */
+@keyframes marquee-continuous {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); } /* Move half the width to loop seamlessly */
+}
+
+.animate-marquee-continuous {
+  animation: marquee-continuous 15s linear infinite; /* Adjust duration as needed */
+  white-space: nowrap; /* Keep text on one line */
+  overflow: hidden; /* Hide overflow */
+  display: inline-block; /* Allow transform */
+  padding-right: 1em; /* Small gap for seamless loop */
+}
