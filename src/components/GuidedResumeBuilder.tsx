@@ -1,5 +1,5 @@
 // src/components/GuidedResumeBuilder.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
@@ -196,7 +196,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setChangedSections([]);
     setCurrentSectionIndex(0); // Reset to first section
     setActiveTab('resume');
-    setShowMobileInterface(false);
     setOptimizationInterrupted(false);
   }, []);
 
@@ -610,7 +609,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setExportStatus({
         type: format,
         status: 'error',
-        message: `${format.toUpperCase()} export failed. Please try again.`
+        message: 'PDF export failed. Please try again.'
       });
       
       setTimeout(() => { setExportStatus({ type: null, status: null, message: '' }); }, 5000);
@@ -657,9 +656,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      submessage = "We're updating your resume with the new sections you provided.";
+      subMessage = "We're updating your resume with the new sections you provided.";
     }
-    return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
+    return <LoadingAnimation message={loadingMessage} submessage={subMessage} />;
   }
 
   // --- NEW: Navigation Handlers ---
@@ -1239,8 +1238,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   // --- End Objective/Summary AI Generation Handlers ---
 
   // --- Review Section State ---
-
-
   const toggleReviewSection = (sectionKey: string) => {
     setExpandedReviewSections(prev => {
       const newSet = new Set(prev);
@@ -1268,7 +1265,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
     if (!optimizedResume) {
-      return <div className="p-6 bg-white rounded-xl shadow-lg">Loading resume data...</div>;
+      return <div className="card p-6 mb-6 shadow-lg">Loading resume data...</div>;
     }
 
     switch (resumeSections[currentSectionIndex]) {
@@ -1740,12 +1737,12 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Skills (comma-separated)</label>
                   {(skillCategory.list || []).map((skill, skillIndex) => (
                     <div key={skillIndex} className="flex items-center space-x-2 mb-2">
-                      <input
-                        type="text"
+                      <textarea
                         value={skill}
                         onChange={(e) => handleUpdateSkill(categoryIndex, skillIndex, e.target.value)}
                         placeholder="e.g., JavaScript, Python"
-                        className="input-base flex-grow"
+                        className="input-base flex-grow resize-y"
+                        rows={2}
                       />
                       <button
                         onClick={() => handleRemoveSkill(categoryIndex, skillIndex)}
@@ -2152,7 +2149,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           </div>
         );
       default:
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Unknown Section</div>;
+        return <div className="card p-6 mb-6 shadow-lg">Unknown Section</div>;
     }
   };
   // --- END NEW ---
