@@ -790,11 +790,12 @@ const generateContent = useCallback(
               <button
                 onClick={async () => {
                   const generatedSkills = await generateContent('skillsList', {
-                    category: skillCategory.category,
-                    existingSkills: skillCategory.list,
-                    userType,
-                    targetRole: resumeData.targetRole,
-                  });
+  category: skillCategory.category,
+  existingSkills: skillCategory.list,
+  userType,
+  targetRole: resumeData.targetRole,
+}, 'deepseek/deepseek-r1:free');
+
                   if (generatedSkills && Array.isArray(generatedSkills)) {
                     const updated = [...resumeData.skills];
                     updated[catIndex].list = generatedSkills;
