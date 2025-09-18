@@ -433,7 +433,8 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
 
 export const generateAtsOptimizedSection = async (
   sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets',
-  data: any
+  data: any,
+  modelOverride?: string 
 ): Promise<string | string[]> => {
   const getPromptForSection = (type: string, sectionData: any) => {
     switch (type) {
