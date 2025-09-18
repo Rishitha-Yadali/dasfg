@@ -18,43 +18,54 @@ const createPDFConfigForPreview = (options: ExportOptions) => {
     { pageWidth: 210, pageHeight: 297 };
 
   return {
-    pageWidth: paperConfig.pageWidth,
-    pageHeight: paperConfig.pageHeight,
-    margins: layoutConfig.margins,
-    get contentWidth() {
-      return this.pageWidth - this.margins.left - this.margins.right;
-    },
-    get contentHeight() {
-      return this.pageHeight - this.margins.top - this.margins.bottom;
-    },
-    fonts: {
-      name: { size: options.nameSize, weight: 'bold' as const },
-      contact: { size: options.bodyTextSize - 0.5, weight: 'bold' as const },
-      sectionTitle: { size: options.sectionHeaderSize, weight: 'bold' as const },
-      jobTitle: { size: options.subHeaderSize, weight: 'bold' as const },
-      company: { size: options.subHeaderSize, weight: 'bold' as const },
-      year: { size: options.subHeaderSize, weight: 'normal' as const },
-      body: { size: options.bodyTextSize, weight: 'normal' as const },
-    },
-    spacing: {
-      nameFromTop: 13,
-      afterName: 0,
-      afterContact: 1,
-      sectionSpacingBefore: options.sectionSpacing,
-      sectionSpacingAfter: 2,
-      bulletListSpacing: options.entrySpacing * 0.3,
-      afterSubsection: 3,
-      bulletIndent: 4, // This is the key value for bullet indentation
-      entrySpacing: options.entrySpacing,
-    },
-    colors: {
-      primary: [0, 0, 0] as [number, number, number],
-      secondary: [80, 80, 80] as [number, number, number],
-      accent: [37, 99, 235] as [number, number, number],
-    },
-    fontFamily: options.fontFamily,
+  // A4 in mm
+  pageWidth: paperConfig.pageWidth,
+  pageHeight: paperConfig.pageHeight,
+
+  margins: layoutConfig.margins,
+
+  get contentWidth() {
+    return this.pageWidth - this.margins.left - this.margins.right;
+  },
+  get contentHeight() {
+    return this.pageHeight - this.margins.top - this.margins.bottom;
+  },
+
+  fonts: {
+    name: { size: options.nameSize, weight: 'bold' as const },
+    contact: { size: options.bodyTextSize - 0.5, weight: 'bold' as const },
+    sectionTitle: { size: options.sectionHeaderSize, weight: 'bold' as const },
+    jobTitle: { size: options.subHeaderSize, weight: 'bold' as const },
+    company: { size: options.subHeaderSize, weight: 'bold' as const },
+    year: { size: options.subHeaderSize, weight: 'normal' as const },
+    body: { size: options.bodyTextSize, weight: 'normal' as const },
+  },
+  spacing: {
+    nameFromTop: 13,
+    afterName: 0,
+    afterContact: 1,
+    sectionSpacingBefore: options.sectionSpacing,
+    sectionSpacingAfter: 2,
+    bulletListSpacing: options.entrySpacing * 0.3,
+    afterSubsection: 3,
+    lineHeight: 1.2,
+    bulletIndent: 4,
+    entrySpacing: options.entrySpacing,
+  },
+  colors: {
+    primary: [0, 0, 0] as [number, number, number],
+    secondary: [80, 80, 80] as [number, number, number],
+    accent: [37, 99, 235] as [number, number, number],
+  },
+  fontFamily: options.fontFamily,
   };
 };
+
+interface ResumePreviewProps {
+  resumeData: ResumeData;
+  userType?: UserType;
+  exportOptions?: ExportOptions;
+}
 
 export const ResumePreview: React.FC<ResumePreviewProps> = ({
   resumeData,
@@ -251,7 +262,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
       case 'summary':
         // Conditional logic for 'Professional Summary' or 'Career Objective' based on userType
         if (userType === 'student' || userType === 'fresher') {
-          if (!resumeData.careerObjective || (resumeData.careerObjective || '').trim() === '') return null;
+          if (!String(resumeData.careerObjective || '').trim()) return null;
           return (
             <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
               <h2 style={sectionTitleStyle}>
@@ -264,7 +275,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
             </div>
           );
         } else { // This will now only be for 'experienced'
-          if (!resumeData.summary || (resumeData.summary || '').trim() === '') return null;
+          if (!String(resumeData.summary || '').trim()) return null;
           return (
             <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
               <h2 style={sectionTitleStyle}>
@@ -626,4 +637,3 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     </div>
   );
 };
-
