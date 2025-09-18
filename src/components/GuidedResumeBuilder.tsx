@@ -1,4 +1,4 @@
-// src/components/ResumeOptimizer.tsx
+// src/components/GuidedResumeBuilder.tsx
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,7 +22,7 @@ import { exportToPDF, exportToWord } from '../utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import { ExportButtons } from './ExportButtons';
 
-// src/components/ResumeOptimizer.tsx
+// src/components/GuidedResumeBuilder.tsx
 const cleanResumeText = (text: string): string => {
   let cleaned = text;
   // Remove "// Line XXX" patterns anywhere in the text
@@ -37,7 +37,7 @@ const cleanResumeText = (text: string): string => {
 };
 
 
-interface ResumeOptimizerProps {
+interface GuidedResumeBuilderProps { // Renamed from ResumeOptimizerProps
   isAuthenticated: boolean;
   onShowAuth: () => void;
   onShowProfile: (mode?: 'profile' | 'wallet') => void;
@@ -57,7 +57,7 @@ type ManualProject = {
   oneLiner: string;
 };
 
-export const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
+export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({ // Renamed component and updated props type
   isAuthenticated,
   onShowAuth,
   onShowProfile,
@@ -945,5 +945,3 @@ export const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
     </div>
   );
 };
-
-export default ResumeOptimizer;
