@@ -74,6 +74,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   // --- NEW: State for sequential UI flow ---
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const resumeSections = [
+    'experience_level', // NEW: Experience Level Selection
     'profile', // Contact Info
     'objective_summary', // Career Objective/Summary
     'education',
@@ -90,13 +91,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [extractionResult, setExtractionResult] = useState<ExtractionResult>({ text: '', extraction_mode: 'TEXT', trimmed: false });
   const [jobDescription, setJobDescription] = useState('');
   const [targetRole, setTargetRole] = useState('');
-  const [userType, setUserType] = useState<UserType>('fresher');
+  const [userType, setUserType] = useState<UserType>('fresher'); // Default to fresher
   const [scoringMode, setScoringMode] = useState<ScoringMode>('general');
   const [autoScoreOnUpload, setAutoScoreOnUpload] = useState(true);
 
   const [optimizedResume, setOptimizedResume] = useState<ResumeData | null>({
     name: '', phone: '', email: '', linkedin: '', github: '',
-    education: [], workExperience: [], projects: [], skills: [], certifications: []
+    education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: []
   });
   const [parsedResumeData, setParsedResumeData] = useState<ResumeData | null>(null);
   const [pendingResumeData, setPendingResumeData] = useState<ResumeData | null>(null);
@@ -173,7 +174,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setExtractionResult({ text: '', extraction_mode: 'TEXT', trimmed: false });
     setJobDescription('');
     setTargetRole('');
-    setUserType('fresher');
+    setUserType('fresher'); // Reset to default
     setBeforeScore(null);
     setAfterScore(null);
     setInitialResumeScore(null);
@@ -646,9 +647,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      subMessage = "We're updating your resume with the new sections you provided.";
+      submessage = "We're updating your resume with the new sections you provided.";
     }
-    return <LoadingAnimation message={loadingMessage} submessage={subMessage} />;
+    return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
   }
 
   // --- NEW: Navigation Handlers ---
@@ -657,6 +658,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let isValid = true;
     if (optimizedResume) {
       switch (resumeSections[currentSectionIndex]) {
+        case 'experience_level':
+          isValid = !!userType; // Ensure a user type is selected
+          break;
         case 'profile':
           isValid = !!optimizedResume.name && !!optimizedResume.email;
           break;
@@ -1190,6 +1194,58 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }
 
     switch (resumeSections[currentSectionIndex]) {
+      case 'experience_level':
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Briefcase className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+              Experience Level
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Select your current career stage. This helps tailor the resume content.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                onClick={() => setUserType('fresher')}
+                className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
+                  userType === 'fresher'
+                    ? 'border-green-500 bg-green-50 shadow-md dark:border-green-600 dark:bg-green-900/20'
+                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
+                }`}
+              >
+                <User className={`w-8 h-8 mb-3 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+                <span className={`font-semibold text-lg mb-2 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Fresher/New Graduate</span>
+                <span className={`text-sm text-gray-500 text-center dark:text-gray-300`}>Recent graduate or entry-level professional</span>
+              </button>
+
+              <button
+                onClick={() => setUserType('experienced')}
+                className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
+                  userType === 'experienced'
+                    ? 'border-green-500 bg-green-50 shadow-md dark:border-green-600 dark:bg-green-900/20'
+                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
+                }`}
+              >
+                <Briefcase className={`w-8 h-8 mb-3 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+                <span className={`font-semibold text-lg mb-2 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Experienced Professional</span>
+                <span className={`text-sm text-gray-500 text-center dark:text-gray-300`}>Professional with 1+ years of work experience</span>
+              </button>
+              {/* Add Student option if needed */}
+              <button
+                onClick={() => setUserType('student')}
+                className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
+                  userType === 'student'
+                    ? 'border-green-500 bg-green-50 shadow-md dark:border-green-600 dark:bg-green-900/20'
+                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
+                }`}
+              >
+                <GraduationCap className={`w-8 h-8 mb-3 ${userType === 'student' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+                <span className={`font-semibold text-lg mb-2 ${userType === 'student' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Student</span>
+                <span className={`text-sm text-gray-500 text-center dark:text-gray-300`}>Currently enrolled in a program</span>
+              </button>
+            </div>
+          </div>
+        );
       case 'profile':
         return (
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
