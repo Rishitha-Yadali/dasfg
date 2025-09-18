@@ -162,13 +162,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [aiGeneratedBullets, setAIGeneratedBullets] = useState<string[][]>([]);
   const [isGeneratingBullets, setIsGeneratingBullets] = useState(false);
   const [currentBulletGenerationIndex, setCurrentBulletGenerationIndex] = useState<number | null>(null);
-  const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | null>(null);
+  const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | 'skills' | 'certifications' | 'additionalSections' | null>(null);
   // --- End AI Bullet Generation States ---
 
   const handleStartNewResume = useCallback(() => { // Memoize
     setOptimizedResume({
       name: '', phone: '', email: '', linkedin: '', github: '',
-      education: [], workExperience: [], projects: [], skills: [], certifications: []
+      education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: []
     });
     setExtractionResult({ text: '', extraction_mode: 'TEXT', trimmed: false });
     setJobDescription('');
@@ -673,7 +673,24 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         case 'work_experience':
           isValid = optimizedResume.workExperience.some(we => we.role.trim() && we.company.trim() && we.year.trim());
           break;
-        // Add validation for other sections as they are implemented
+        case 'projects':
+          isValid = optimizedResume.projects.some(p => p.title.trim() && p.bullets.some(b => b.trim()));
+          break;
+        case 'skills':
+          isValid = optimizedResume.skills.some(s => s.category.trim() && s.list.some(item => item.trim()));
+          break;
+        case 'certifications':
+          isValid = optimizedResume.certifications.some(c => (typeof c === 'string' ? c.trim() : c.title?.trim()));
+          break;
+        case 'additional_sections':
+          isValid = true; // Additional sections are optional, so always valid to proceed
+          break;
+        case 'review':
+          isValid = true; // Review section is just a display, always valid
+          break;
+        case 'final_resume':
+          isValid = true; // Final step, always valid
+          break;
         default:
           isValid = true; // Assume valid for unimplemented sections
       }
@@ -782,7 +799,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           userType: userType,
         }
       );
-      setAIGeneratedBullets(generated as string[][]); // Cast to string[][]
+      setAIGeneratedBullets([generated as string[]]); // FIX: Wrap in an array
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating bullets:', error);
@@ -799,6 +816,18 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         updatedWorkExperience[currentBulletGenerationIndex].bullets = bullets;
         return { ...prev!, workExperience: updatedWorkExperience };
       });
+    } else if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'projects') {
+      setOptimizedResume(prev => {
+        const updatedProjects = [...(prev?.projects || [])];
+        updatedProjects[currentBulletGenerationIndex].bullets = bullets;
+        return { ...prev!, projects: updatedProjects };
+      });
+    } else if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'additionalSections') {
+      setOptimizedResume(prev => {
+        const updatedAdditionalSections = [...(prev?.additionalSections || [])];
+        updatedAdditionalSections[currentBulletGenerationIndex].bullets = bullets;
+        return { ...prev!, additionalSections: updatedAdditionalSections };
+      });
     }
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
@@ -807,21 +836,46 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   };
 
   const handleRegenerateAIBullets = async () => {
-    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'workExperience' && optimizedResume) {
+    if (currentBulletGenerationIndex !== null && optimizedResume) {
       setIsGeneratingBullets(true);
       try {
-        const currentWork = optimizedResume.workExperience[currentBulletGenerationIndex];
-        const generated = await generateAtsOptimizedSection(
-          'workExperienceBullets',
-          {
-            role: currentWork.role,
-            company: currentWork.company,
-            year: currentWork.year,
-            description: currentWork.bullets.join(' '),
-            userType: userType,
-          }
-        );
-        setAIGeneratedBullets(generated as string[][]);
+        let generated: string[] | string[][];
+        if (currentBulletGenerationSection === 'workExperience') {
+          const currentWork = optimizedResume.workExperience[currentBulletGenerationIndex];
+          generated = await generateAtsOptimizedSection(
+            'workExperienceBullets',
+            {
+              role: currentWork.role,
+              company: currentWork.company,
+              year: currentWork.year,
+              description: currentWork.bullets.join(' '),
+              userType: userType,
+            }
+          );
+        } else if (currentBulletGenerationSection === 'projects') {
+          const currentProject = optimizedResume.projects[currentBulletGenerationIndex];
+          generated = await generateAtsOptimizedSection(
+            'projectBullets',
+            {
+              title: currentProject.title,
+              description: currentProject.bullets.join(' '),
+              userType: userType,
+            }
+          );
+        } else if (currentBulletGenerationSection === 'additionalSections') {
+          const currentSection = optimizedResume.additionalSections![currentBulletGenerationIndex];
+          generated = await generateAtsOptimizedSection(
+            'additionalSectionBullets',
+            {
+              title: currentSection.title,
+              details: currentSection.bullets.join(' '),
+              userType: userType,
+            }
+          );
+        } else {
+          throw new Error("Unknown section for bullet regeneration");
+        }
+        setAIGeneratedBullets([generated as string[]]);
       } catch (error) {
         console.error('Error regenerating bullets:', error);
         alert('Failed to regenerate bullets. Please try again.');
@@ -831,6 +885,303 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }
   };
   // --- End Work Experience Section Handlers ---
+
+  // --- Projects Section Handlers ---
+  const handleAddProject = () => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      projects: [...(prev?.projects || []), { title: '', bullets: [''] }]
+    }));
+  };
+
+  const handleUpdateProject = (index: number, field: keyof ResumeData['projects'][0], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedProjects = [...(prev?.projects || [])];
+      updatedProjects[index] = { ...updatedProjects[index], [field]: value };
+      return { ...prev!, projects: updatedProjects };
+    });
+  };
+
+  const handleRemoveProject = (index: number) => {
+    setOptimizedResume(prev => {
+      const updatedProjects = (prev?.projects || []).filter((_, i) => i !== index);
+      return { ...prev!, projects: updatedProjects };
+    });
+  };
+
+  const handleAddProjectBullet = (projectIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedProjects = [...(prev?.projects || [])];
+      updatedProjects[projectIndex].bullets.push('');
+      return { ...prev!, projects: updatedProjects };
+    });
+  };
+
+  const handleUpdateProjectBullet = (projectIndex: number, bulletIndex: number, value: string) => {
+    setOptimizedResume(prev => {
+      const updatedProjects = [...(prev?.projects || [])];
+      updatedProjects[projectIndex].bullets[bulletIndex] = value;
+      return { ...prev!, projects: updatedProjects };
+    });
+  };
+
+  const handleRemoveProjectBullet = (projectIndex: number, bulletIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedProjects = [...(prev?.projects || [])];
+      updatedProjects[projectIndex].bullets = updatedProjects[projectIndex].bullets.filter((_, i) => i !== bulletIndex);
+      return { ...prev!, projects: updatedProjects };
+    });
+  };
+
+  const handleGenerateProjectBullets = async (projectIndex: number) => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true);
+    setCurrentBulletGenerationIndex(projectIndex);
+    setCurrentBulletGenerationSection('projects');
+    try {
+      const currentProject = optimizedResume.projects[projectIndex];
+      const generated = await generateAtsOptimizedSection(
+        'projectBullets',
+        {
+          title: currentProject.title,
+          description: currentProject.bullets.join(' '),
+          userType: userType,
+        }
+      );
+      setAIGeneratedBullets([generated as string[]]);
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating project bullets:', error);
+      alert('Failed to generate project bullets. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
+  // --- End Projects Section Handlers ---
+
+  // --- Skills Section Handlers ---
+  const handleAddSkillCategory = () => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      skills: [...(prev?.skills || []), { category: '', count: 0, list: [''] }]
+    }));
+  };
+
+  const handleUpdateSkillCategory = (index: number, field: keyof ResumeData['skills'][0], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedSkills = [...(prev?.skills || [])];
+      updatedSkills[index] = { ...updatedSkills[index], [field]: value };
+      return { ...prev!, skills: updatedSkills };
+    });
+  };
+
+  const handleRemoveSkillCategory = (index: number) => {
+    setOptimizedResume(prev => {
+      const updatedSkills = (prev?.skills || []).filter((_, i) => i !== index);
+      return { ...prev!, skills: updatedSkills };
+    });
+  };
+
+  const handleAddSkill = (categoryIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedSkills = [...(prev?.skills || [])];
+      updatedSkills[categoryIndex].list.push('');
+      updatedSkills[categoryIndex].count = updatedSkills[categoryIndex].list.length;
+      return { ...prev!, skills: updatedSkills };
+    });
+  };
+
+  const handleUpdateSkill = (categoryIndex: number, skillIndex: number, value: string) => {
+    setOptimizedResume(prev => {
+      const updatedSkills = [...(prev?.skills || [])];
+      updatedSkills[categoryIndex].list[skillIndex] = value;
+      return { ...prev!, skills: updatedSkills };
+    });
+  };
+
+  const handleRemoveSkill = (categoryIndex: number, skillIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedSkills = [...(prev?.skills || [])];
+      updatedSkills[categoryIndex].list = updatedSkills[categoryIndex].list.filter((_, i) => i !== skillIndex);
+      updatedSkills[categoryIndex].count = updatedSkills[categoryIndex].list.length;
+      return { ...prev!, skills: updatedSkills };
+    });
+  };
+
+  const handleGenerateSkills = async (categoryIndex: number) => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true); // Reusing bullet generation loading state
+    setCurrentBulletGenerationIndex(categoryIndex);
+    setCurrentBulletGenerationSection('skills');
+    try {
+      const currentCategory = optimizedResume.skills[categoryIndex];
+      const generated = await generateAtsOptimizedSection(
+        'skillsList',
+        {
+          category: currentCategory.category,
+          existingSkills: currentCategory.list.join(', '),
+          userType: userType,
+          jobDescription: jobDescription, // Pass JD for relevance
+        }
+      );
+      setAIGeneratedBullets([generated as string[]]); // Expecting string[] of skills
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating skills:', error);
+      alert('Failed to generate skills. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
+
+  const handleSelectAISkills = (skillsList: string[]) => {
+    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'skills') {
+      setOptimizedResume(prev => {
+        const updatedSkills = [...(prev?.skills || [])];
+        updatedSkills[currentBulletGenerationIndex].list = skillsList;
+        updatedSkills[currentBulletGenerationIndex].count = skillsList.length;
+        return { ...prev!, skills: updatedSkills };
+      });
+    }
+    setShowAIBulletOptions(false);
+    setAIGeneratedBullets([]);
+    setCurrentBulletGenerationIndex(null);
+    setCurrentBulletGenerationSection(null);
+  };
+  // --- End Skills Section Handlers ---
+
+  // --- Certifications Section Handlers ---
+  const handleAddCertification = () => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      certifications: [...(prev?.certifications || []), { title: '', description: '' }]
+    }));
+  };
+
+  const handleUpdateCertification = (index: number, field: keyof ResumeData['certifications'][0], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedCertifications = [...(prev?.certifications || [])];
+      updatedCertifications[index] = { ...updatedCertifications[index], [field]: value };
+      return { ...prev!, certifications: updatedCertifications };
+    });
+  };
+
+  const handleRemoveCertification = (index: number) => {
+    setOptimizedResume(prev => {
+      const updatedCertifications = (prev?.certifications || []).filter((_, i) => i !== index);
+      return { ...prev!, certifications: updatedCertifications };
+    });
+  };
+
+  const handleGenerateCertifications = async () => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true);
+    setCurrentBulletGenerationIndex(null); // Not tied to a specific entry
+    setCurrentBulletGenerationSection('certifications');
+    try {
+      const generated = await generateAtsOptimizedSection(
+        'certifications',
+        {
+          userType: userType,
+          jobDescription: jobDescription,
+          skills: optimizedResume.skills,
+        }
+      );
+      // Assuming generated is an array of {title: string, description: string}
+      setAIGeneratedBullets([generated as string[]]); // Cast to string[] for display in generic modal
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating certifications:', error);
+      alert('Failed to generate certifications. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
+
+  const handleSelectAICertifications = (certs: string[]) => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      certifications: certs.map(c => ({ title: c, description: '' })) // Convert back to structured if needed
+    }));
+    setShowAIBulletOptions(false);
+    setAIGeneratedBullets([]);
+    setCurrentBulletGenerationIndex(null);
+    setCurrentBulletGenerationSection(null);
+  };
+  // --- End Certifications Section Handlers ---
+
+  // --- Additional Sections Handlers ---
+  const handleAddAdditionalSection = () => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      additionalSections: [...(prev?.additionalSections || []), { title: '', bullets: [''] }]
+    }));
+  };
+
+  const handleUpdateAdditionalSection = (index: number, field: keyof ResumeData['additionalSections'][0], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedSections = [...(prev?.additionalSections || [])];
+      updatedSections[index] = { ...updatedSections[index], [field]: value };
+      return { ...prev!, additionalSections: updatedSections };
+    });
+  };
+
+  const handleRemoveAdditionalSection = (index: number) => {
+    setOptimizedResume(prev => {
+      const updatedSections = (prev?.additionalSections || []).filter((_, i) => i !== index);
+      return { ...prev!, additionalSections: updatedSections };
+    });
+  };
+
+  const handleAddAdditionalBullet = (sectionIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedSections = [...(prev?.additionalSections || [])];
+      updatedSections[sectionIndex].bullets.push('');
+      return { ...prev!, additionalSections: updatedSections };
+    });
+  };
+
+  const handleUpdateAdditionalBullet = (sectionIndex: number, bulletIndex: number, value: string) => {
+    setOptimizedResume(prev => {
+      const updatedSections = [...(prev?.additionalSections || [])];
+      updatedSections[sectionIndex].bullets[bulletIndex] = value;
+      return { ...prev!, additionalSections: updatedSections };
+    });
+  };
+
+  const handleRemoveAdditionalBullet = (sectionIndex: number, bulletIndex: number) => {
+    setOptimizedResume(prev => {
+      const updatedSections = [...(prev?.additionalSections || [])];
+      updatedSections[sectionIndex].bullets = updatedSections[sectionIndex].bullets.filter((_, i) => i !== bulletIndex);
+      return { ...prev!, additionalSections: updatedSections };
+    });
+  };
+
+  const handleGenerateAdditionalBullets = async (sectionIndex: number) => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true);
+    setCurrentBulletGenerationIndex(sectionIndex);
+    setCurrentBulletGenerationSection('additionalSections');
+    try {
+      const currentSection = optimizedResume.additionalSections![sectionIndex];
+      const generated = await generateAtsOptimizedSection(
+        'additionalSectionBullets',
+        {
+          title: currentSection.title,
+          details: currentSection.bullets.join(' '),
+          userType: userType,
+        }
+      );
+      setAIGeneratedBullets([generated as string[]]);
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating additional section bullets:', error);
+      alert('Failed to generate additional section bullets. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
+  // --- End Additional Sections Handlers ---
 
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
@@ -1138,17 +1489,398 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           </div>
         );
       case 'projects':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Projects Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Code className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Projects
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Showcase your personal or academic projects.
+            </p>
+            {(optimizedResume.projects || []).map((project, projectIndex) => (
+              <div key={projectIndex} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Project #{projectIndex + 1}</h3>
+                  <button
+                    onClick={() => handleRemoveProject(projectIndex)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Project Title *</label>
+                  <input
+                    type="text"
+                    value={project.title}
+                    onChange={(e) => handleUpdateProject(projectIndex, 'title', e.target.value)}
+                    placeholder="e.g., E-commerce Platform"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
+                  {(project.bullets || []).map((bullet, bulletIndex) => (
+                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
+                      <textarea
+                        value={bullet}
+                        onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
+                        placeholder="Describe your project's features or impact"
+                        className="input-base flex-grow resize-y"
+                        rows={2}
+                      />
+                      <button
+                        onClick={() => handleRemoveProjectBullet(projectIndex, bulletIndex)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleAddProjectBullet(projectIndex)} className="btn-secondary flex items-center space-x-2">
+                      <Plus className="w-5 h-5" />
+                      <span>Add Bullet</span>
+                    </button>
+                    <button
+                      onClick={() => handleGenerateProjectBullets(projectIndex)}
+                      className="btn-primary flex items-center space-x-2"
+                      disabled={isGeneratingBullets}
+                    >
+                      {isGeneratingBullets && currentBulletGenerationIndex === projectIndex ? (
+                        <RotateCcw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-5 h-5" />
+                      )}
+                      <span>{isGeneratingBullets && currentBulletGenerationIndex === projectIndex ? 'Generating...' : 'Generate with AI'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAddProject} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Project</span>
+            </button>
+          </div>
+        );
       case 'skills':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Skills Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Lightbulb className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Skills
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              List your technical and soft skills, categorized for clarity.
+            </p>
+            {(optimizedResume.skills || []).map((skillCategory, categoryIndex) => (
+              <div key={categoryIndex} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Category #{categoryIndex + 1}</h3>
+                  <button
+                    onClick={() => handleRemoveSkillCategory(categoryIndex)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Category Name *</label>
+                  <input
+                    type="text"
+                    value={skillCategory.category}
+                    onChange={(e) => handleUpdateSkillCategory(categoryIndex, 'category', e.target.value)}
+                    placeholder="e.g., Programming Languages, Frameworks"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Skills (comma-separated)</label>
+                  {(skillCategory.list || []).map((skill, skillIndex) => (
+                    <div key={skillIndex} className="flex items-center space-x-2 mb-2">
+                      <input
+                        type="text"
+                        value={skill}
+                        onChange={(e) => handleUpdateSkill(categoryIndex, skillIndex, e.target.value)}
+                        placeholder="e.g., JavaScript, Python"
+                        className="input-base flex-grow"
+                      />
+                      <button
+                        onClick={() => handleRemoveSkill(categoryIndex, skillIndex)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleAddSkill(categoryIndex)} className="btn-secondary flex items-center space-x-2">
+                      <Plus className="w-5 h-5" />
+                      <span>Add Skill</span>
+                    </button>
+                    <button
+                      onClick={() => handleGenerateSkills(categoryIndex)}
+                      className="btn-primary flex items-center space-x-2"
+                      disabled={isGeneratingBullets}
+                    >
+                      {isGeneratingBullets && currentBulletGenerationIndex === categoryIndex && currentBulletGenerationSection === 'skills' ? (
+                        <RotateCcw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-5 h-5" />
+                      )}
+                      <span>{isGeneratingBullets && currentBulletGenerationIndex === categoryIndex && currentBulletGenerationSection === 'skills' ? 'Generating...' : 'Generate with AI'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAddSkillCategory} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Skill Category</span>
+            </button>
+          </div>
+        );
       case 'certifications':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Certifications Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Award className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Certifications
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              List any relevant certifications or licenses you hold.
+            </p>
+            {(optimizedResume.certifications || []).map((cert, index) => (
+              <div key={index} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Certification #{index + 1}</h3>
+                  <button
+                    onClick={() => handleRemoveCertification(index)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Title *</label>
+                  <input
+                    type="text"
+                    value={(cert as any).title || ''}
+                    onChange={(e) => handleUpdateCertification(index, 'title', e.target.value)}
+                    placeholder="e.g., AWS Certified Solutions Architect"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Description (Optional)</label>
+                  <textarea
+                    value={(cert as any).description || ''}
+                    onChange={(e) => handleUpdateCertification(index, 'description', e.target.value)}
+                    placeholder="Brief description or issuing body"
+                    className="input-base resize-y"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            ))}
+            <div className="flex space-x-2">
+              <button onClick={handleAddCertification} className="btn-secondary flex items-center space-x-2">
+                <Plus className="w-5 h-5" />
+                <span>Add Certification</span>
+              </button>
+              <button
+                onClick={handleGenerateCertifications}
+                className="btn-primary flex items-center space-x-2"
+                disabled={isGeneratingBullets}
+              >
+                {isGeneratingBullets && currentBulletGenerationSection === 'certifications' ? (
+                  <RotateCcw className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5" />
+                )}
+                <span>{isGeneratingBullets && currentBulletGenerationSection === 'certifications' ? 'Generating...' : 'Generate with AI'}</span>
+              </button>
+            </div>
+          </div>
+        );
       case 'additional_sections':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Additional Sections (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Plus className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Additional Sections (Optional)
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Add sections like "Awards", "Publications", "Volunteer Experience", etc.
+            </p>
+            {(optimizedResume.additionalSections || []).map((section, index) => (
+              <div key={index} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Section #{index + 1}</h3>
+                  <button
+                    onClick={() => handleRemoveAdditionalSection(index)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Section Title *</label>
+                  <input
+                    type="text"
+                    value={section.title}
+                    onChange={(e) => handleUpdateAdditionalSection(index, 'title', e.target.value)}
+                    placeholder="e.g., Awards, Volunteer Experience"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
+                  {(section.bullets || []).map((bullet, bulletIndex) => (
+                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
+                      <textarea
+                        value={bullet}
+                        onChange={(e) => handleUpdateAdditionalBullet(index, bulletIndex, e.target.value)}
+                        placeholder="Describe your achievement or experience"
+                        className="input-base flex-grow resize-y"
+                        rows={2}
+                      />
+                      <button
+                        onClick={() => handleRemoveAdditionalBullet(index, bulletIndex)}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleAddAdditionalBullet(index)} className="btn-secondary flex items-center space-x-2">
+                      <Plus className="w-5 h-5" />
+                      <span>Add Bullet</span>
+                    </button>
+                    <button
+                      onClick={() => handleGenerateAdditionalBullets(index)}
+                      className="btn-primary flex items-center space-x-2"
+                      disabled={isGeneratingBullets}
+                    >
+                      {isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'additionalSections' ? (
+                        <RotateCcw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-5 h-5" />
+                      )}
+                      <span>{isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'additionalSections' ? 'Generating...' : 'Generate with AI'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAddAdditionalSection} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Additional Section</span>
+            </button>
+          </div>
+        );
       case 'review':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Review Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <CheckCircle className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
+              Review Your Resume
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Take a moment to review all the information you've entered. Ensure everything is accurate and complete before generating the final optimized resume.
+            </p>
+            <div className="space-y-4">
+              {/* Display summary of each section */}
+              <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Contact Information</h3>
+                <p className="text-gray-700 dark:text-gray-300">Name: {optimizedResume.name}</p>
+                <p className="text-gray-700 dark:text-gray-300">Email: {optimizedResume.email}</p>
+                {optimizedResume.phone && <p className="text-gray-700 dark:text-gray-300">Phone: {optimizedResume.phone}</p>}
+                {optimizedResume.linkedin && <p className="text-gray-700 dark:text-gray-300">LinkedIn: {optimizedResume.linkedin}</p>}
+                {optimizedResume.github && <p className="text-gray-700 dark:text-gray-300">GitHub: {optimizedResume.github}</p>}
+              </div>
+              <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Objective/Summary</h3>
+                {userType === 'experienced' ? (
+                  <p className="text-gray-700 dark:text-gray-300">{optimizedResume.summary || 'Not provided'}</p>
+                ) : (
+                  <p className="text-gray-700 dark:text-gray-300">{optimizedResume.careerObjective || 'Not provided'}</p>
+                )}
+              </div>
+              {optimizedResume.education && optimizedResume.education.length > 0 && (
+                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Education ({optimizedResume.education.length} entries)</h3>
+                  {optimizedResume.education.map((edu, idx) => (
+                    <p key={idx} className="text-gray-700 dark:text-gray-300">{edu.degree} from {edu.school} ({edu.year})</p>
+                  ))}
+                </div>
+              )}
+              {optimizedResume.workExperience && optimizedResume.workExperience.length > 0 && (
+                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Work Experience ({optimizedResume.workExperience.length} entries)</h3>
+                  {optimizedResume.workExperience.map((work, idx) => (
+                    <p key={idx} className="text-gray-700 dark:text-gray-300">{work.role} at {work.company} ({work.year})</p>
+                  ))}
+                </div>
+              )}
+              {optimizedResume.projects && optimizedResume.projects.length > 0 && (
+                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Projects ({optimizedResume.projects.length} entries)</h3>
+                  {optimizedResume.projects.map((project, idx) => (
+                    <p key={idx} className="text-gray-700 dark:text-gray-300">{project.title}</p>
+                  ))}
+                </div>
+              )}
+              {optimizedResume.skills && optimizedResume.skills.length > 0 && (
+                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Skills ({optimizedResume.skills.length} categories)</h3>
+                  {optimizedResume.skills.map((skill, idx) => (
+                    <p key={idx} className="text-gray-700 dark:text-gray-300">{skill.category}: {skill.list.join(', ')}</p>
+                  ))}
+                </div>
+              )}
+              {optimizedResume.certifications && optimizedResume.certifications.length > 0 && (
+                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Certifications ({optimizedResume.certifications.length} entries)</h3>
+                  {optimizedResume.certifications.map((cert, idx) => (
+                    <p key={idx} className="text-gray-700 dark:text-gray-300">{(cert as any).title || cert}</p>
+                  ))}
+                </div>
+              )}
+              {optimizedResume.additionalSections && optimizedResume.additionalSections.length > 0 && (
+                <div className="border border-gray-200 p-4 rounded-lg dark:border-dark-300">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Additional Sections ({optimizedResume.additionalSections.length} entries)</h3>
+                  {optimizedResume.additionalSections.map((section, idx) => (
+                    <p key={idx} className="text-gray-700 dark:text-gray-300">{section.title}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
       case 'final_resume':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Final Resume Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <Sparkles className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Generate Optimized Resume
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Click the button below to generate your final AI-optimized resume based on all the information you've provided.
+            </p>
+            <button onClick={handleOptimize} className="btn-primary w-full flex items-center justify-center space-x-2">
+              <Sparkles className="w-5 h-5" />
+              <span>Generate Final Resume</span>
+            </button>
+          </div>
+        );
       default:
         return <div className="p-6 bg-white rounded-xl shadow-lg">Unknown Section</div>;
     }
@@ -1404,7 +2136,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       <ProjectEnhancement
         isOpen={showProjectEnhancement}
         onClose={() => setShowProjectEnhancement(false)}
-        currentResume={optimizedResume || { name: '', phone: '', email: '', linkedin: '', github: '', education: [], workExperience: [], projects: [], skills: [], certifications: [] }}
+        currentResume={optimizedResume || { name: '', phone: '', email: '', linkedin: '', github: '', education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: [] }}
         jobDescription={jobDescription}
         onProjectsAdded={handleProjectsUpdated}
       />
@@ -1412,7 +2144,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       <ProjectAnalysisModal
         isOpen={showProjectAnalysis}
         onClose={() => setShowProjectAnalysis(false)}
-        resumeData={parsedResumeData || optimizedResume || { name: '', phone: '', email: '', linkedin: '', github: '', education: [], workExperience: [], projects: [], skills: [], certifications: [] }}
+        resumeData={parsedResumeData || optimizedResume || { name: '', phone: '', email: '', linkedin: '', github: '', education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: [] }}
         jobDescription={jobDescription}
         targetRole={targetRole}
         onProjectsUpdated={handleProjectsUpdated}
@@ -1466,7 +2198,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                       </button>
                     </div>
                   ))}
-                  <button onClick={handleRegenerateAIBullets} className="btn-secondary w-full flex items-center justify-center space-x-2">
+                  <button onClick={handleRegenerateAIBullets} className="btn-secondary w-full flex items-center space-x-2">
                     <RotateCcw className="w-5 h-5" />
                     <span>Regenerate Options</span>
                   </button>
