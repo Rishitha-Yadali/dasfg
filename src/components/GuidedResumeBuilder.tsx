@@ -1021,7 +1021,6 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
               className="inline-flex items-center justify-center space-x-3 mx-auto
            font-semibold text-lg text-blue-600 hover:text-blue-800 hover:underline
            transition-all duration-300"
-"
             >
               {isGenerating ? (
                 <>
