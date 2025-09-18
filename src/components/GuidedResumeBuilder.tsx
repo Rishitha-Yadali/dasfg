@@ -368,6 +368,7 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
                   experience: resumeData.workExperience,
                   education: resumeData.education,
                 }
+                'deepseek/deepseek-r1:free'
               );
               if (generatedContent) {
                 userType === 'experienced'
