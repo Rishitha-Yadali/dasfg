@@ -28,9 +28,7 @@ import {
   Star
 } from 'lucide-react';
 import { ResumeData, UserType } from '../types/resume';
-import { ExportOptions, defaultExportOptions } from '../types/export';
 import { ResumePreview } from './ResumePreview';
-import { ResumeExportSettings } from './ResumeExportSettings';
 import { ExportButtons } from './ExportButtons';
 import { LoadingAnimation } from './LoadingAnimation';
 import { generateAtsOptimizedSection } from '../services/geminiService';
@@ -81,7 +79,6 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
   // Core state
   const [currentStep, setCurrentStep] = useState(0);
   const [userType, setUserType] = useState<UserType>('fresher');
-  const [exportOptions, setExportOptions] = useState<ExportOptions>(defaultExportOptions);
   const [isGenerating, setIsGenerating] = useState(false);
   const [buildInterrupted, setBuildInterrupted] = useState(false);
 
@@ -318,28 +315,6 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
     } catch (error) {
       console.error('Error generating complete resume:', error);
       throw error;
-    }
-  };
-
-  const handleExportFile = async (options: ExportOptions, format: 'pdf' | 'word') => {
-    if (!resumeData.name) {
-      onShowAlert('Resume Not Ready', 'Please complete building your resume before exporting.', 'warning');
-      return;
-    }
-
-    try {
-      const { exportToPDF, exportToWord } = await import('../utils/exportUtils');
-      
-      if (format === 'pdf') {
-        await exportToPDF(resumeData, userType, options);
-      } else {
-        await exportToWord(resumeData, userType);
-      }
-      
-      onShowAlert('Export Successful', `Resume exported as ${format.toUpperCase()} successfully!`, 'success');
-    } catch (error) {
-      console.error('Export failed:', error);
-      onShowAlert('Export Failed', `Failed to export resume. Please try again.`, 'error');
     }
   };
 
@@ -919,28 +894,8 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
 
           {resumeData.name ? (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
-                    Resume Preview
-                  </h3>
-                  <ResumePreview resumeData={resumeData} userType={userType} exportOptions={exportOptions} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <Save className="w-5 h-5 mr-2 text-green-600" />
-                    Export Settings
-                  </h3>
-                  <ResumeExportSettings
-                    resumeData={resumeData}
-                    userType={userType}
-                    onExport={handleExportFile}
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-8">
+              <div className="space-y-8">
+                <ResumePreview resumeData={resumeData} userType={userType} />
                 <ExportButtons
                   resumeData={resumeData}
                   userType={userType}
