@@ -36,18 +36,18 @@ const deepCleanComments = (val: any): any => {
     cleanedInput = lines.join('\n');
 
     // 4. Remove excessive newlines
-    cleanedInput = cleanedInput.replace(/\n{3,}/g, '\n\n');
+    cleanedInput = cleanedOut.replace(/\n{3,}/g, '\n\n');
 
     return cleanedInput.trim();
-  };
-  if (typeof val === 'string') return stripLineComments(val);
-  if (Array.isArray(val)) return val.map(deepCleanComments);
-  if (val && typeof val === 'object') {
-    const out: Record<string, any> = {};
-    for (const k of Object.keys(val)) out[k] = deepCleanComments(val[k]);
-    return out;
-  }
-  return val;
+};
+if (typeof val === 'string') return stripLineComments(val);
+if (Array.isArray(val)) return val.map(deepCleanComments);
+if (val && typeof val === 'object') {
+  const out: Record<string, any> = {};
+  for (const k of Object.keys(val)) out[k] = deepCleanComments(val[k]);
+  return out;
+}
+return val;
 };
 
 export const optimizeResume = async (
@@ -601,7 +601,7 @@ Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement
 };
 
 export const generateAtsOptimizedSection = async (
-  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets',
+  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets' | 'certifications' | 'achievements',
   data: any,
   modelOverride?: string 
 ): Promise<string | string[]> => {
@@ -744,6 +744,22 @@ CRITICAL REQUIREMENTS:
 
 Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievement2", "achievement3", "achievement4"]`;
 
+      case 'skillsList':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate a list of skills for a given category based on the user's profile and job description.
+- Category: ${sectionData.category}
+- Existing Skills: ${sectionData.existingSkills || 'None'}
+- User Type: ${sectionData.userType}
+- Job Description: ${sectionData.jobDescription || 'None'}
+
+CRITICAL REQUIREMENTS:
+1. Provide 5-8 specific and relevant skills for the given category.
+2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
+3. Ensure skills are ATS-friendly.
+
+Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
+
       default:
         return `Generate ATS-optimized content for ${type}.`;
     }
@@ -797,14 +813,23 @@ const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 
       result = result.replace(/```json/g, '').replace(/```/g, '').trim();
 
-      if (sectionType === 'workExperienceBullets' || sectionType === 'projectBullets' || sectionType === 'additionalSectionBullets') {
+      // MODIFIED: Consolidated JSON parsing for all array-returning section types
+      if (
+        sectionType === 'workExperienceBullets' ||
+        sectionType === 'projectBullets' ||
+        sectionType === 'additionalSectionBullets' ||
+        sectionType === 'certifications' || // Added for JSON parsing
+        sectionType === 'achievements' ||   // Added for JSON parsing
+        sectionType === 'skillsList'        // Added for JSON parsing
+      ) {
         try {
           return JSON.parse(result);
         } catch {
+          // Fallback to splitting by lines if JSON parsing fails
           return result.split('\n')
             .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
             .filter(line => line.length > 0)
-            .slice(0, 3);
+            .slice(0, 5); // Limit to 5 for fallback, adjust as needed
         }
       }
 
