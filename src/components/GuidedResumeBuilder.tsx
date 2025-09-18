@@ -1,3 +1,4 @@
+```typescript
 // src/components/GuidedResumeBuilder.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -27,7 +28,7 @@ import {
   BookOpen,
   Star
 } from 'lucide-react';
-import { ResumeData, UserType } from '../types/resume';
+import { ResumeData, UserType, AdditionalSection } from '../types/resume'; // Import AdditionalSection
 import { ResumePreview } from './ResumePreview';
 import { ExportButtons } from './ExportButtons';
 import { LoadingAnimation } from './LoadingAnimation';
@@ -98,10 +99,7 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
     projects: [],
     skills: [],
     certifications: [],
-    achievements: [],
-    extraCurricularActivities: [],
-    languagesKnown: [],
-    personalDetails: '',
+    additionalSections: [], // NEW: Initialize additionalSections
     origin: 'guided'
   });
 
@@ -133,6 +131,11 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
   ]);
 
   const [certsForm, setCertsForm] = useState(['']);
+
+  // NEW: State for dynamic additional sections
+  const [additionalSectionsForm, setAdditionalSectionsForm] = useState<AdditionalSection[]>([
+    { title: '', bullets: [''] }
+  ]);
 
   useEffect(() => {
     if (user) {
@@ -310,6 +313,14 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
         .filter(cert => cert.trim())
         .map(cert => ({ title: cert.trim(), description: '' }));
 
+      // NEW: Process additional sections
+      baseResume.additionalSections = additionalSectionsForm
+        .filter(section => section.title && section.bullets.some(b => b.trim()))
+        .map(section => ({
+          title: section.title,
+          bullets: section.bullets.filter(b => b.trim())
+        }));
+
       setResumeData(baseResume);
       setCurrentStep(steps.length - 1); // Move to preview step
     } catch (error) {
@@ -397,6 +408,43 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
     const updated = [...certsForm];
     updated[index] = value;
     setCertsForm(updated);
+  };
+
+  // NEW: Handlers for additional sections
+  const addAdditionalSection = () => {
+    setAdditionalSectionsForm([...additionalSectionsForm, { title: '', bullets: [''] }]);
+  };
+
+  const removeAdditionalSection = (index: number) => {
+    if (additionalSectionsForm.length > 1) {
+      setAdditionalSectionsForm(additionalSectionsForm.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateAdditionalSectionTitle = (index: number, value: string) => {
+    const updated = [...additionalSectionsForm];
+    updated[index] = { ...updated[index], title: value };
+    setAdditionalSectionsForm(updated);
+  };
+
+  const addAdditionalSectionBullet = (sectionIndex: number) => {
+    const updated = [...additionalSectionsForm];
+    updated[sectionIndex].bullets.push('');
+    setAdditionalSectionsForm(updated);
+  };
+
+  const updateAdditionalSectionBullet = (sectionIndex: number, bulletIndex: number, value: string) => {
+    const updated = [...additionalSectionsForm];
+    updated[sectionIndex].bullets[bulletIndex] = value;
+    setAdditionalSectionsForm(updated);
+  };
+
+  const removeAdditionalSectionBullet = (sectionIndex: number, bulletIndex: number) => {
+    const updated = [...additionalSectionsForm];
+    if (updated[sectionIndex].bullets.length > 1) {
+      updated[sectionIndex].bullets.splice(bulletIndex, 1);
+      setAdditionalSectionsForm(updated);
+    }
   };
 
   // Define form steps
@@ -881,6 +929,83 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
       ),
       isValid: () => true // Certifications are optional
     },
+    // NEW: Additional Sections Step
+    {
+      id: 'additionalSections',
+      title: 'Additional Sections',
+      icon: <Star className="w-6 h-6" />,
+      component: (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Custom Sections</h2>
+            <p className="text-gray-600 dark:text-gray-300">Add achievements, awards, languages, or any other custom section</p>
+          </div>
+          {additionalSectionsForm.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="border border-gray-200 rounded-xl p-6 space-y-4 dark:border-dark-300">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Section #{sectionIndex + 1}</h3>
+                {additionalSectionsForm.length > 1 && (
+                  <button
+                    onClick={() => removeAdditionalSection(sectionIndex)}
+                    className="text-red-600 hover:text-red-700 p-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Section Title *</label>
+                  <input
+                    type="text"
+                    value={section.title}
+                    onChange={(e) => updateAdditionalSectionTitle(sectionIndex, e.target.value)}
+                    placeholder="e.g., Awards, Languages, Volunteer Experience"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bullet Points</label>
+                  {section.bullets.map((bullet, bulletIndex) => (
+                    <div key={bulletIndex} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={bullet}
+                        onChange={(e) => updateAdditionalSectionBullet(sectionIndex, bulletIndex, e.target.value)}
+                        placeholder="Describe your achievement or detail"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
+                      />
+                      {section.bullets.length > 1 && (
+                        <button
+                          onClick={() => removeAdditionalSectionBullet(sectionIndex, bulletIndex)}
+                          className="text-red-600 hover:text-red-700 p-2"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addAdditionalSectionBullet(sectionIndex)}
+                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Add Bullet
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={addAdditionalSection}
+            className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors flex items-center justify-center"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Another Custom Section
+          </button>
+        </div>
+      ),
+      isValid: () => true // Additional sections are optional
+    },
     {
       id: 'preview',
       title: 'Preview & Export',
@@ -894,8 +1019,19 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
 
           {resumeData.name ? (
             <>
-              <div className="space-y-8">
-                <ResumePreview resumeData={resumeData} userType={userType} />
+              {/* Keep the main ResumePreview component */}
+              <div className="grid grid-cols-1 gap-8"> {/* Simplified grid, removed lg:grid-cols-2 */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                    Resume Preview
+                  </h3>
+                  <ResumePreview resumeData={resumeData} userType={userType} />
+                </div>
+              </div>
+              
+              {/* Keep the ExportButtons component */}
+              <div className="mt-8">
                 <ExportButtons
                   resumeData={resumeData}
                   userType={userType}
@@ -1076,3 +1212,4 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
     </div>
   );
 };
+```

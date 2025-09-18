@@ -1,3 +1,4 @@
+```typescript
 // src/types/resume.ts
 
 interface Education {
@@ -33,6 +34,12 @@ export interface Certification {
   description: string;
 }
 
+// NEW: Interface for dynamic additional sections
+export interface AdditionalSection {
+  title: string;
+  bullets: string[];
+}
+
 export interface ResumeData {
   name: string;
   phone: string;
@@ -49,10 +56,12 @@ export interface ResumeData {
   skills: Skill[];
   // Updated to allow for both simple strings and structured Certification objects
   certifications: (string | Certification)[];
-  achievements?: string[]; // For freshers - awards, achievements
-  extraCurricularActivities?: string[]; // For freshers - activities, leadership
-  languagesKnown?: string[]; // For freshers - languages spoken
-  personalDetails?: string; // For freshers - personal information
+  // REMOVED: achievements?: string[]; // For freshers - awards, achievements
+  // REMOVED: extraCurricularActivities?: string[]; // For freshers - activities, leadership
+  // REMOVED: languagesKnown?: string[]; // For freshers - languages spoken
+  // REMOVED: personalDetails?: string; // For freshers - personal information
+  // NEW: Dynamic additional sections
+  additionalSections?: AdditionalSection[];
   origin?: string;
 }
 
@@ -192,3 +201,4 @@ export interface DetailedScore {
   recommendations: string[];
   grade: Grade;
 }
+```

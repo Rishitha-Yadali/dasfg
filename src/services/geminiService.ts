@@ -1,5 +1,6 @@
+```typescript
 // src/services/geminiService.ts
-import { ResumeData, UserType } from '../types/resume';
+import { ResumeData, UserType, AdditionalSection } from '../types/resume'; // Import AdditionalSection
 
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
@@ -62,7 +63,8 @@ export const optimizeResume = async (
   userGithub?: string,
   linkedinUrl?: string,
   githubUrl?: string,
-  targetRole?: string
+  targetRole?: string,
+  additionalSections?: AdditionalSection[] // NEW: Add additionalSections parameter
 ): Promise<ResumeData> => {
   const getPromptForUserType = (type: UserType) => {
     if (type === 'experienced') {
@@ -82,7 +84,8 @@ SECTION ORDER FOR EXPERIENCED PROFESSIONALS:
 4. Professional Experience (MOST IMPORTANT)
 5. Projects (if relevant to role)
 6. Certifications
-7. Education (minimal or omit if not required)`;
+7. Education (minimal or omit if not required)
+8. Additional Sections (if provided, with custom titles)`;
     } else if (type === 'student') {
       return `You are a professional resume optimization assistant for COLLEGE STUDENTS. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
 
@@ -104,8 +107,7 @@ SECTION ORDER FOR COLLEGE STUDENTS:
 5. Academic Projects (IMPORTANT)
 6. Internships & Work Experience (if any)
 7. Certifications
-8. Achievements (academic awards, competitions, etc.)
-9. Languages Known (if present in original resume)`;
+8. Additional Sections (if provided, with custom titles)`;
     } else {
       return `You are a professional resume optimization assistant for FRESHERS/NEW GRADUATES. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
 
@@ -125,11 +127,8 @@ SECTION ORDER FOR FRESHERS:
 4. Education (PROMINENT)
 5. Internships & Work Experience (IMPORTANT - includes all internships, trainings, and work)
 6. Academic Projects (IMPORTANT)
-7. Achievements (if present in original resume)
-8. Extra-curricular Activities (if present in original resume)
-9. Certifications
-10. Languages Known (if present in original resume)
-11. Personal Details (if present in original resume)`;
+7. Certifications
+8. Additional Sections (if provided, with custom titles)`;
     }
   };
 
@@ -216,10 +215,11 @@ Rules:
 4. Generate comprehensive skills section based on resume and job description
 5. Only include sections that have meaningful content
 6. If optional sections don't exist in original resume, set them as empty arrays or omit
-7. Ensure all dates are in proper format (e.g., "Jan 2024 – Mar 2024")
+7. Ensure all dates are in proper format (e.g., "Jan 2023 – Mar 2024")
 8. Use professional language and industry-specific keywords from the job description
 9. For LinkedIn and GitHub, use EXACTLY what is provided - empty string if not provided
 10. The "name" field in the JSON should ONLY contain the user's name. The "email", "phone", "linkedin", "github", and "location" fields MUST NOT contain the user's name or any part of it. The user's name should appear ONLY in the dedicated "name" field.
+11. NEW: If 'additionalSections' are provided, include them in the output JSON with their custom titles and optimized bullet points. Apply all bullet point optimization rules to these sections as well.
 
 JSON Structure:
 {
@@ -246,10 +246,9 @@ JSON Structure:
     {"category": "...", "count": 0, "list": ["...", "..."]}
   ],
   "certifications": [{"title": "...", "description": "..."}, "..."],
-  ${userType === 'fresher' || userType === 'student' ? `
-  "achievements": ["...", "..."],
-  
-  "personalDetails": "..."` : ''}
+  "additionalSections": [
+    {"title": "...", "bullets": ["...", "...", "..."]}
+  ]
 }
 Resume:
 ${resume}
@@ -260,7 +259,8 @@ ${jobDescription}
 User Type: ${userType.toUpperCase()}
 
 LinkedIn URL provided: ${linkedinUrl || 'NONE - leave empty'}
-GitHub URL provided: ${githubUrl || 'NONE - leave empty'}`;
+GitHub URL provided: ${githubUrl || 'NONE - leave empty'}
+${additionalSections && additionalSections.length > 0 ? `Additional Sections Provided: ${JSON.stringify(additionalSections)}` : ''}`;
 
   const maxRetries = 5;
   let retryCount = 0;
@@ -376,6 +376,14 @@ GitHub URL provided: ${githubUrl || 'NONE - leave empty'}`;
           );
         }
 
+        // NEW: Handle additionalSections parsing
+        if (parsedResult.additionalSections && Array.isArray(parsedResult.additionalSections)) {
+          parsedResult.additionalSections = parsedResult.additionalSections.filter(
+            (section: any) => section && section.title && section.bullets && section.bullets.length > 0
+          );
+        }
+
+
         parsedResult.name = userName || parsedResult.name || '';
 
         parsedResult.linkedin = userLinkedin || parsedResult.linkedin || '';
@@ -428,7 +436,7 @@ GitHub URL provided: ${githubUrl || 'NONE - leave empty'}`;
 
 // New function for generating ATS-optimized sections in Guided Resume Builder
 export const generateAtsOptimizedSection = async (
-  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList',
+  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets', // NEW: Added additionalSectionBullets
   data: any
 ): Promise<string | string[]> => {
   const getPromptForSection = (type: string, sectionData: any) => {
@@ -514,6 +522,25 @@ CRITICAL ATS OPTIMIZATION RULES:
 
 Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
 
+      case 'additionalSectionBullets': // NEW: Prompt for additional sections
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 3 concise bullet points for a custom resume section based on:
+- Section Title: ${sectionData.title}
+- User Provided Details: ${sectionData.details || 'General information'}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 20 words or less
+2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
+3. Focus on achievements, contributions, or relevant details for the section type
+4. Use industry-standard keywords where applicable
+5. Quantify results where possible
+6. Avoid repetitive words across bullets
+7. Make each bullet distinct and valuable
+
+Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
+
       default:
         return `Generate ATS-optimized content for ${type}.`;
     }
@@ -565,7 +592,7 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
       result = result.replace(/```json/g, '').replace(/```/g, '').trim();
 
       // Try to parse as JSON for bullet points, otherwise return as string
-      if (sectionType === 'workExperienceBullets' || sectionType === 'projectBullets') {
+      if (sectionType === 'workExperienceBullets' || sectionType === 'projectBullets' || sectionType === 'additionalSectionBullets') { // NEW: Added additionalSectionBullets
         try {
           return JSON.parse(result);
         } catch {
@@ -590,3 +617,4 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
 
   throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
 };
+```
