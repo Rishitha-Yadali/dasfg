@@ -489,7 +489,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }, []);
 
   const handleManualProjectSubmit = useCallback(async () => { // Memoize
-    if (!manualProject.title || manualProject.techStack.length === 0 || !parsedResumeData) {
+    if (!manualProject.title || manualProject.techStack.length === 0 || !optimizedResume) { // Changed parsedResumeData to optimizedResume
       alert('Please provide project title and tech stack.');
       return;
     }
@@ -501,7 +501,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         bullets: projectDescriptionText.split('\n').filter(line => line.trim().startsWith('•')).map(line => line.replace('•', '').trim()),
         githubUrl: ''
       };
-      const updatedResume = { ...parsedResumeData, projects: [...(parsedResumeData.projects || []), newProject] };
+      const updatedResume = { ...optimizedResume, projects: [...(optimizedResume.projects || []), newProject] }; // Changed parsedResumeData to optimizedResume
       setShowManualProjectAdd(false);
       const { data: sessionData } = await supabase.auth.getSession();
       if (initialResumeScore) {
@@ -516,7 +516,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     } finally {
       setIsOptimizing(false);
     }
-  }, [manualProject, parsedResumeData, generateProjectDescription, jobDescription, initialResumeScore, proceedWithFinalOptimization]); // Dependencies for memoized function
+  }, [manualProject, optimizedResume, generateProjectDescription, jobDescription, initialResumeScore, proceedWithFinalOptimization]); // Changed parsedResumeData to optimizedResume in dependencies
 
   const generateScoresAfterProjectAdd = useCallback(async (updatedResume: ResumeData, accessToken: string) => { // Memoize
     try {
@@ -659,6 +659,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             isValid = !!optimizedResume.careerObjective && optimizedResume.careerObjective.trim().length > 0;
           }
           break;
+        case 'education':
+          isValid = optimizedResume.education.some(edu => edu.degree.trim() && edu.school.trim() && edu.year.trim());
+          break;
         // Add validation for other sections as they are implemented
         default:
           isValid = true; // Assume valid for unimplemented sections
@@ -679,7 +682,30 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setCurrentSectionIndex(prev => prev - 1);
     }
   };
-  // --- END NEW ---
+
+  // --- Education Section Handlers ---
+  const handleAddEducation = () => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      education: [...(prev?.education || []), { degree: '', school: '', year: '' }]
+    }));
+  };
+
+  const handleUpdateEducation = (index: number, field: keyof ResumeData['education'][0], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedEducation = [...(prev?.education || [])];
+      updatedEducation[index] = { ...updatedEducation[index], [field]: value };
+      return { ...prev!, education: updatedEducation };
+    });
+  };
+
+  const handleRemoveEducation = (index: number) => {
+    setOptimizedResume(prev => {
+      const updatedEducation = (prev?.education || []).filter((_, i) => i !== index);
+      return { ...prev!, education: updatedEducation };
+    });
+  };
+  // --- End Education Section Handlers ---
 
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
@@ -793,7 +819,87 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           </div>
         );
       case 'education':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Education Section (Coming Soon)</div>;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <GraduationCap className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
+              Education
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Add your educational background.
+            </p>
+            {(optimizedResume.education || []).map((edu, index) => (
+              <div key={index} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Entry #{index + 1}</h3>
+                  <button
+                    onClick={() => handleRemoveEducation(index)}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Degree *</label>
+                  <input
+                    type="text"
+                    value={edu.degree}
+                    onChange={(e) => handleUpdateEducation(index, 'degree', e.target.value)}
+                    placeholder="e.g., Bachelor of Technology"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">School/University *</label>
+                  <input
+                    type="text"
+                    value={edu.school}
+                    onChange={(e) => handleUpdateEducation(index, 'school', e.target.value)}
+                    placeholder="e.g., University of Example"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Year *</label>
+                  <input
+                    type="text"
+                    value={edu.year}
+                    onChange={(e) => handleUpdateEducation(index, 'year', e.target.value)}
+                    placeholder="e.g., 2020-2024"
+                    className="input-base"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">CGPA/GPA (Optional)</label>
+                  <input
+                    type="text"
+                    value={edu.cgpa || ''}
+                    onChange={(e) => handleUpdateEducation(index, 'cgpa', e.target.value)}
+                    placeholder="e.g., 8.5/10 or 3.8/4.0"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Location (Optional)</label>
+                  <input
+                    type="text"
+                    value={edu.location || ''}
+                    onChange={(e) => handleUpdateEducation(index, 'location', e.target.value)}
+                    placeholder="e.g., City, State"
+                    className="input-base"
+                  />
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAddEducation} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Education Entry</span>
+            </button>
+          </div>
+        );
       case 'work_experience':
         return <div className="p-6 bg-white rounded-xl shadow-lg">Work Experience Section (Coming Soon)</div>;
       case 'projects':
@@ -821,7 +927,43 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         {/* Removed the "Back to Home" button from here as it will be part of the navigation */}
 
         <div className="max-w-7xl mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6">
-          {/* Left Column: Resume Preview & Export Buttons */}
+          {/* Left Column: Guided Builder Sections & Navigation */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Section Header/Progress */}
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                Guided Resume Builder
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Step {currentSectionIndex + 1} of {resumeSections.length}: {resumeSections[currentSectionIndex].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </p>
+            </div>
+
+            {/* Render Current Section */}
+            {renderCurrentSection()}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between items-center bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+              <button
+                onClick={handlePreviousSection}
+                disabled={currentSectionIndex === 0}
+                className="btn-secondary flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Previous</span>
+              </button>
+              <button
+                onClick={handleNextSection}
+                // The disabled state will now be handled by the validation inside handleNextSection
+                className="btn-primary flex items-center space-x-2"
+              >
+                <span>Next</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Resume Preview & Export Buttons */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl">
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
@@ -857,42 +999,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                   Complete your resume to enable export.
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Right Column: Guided Builder Sections & Navigation */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Section Header/Progress */}
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Guided Resume Builder
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Step {currentSectionIndex + 1} of {resumeSections.length}: {resumeSections[currentSectionIndex].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </p>
-            </div>
-
-            {/* Render Current Section */}
-            {renderCurrentSection()}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between items-center bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
-              <button
-                onClick={handlePreviousSection}
-                disabled={currentSectionIndex === 0}
-                className="btn-secondary flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Previous</span>
-              </button>
-              <button
-                onClick={handleNextSection}
-                // The disabled state will now be handled by the validation inside handleNextSection
-                className="btn-primary flex items-center space-x-2"
-              >
-                <span>Next</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
