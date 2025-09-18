@@ -1239,7 +1239,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   // --- End Objective/Summary AI Generation Handlers ---
 
   // --- Review Section State ---
-  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
+
 
   const toggleReviewSection = (sectionKey: string) => {
     setExpandedReviewSections(prev => {
