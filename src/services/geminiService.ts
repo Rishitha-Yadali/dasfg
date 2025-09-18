@@ -561,6 +561,7 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
         },
         body: JSON.stringify({
           model: modelOverride || 'google/gemini-flash-1.5',
+          console.log("Sending request to OpenRouter with model:", modelToSend);
           messages: [{ role: 'user', content: prompt }]
         })
       });
