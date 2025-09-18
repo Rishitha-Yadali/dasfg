@@ -62,8 +62,7 @@ export const optimizeResume = async (
   linkedinUrl?: string,
   githubUrl?: string,
   targetRole?: string,
-  additionalSections?: AdditionalSection[],
-  modelOverride?: string // Add this new parameter
+  additionalSections?: AdditionalSection[] // NEW: Add additionalSections parameter
 ): Promise<ResumeData> => {
   const getPromptForUserType = (type: UserType) => {
     if (type === 'experienced') {
@@ -276,14 +275,13 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
           'X-Title': 'PrimoBoost AI'
         },
         body: JSON.stringify({
-          model: modelOverride || 'google/gemini-1.5-flash', // Use modelOverride or fallback
+          model: 'google/gemini-flash-1.5',
           messages: [{ role: 'user', content: promptContent }]
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenRouter API error response:', response.status, errorText); // Log API error response
         if (response.status === 401) {
           throw new Error('Invalid API key. Please check your OpenRouter API key configuration.');
         } else if (response.status === 429 || response.status >= 500) {
@@ -299,7 +297,6 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
 
       const data = await response.json();
       let result = data?.choices?.[0]?.message?.content;
-      console.log('GeminiService: Raw AI result:', result); // Log raw AI result
       if (!result) throw new Error('No response content from OpenRouter API');
 
       const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
@@ -546,7 +543,6 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
   };
 
   const prompt = getPromptForSection(sectionType, data);
-  console.log('GeminiService: Sending prompt for', sectionType, ':', prompt); // Log the prompt
 
   const maxRetries = 3;
   let retryCount = 0;
@@ -563,18 +559,17 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
           'X-Title': 'PrimoBoost AI'
         },
         body: JSON.stringify({
-          model: 'google/gemini-1.5-flash',
+          model: 'google/gemini-flash-1.5',
           messages: [{ role: 'user', content: prompt }]
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenRouter API error response:', response.status, errorText); // Log API error response
         if (response.status === 429 || response.status >= 500) {
           retryCount++;
           if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
-          await new Promise((r) => setTimeout(r, delay));
+          await new Promise(r => setTimeout(r, delay));
           delay *= 2;
           continue;
         } else {
@@ -584,7 +579,6 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
 
       const responseData = await response.json();
       let result = responseData?.choices?.[0]?.message?.content;
-      console.log('GeminiService: Raw AI result:', result); // Log raw AI result
       
       if (!result) {
         throw new Error('No response content from OpenRouter API');
@@ -593,39 +587,19 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
       result = result.replace(/```json/g, '').replace(/```/g, '').trim();
 
       if (sectionType === 'workExperienceBullets' || sectionType === 'projectBullets' || sectionType === 'additionalSectionBullets') {
-        console.log('GeminiService: Attempting to parse JSON for bullets:', result); // Log before parsing
         try {
           return JSON.parse(result);
-        } catch (parseError) {
-          console.error('GeminiService: JSON parsing error for bullets:', parseError); // Log parsing error
-          console.error('GeminiService: Raw result that failed parsing:', result); // Log raw result that failed parsing
+        } catch {
           return result.split('\n')
             .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
             .filter(line => line.length > 0)
             .slice(0, 3);
         }
       }
-      
-      console.log('GeminiService: Attempting to parse JSON for text:', result); // Log before parsing
-      try {
-        return JSON.parse(result); // This line is for non-bullet sections that expect JSON
-      } catch (parseError) {
-        console.error('GeminiService: JSON parsing error for text:', parseError); // Log parsing error
-        console.error('GeminiService: Raw result that failed parsing:', result); // Log raw result that failed parsing
-        throw new Error('Invalid JSON response from OpenRouter API');
-      }
+
+      return result;
     } catch (error: any) {
       if (retryCount === maxRetries - 1) {
-        // Fallback for careerObjective if generation fails
-        if (sectionType === 'careerObjective') {
-          console.warn('GeminiService: Falling back to default career objective due to repeated errors.'); // Log fallback
-          return "Highly motivated and results-oriented individual seeking an entry-level position to apply strong analytical and problem-solving skills in a dynamic environment.";
-        }
-        // Fallback for summary if generation fails
-        if (sectionType === 'summary') {
-          console.warn('GeminiService: Falling back to default professional summary due to repeated errors.'); // Log fallback
-          return "Experienced professional with a proven track record of success in driving results and leading cross-functional teams. Seeking to leverage expertise in a challenging role.";
-        }
         throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
       }
       retryCount++;
@@ -636,3 +610,4 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
 
   throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
 };
+
