@@ -1,4 +1,3 @@
-```typescript
 // src/services/geminiService.ts
 import { ResumeData, UserType, AdditionalSection } from '../types/resume'; // Import AdditionalSection
 
@@ -16,7 +15,6 @@ const deepCleanComments = (val: any): any => {
     cleanedInput = cleanedInput.replace(/\/\*[\s\S]*?\*\//g, '');
 
     // 2. Remove specific "// Line XXX" comments anywhere in the string
-    // This regex targets "// Line" followed by numbers and optional spaces, then removes it.
     cleanedInput = cleanedInput.replace(/\/\/\s*Line\s*\d+\s*/g, '');
 
     // 3. Process line-by-line for traditional single-line comments (// at start or mid-line)
@@ -68,7 +66,7 @@ export const optimizeResume = async (
 ): Promise<ResumeData> => {
   const getPromptForUserType = (type: UserType) => {
     if (type === 'experienced') {
-              return `You are a professional resume optimization assistant for EXPERIENCED PROFESSIONALS. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
+      return `You are a professional resume optimization assistant for EXPERIENCED PROFESSIONALS. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
 
 EXPERIENCED PROFESSIONAL REQUIREMENTS:
 1. MUST include a compelling Professional Summary (2-3 lines highlighting key experience and value proposition)
@@ -277,7 +275,7 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
           'X-Title': 'PrimoBoost AI'
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'google/gemini-1.5-flash',
           messages: [{ role: 'user', content: promptContent }]
         })
       });
@@ -376,7 +374,6 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
           );
         }
 
-        // NEW: Handle additionalSections parsing
         if (parsedResult.additionalSections && Array.isArray(parsedResult.additionalSections)) {
           parsedResult.additionalSections = parsedResult.additionalSections.filter(
             (section: any) => section && section.title && section.bullets && section.bullets.length > 0
@@ -434,9 +431,8 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
   throw new Error(`Failed to optimize resume after ${maxRetries} attempts.`);
 };
 
-// New function for generating ATS-optimized sections in Guided Resume Builder
 export const generateAtsOptimizedSection = async (
-  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets', // NEW: Added additionalSectionBullets
+  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets',
   data: any
 ): Promise<string | string[]> => {
   const getPromptForSection = (type: string, sectionData: any) => {
@@ -522,7 +518,7 @@ CRITICAL ATS OPTIMIZATION RULES:
 
 Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
 
-      case 'additionalSectionBullets': // NEW: Prompt for additional sections
+      case 'additionalSectionBullets':
         return `You are an expert resume writer specializing in ATS optimization.
 
 Generate exactly 3 concise bullet points for a custom resume section based on:
@@ -563,7 +559,7 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
           'X-Title': 'PrimoBoost AI'
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'google/gemini-1.5-flash',
           messages: [{ role: 'user', content: prompt }]
         })
       });
@@ -588,15 +584,12 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
         throw new Error('No response content from OpenRouter API');
       }
 
-      // Clean response
       result = result.replace(/```json/g, '').replace(/```/g, '').trim();
 
-      // Try to parse as JSON for bullet points, otherwise return as string
-      if (sectionType === 'workExperienceBullets' || sectionType === 'projectBullets' || sectionType === 'additionalSectionBullets') { // NEW: Added additionalSectionBullets
+      if (sectionType === 'workExperienceBullets' || sectionType === 'projectBullets' || sectionType === 'additionalSectionBullets') {
         try {
           return JSON.parse(result);
         } catch {
-          // If JSON parsing fails, split by lines and clean up
           return result.split('\n')
             .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
             .filter(line => line.length > 0)
@@ -617,4 +610,3 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
 
   throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
 };
-```
