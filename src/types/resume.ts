@@ -56,10 +56,6 @@ export interface ResumeData {
   skills: Skill[];
   // Updated to allow for both simple strings and structured Certification objects
   certifications: (string | Certification)[];
-  // REMOVED: achievements?: string[]; // For freshers - awards, achievements
-  // REMOVED: extraCurricularActivities?: string[]; // For freshers - activities, leadership
-  // REMOVED: languagesKnown?: string[]; // For freshers - languages spoken
-  // REMOVED: personalDetails?: string; // For freshers - personal information
   // NEW: Dynamic additional sections
   additionalSections?: AdditionalSection[];
   origin?: string;
