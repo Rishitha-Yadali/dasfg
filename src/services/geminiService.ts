@@ -560,7 +560,7 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
           'X-Title': 'PrimoBoost AI'
         },
         body: JSON.stringify({
-          model: 'google/gemini-flash-1.5',
+          model: modelOverride || 'google/gemini-flash-1.5',
           messages: [{ role: 'user', content: prompt }]
         })
       });
