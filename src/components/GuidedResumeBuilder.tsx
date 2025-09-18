@@ -585,12 +585,13 @@ const generateContent = useCallback(
               <button
                 onClick={async () => {
                   const generatedBullets = await generateContent('workExperienceBullets', {
-                    role: exp.role,
-                    company: exp.company,
-                    year: exp.year,
-                    description: exp.bullets.join(' '),
-                    userType,
-                  });
+  role: exp.role,
+  company: exp.company,
+  year: exp.year,
+  description: exp.bullets.join(' '),
+  userType,
+}, 'deepseek/deepseek-r1:free');
+
                   if (generatedBullets && Array.isArray(generatedBullets)) {
                     const updated = [...resumeData.workExperience];
                     updated[expIndex].bullets = generatedBullets;
