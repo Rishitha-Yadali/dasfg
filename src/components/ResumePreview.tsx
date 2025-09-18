@@ -251,7 +251,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
       case 'summary':
         // Conditional logic for 'Professional Summary' or 'Career Objective' based on userType
         if (userType === 'student' || userType === 'fresher') {
-          if (!resumeData.careerObjective || resumeData.careerObjective.trim() === '') return null;
+          if (!resumeData.careerObjective || (resumeData.careerObjective || '').trim() === '') return null;
           return (
             <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
               <h2 style={sectionTitleStyle}>
@@ -259,12 +259,12 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
               </h2>
               {/* No underline for Career Objective as per PDF export */}
               <p style={{ ...bodyTextStyle, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
-                {resumeData.careerObjective}
+                {resumeData.careerObjective || ''}
               </p>
             </div>
           );
         } else { // This will now only be for 'experienced'
-          if (!resumeData.summary || resumeData.summary.trim() === '') return null;
+          if (!resumeData.summary || (resumeData.summary || '').trim() === '') return null;
           return (
             <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
               <h2 style={sectionTitleStyle}>
@@ -273,7 +273,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
               {/* Underline only for Professional Summary */}
               <div style={sectionUnderlineStyle}></div>
               <p style={{ ...bodyTextStyle, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
-                {resumeData.summary}
+                {resumeData.summary || ''}
               </p>
             </div>
           );
