@@ -1016,11 +1016,11 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
               You're all set! Review your details and generate your ATS-optimized resume.
             </p>
             <button
-              onClick={handleGenerateResume}
-              disabled={isGenerating}
-              className="inline-flex items-center justify-center space-x-3 mx-auto
-           font-semibold text-lg text-blue-600 hover:text-blue-800 hover:underline
-           transition-all duration-300"
+              type="button"
+onClick={handleGenerateResume}
+disabled={isGenerating}
+className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 mx-auto shadow-xl hover:shadow-2xl btn-primary"
+
             >
               {isGenerating ? (
                 <>
