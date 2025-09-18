@@ -244,9 +244,9 @@ JSON Structure:
     {"category": "...", "count": 0, "list": ["...", "..."]}
   ],
   "certifications": [{"title": "...", "description": "..."}, "..."],
-  "additionalSections": [
-    {"title": "...", "bullets": ["...", "...", "..."]}
-  ]
+  ${additionalSections && additionalSections.length > 0 ? '"additionalSections": [' : ''}
+  ${additionalSections && additionalSections.length > 0 ? '{"title": "...", "bullets": ["...", "...", "..."]}' : ''}
+  ${additionalSections && additionalSections.length > 0 ? ']' : ''}
 }
 Resume:
 ${resume}
@@ -431,6 +431,175 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
   throw new Error(`Failed to optimize resume after ${maxRetries} attempts.`);
 };
 
+// New function for generating multiple variations
+export const generateMultipleAtsVariations = async (
+  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'certifications' | 'achievements' | 'additionalSectionBullets',
+  data: any,
+  modelOverride?: string,
+  variationCount: number = 3
+): Promise<string[]> => {
+  const getPromptForMultipleVariations = (type: string, sectionData: any, count: number) => {
+    const baseInstructions = `
+CRITICAL ATS OPTIMIZATION RULES:
+1. Use strong action verbs and industry keywords
+2. Focus on quantifiable achievements and impact
+3. Keep content concise and ATS-friendly
+4. Avoid personal pronouns ("I", "my")
+5. Make each variation distinctly different in style and approach
+`;
+
+    switch (type) {
+      case 'summary':
+        return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
+
+Generate ${count} distinctly different professional summary variations based on:
+- User Type: ${sectionData.userType}
+- Target Role: ${sectionData.targetRole || 'General Professional Role'}
+- Experience: ${JSON.stringify(sectionData.experience || [])}
+
+${baseInstructions}
+
+Each summary should be 2-3 sentences (50-80 words max) and have a different focus:
+- Variation 1: Achievement-focused with metrics
+- Variation 2: Skills and expertise-focused
+- Variation 3: Leadership and impact-focused
+
+Return ONLY a JSON array with exactly ${count} variations: ["summary1", "summary2", "summary3"]`;
+
+      case 'careerObjective':
+        return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
+
+Generate ${count} distinctly different career objective variations based on:
+- User Type: ${sectionData.userType}
+- Target Role: ${sectionData.targetRole || 'Entry-level Professional Position'}
+- Education: ${JSON.stringify(sectionData.education || [])}
+
+${baseInstructions}
+
+Each objective should be 2 sentences (30-50 words max) and have a different approach:
+- Variation 1: Learning and growth-focused
+- Variation 2: Skills and contribution-focused
+- Variation 3: Career goals and enthusiasm-focused
+
+Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
+
+      case 'certifications':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate ${count} different certification variations relevant to:
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Current Skills: ${JSON.stringify(sectionData.skills || [])}
+- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
+
+${baseInstructions}
+
+Each variation should include 3-5 relevant certifications with brief descriptions:
+- Variation 1: Industry-standard certifications
+- Variation 2: Technology-specific certifications
+- Variation 3: Leadership and management certifications
+
+Return ONLY a JSON array with exactly ${count} certification lists: [["cert1", "cert2"], ["cert3", "cert4"], ["cert5", "cert6"]]`;
+
+      case 'achievements':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate ${count} different achievement variations based on:
+- User Type: ${sectionData.userType}
+- Experience Level: ${sectionData.experienceLevel || 'Professional'}
+- Context: ${sectionData.context || 'General achievements'}
+
+${baseInstructions}
+
+Each variation should include 3-4 quantified achievements:
+- Variation 1: Performance and results-focused
+- Variation 2: Leadership and team impact-focused
+- Variation 3: Innovation and process improvement-focused
+
+Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement1", "achievement2"], ["achievement3", "achievement4"], ["achievement5", "achievement6"]]`;
+
+      default:
+        return `Generate ${count} ATS-optimized variations for ${type}.`;
+    }
+  };
+
+  const prompt = getPromptForMultipleVariations(sectionType, data, variationCount);
+
+  const maxRetries = 3;
+  let retryCount = 0;
+  let delay = 1000;
+
+  while (retryCount < maxRetries) {
+    try {
+      const modelToSend = modelOverride || 'google/gemini-flash-1.5';
+      console.log("[MULTIPLE_VARIATIONS_CALL] Sending request to OpenRouter with model:", modelToSend);
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://primoboost.ai',
+          'X-Title': 'PrimoBoost AI'
+        },
+        body: JSON.stringify({
+          model: modelToSend,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 429 || response.status >= 500) {
+          retryCount++;
+          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2;
+          continue;
+        } else {
+          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+      }
+
+      const responseData = await response.json();
+      let result = responseData?.choices?.[0]?.message?.content;
+      
+      if (!result) {
+        throw new Error('No response content from OpenRouter API');
+      }
+
+      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      try {
+        const parsedResult = JSON.parse(result);
+        if (Array.isArray(parsedResult)) {
+          return parsedResult.slice(0, variationCount);
+        } else {
+          // Fallback: split by lines if not properly formatted JSON array
+          return result.split('\n')
+            .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+            .filter(line => line.length > 0)
+            .slice(0, variationCount);
+        }
+      } catch {
+        // Fallback parsing
+        return result.split('\n')
+          .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+          .filter(line => line.length > 0)
+          .slice(0, variationCount);
+      }
+    } catch (error: any) {
+      if (retryCount === maxRetries - 1) {
+        throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
+      }
+      retryCount++;
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+
+  throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
+};
+
 export const generateAtsOptimizedSection = async (
   sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets',
   data: any,
@@ -538,6 +707,43 @@ CRITICAL ATS OPTIMIZATION RULES:
 
 Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
 
+      case 'certifications':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 5 relevant certifications for a professional based on:
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Current Skills: ${JSON.stringify(sectionData.skills || [])}
+- User Type: ${sectionData.userType}
+- Industry Context: ${sectionData.jobDescription || 'General professional context'}
+
+CRITICAL REQUIREMENTS:
+1. Each certification should be industry-relevant and realistic
+2. Include both technical and professional certifications
+3. Focus on certifications that add value to the target role
+4. Use actual certification names from recognized organizations
+5. Include a mix of beginner and advanced certifications
+
+Return ONLY a JSON array with exactly 5 certifications: ["cert1", "cert2", "cert3", "cert4", "cert5"]`;
+
+      case 'achievements':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 4 quantified achievements based on:
+- User Type: ${sectionData.userType}
+- Experience Level: ${sectionData.experienceLevel || 'Professional'}
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Context: ${sectionData.context || 'General professional achievements'}
+
+CRITICAL REQUIREMENTS:
+1. Each achievement MUST be quantified with specific metrics
+2. Start with strong action verbs (Achieved, Increased, Led, Improved, etc.)
+3. Focus on results and impact, not just activities
+4. Make achievements relevant to the target role
+5. Include different types of achievements (performance, leadership, innovation, efficiency)
+6. Keep each achievement to 20 words or less
+
+Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievement2", "achievement3", "achievement4"]`;
+
       default:
         return `Generate ATS-optimized content for ${type}.`;
     }
@@ -615,4 +821,3 @@ const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 
   throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
 };
-

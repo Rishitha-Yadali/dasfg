@@ -58,6 +58,8 @@ export interface ResumeData {
   certifications: (string | Certification)[];
   // NEW: Dynamic additional sections
   additionalSections?: AdditionalSection[];
+  // NEW: Add achievements field
+  achievements?: string[];
   origin?: string;
 }
 

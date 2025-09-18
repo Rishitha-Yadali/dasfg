@@ -1,40 +1,44 @@
 // src/components/GuidedResumeBuilder.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   ArrowLeft,
-  CheckCircle,
-  Plus,
-  X,
   User,
   Briefcase,
   GraduationCap,
   Code,
-  Target,
   Award,
+  Target,
   Sparkles,
-  ArrowRight,
-  FileText,
   Loader2,
+  Plus,
+  X,
+  Edit3,
+  Save,
+  CheckCircle,
   AlertCircle,
-  Trash2,
+  RefreshCw,
+  Zap,
+  Copy,
+  Heart,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb
 } from 'lucide-react';
-import { LoadingAnimation } from './LoadingAnimation';
-import { optimizeResume, generateAtsOptimizedSection } from '../services/geminiService';
-import { getDetailedResumeScore, generateAfterScore } from '../services/scoringService';
-import { paymentService } from '../services/paymentService';
-import { ResumeData, UserType, DetailedScore, AdditionalSection } from '../types/resume'; // Import AdditionalSection
-import { MissingSectionsModal } from './MissingSectionsModal';
+import { ResumeData, UserType, AdditionalSection, Certification } from '../types/resume';
+import { generateAtsOptimizedSection, generateMultipleAtsVariations } from '../services/geminiService';
 import { ResumePreview } from './ResumePreview';
-import { ResumeExportSettings } from './ResumeExportSettings';
-import { ExportOptions, defaultExportOptions } from '../types/export';
-import { exportToPDF, exportToWord } from '../utils/exportUtils';
+import { ExportButtons } from './ExportButtons';
+import { paymentService } from '../services/paymentService';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import type { Subscription } from '../types/payment';
 
 interface GuidedResumeBuilderProps {
+  onNavigateBack: () => void;
   isAuthenticated: boolean;
   onShowAuth: () => void;
+  userSubscription: Subscription | null;
   onShowSubscriptionPlans: (featureId?: string) => void;
   onShowAlert: (
     title: string,
@@ -43,20 +47,18 @@ interface GuidedResumeBuilderProps {
     actionText?: string,
     onAction?: () => void
   ) => void;
-  onNavigateBack: () => void;
-  userSubscription: any;
   refreshUserSubscription: () => Promise<void>;
   toolProcessTrigger: (() => void) | null;
   setToolProcessTrigger: React.Dispatch<React.SetStateAction<(() => void) | null>>;
 }
 
 export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
+  onNavigateBack,
   isAuthenticated,
   onShowAuth,
+  userSubscription,
   onShowSubscriptionPlans,
   onShowAlert,
-  onNavigateBack,
-  userSubscription,
   refreshUserSubscription,
   toolProcessTrigger,
   setToolProcessTrigger,
@@ -64,1212 +66,1448 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // --- State for Resume Data ---
+  // Core resume data state
   const [resumeData, setResumeData] = useState<ResumeData>({
-    name: user?.name || '',
-    phone: user?.phone || '',
-    email: user?.email || '',
-    linkedin: user?.linkedin || '',
-    github: user?.github || '',
+    name: '',
+    phone: '',
+    email: '',
+    linkedin: '',
+    github: '',
     location: '',
     targetRole: '',
-    summary: '',
-    careerObjective: '',
-    education: [],
-    workExperience: [],
-    projects: [],
-    skills: [],
+    education: [{ degree: '', school: '', year: '', cgpa: '', location: '' }],
+    workExperience: [{ role: '', company: '', year: '', bullets: [''] }],
+    projects: [{ title: '', bullets: [''] }],
+    skills: [{ category: '', count: 0, list: [] }],
     certifications: [],
-    additionalSections: [], // NEW: Initialize additionalSections
+    additionalSections: [],
+    origin: 'guided'
   });
 
-  // --- State for Wizard Flow ---
-  const [currentStep, setCurrentStep] = useState(0);
   const [userType, setUserType] = useState<UserType>('fresher');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isCalculatingScore, setIsCalculatingScore] = useState(false);
-  const [optimizedResume, setOptimizedResume] = useState<ResumeData | null>(null);
-  const [finalDetailedScore, setFinalDetailedScore] = useState<DetailedScore | null>(null);
-  const [initialDetailedScore, setInitialDetailedScore] = useState<DetailedScore | null>(null);
-  const [exportOptions, setExportOptions] = useState<ExportOptions>(defaultExportOptions);
-  const [isExportingPDF, setIsExportingPDF] = useState(false);
-  const [isExportingWord, setIsExportingWord] = useState(false);
-  const [exportStatus, setExportStatus] = useState<{
-    type: 'pdf' | 'word' | null;
-    status: 'success' | 'error' | null;
-    message: string;
-  }>({ type: null, status: null, message: '' });
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isGeneratingAIContent, setIsGeneratingAIContent] = useState(false);
+  const [buildInterrupted, setBuildInterrupted] = useState(false);
 
-  // --- Missing Sections Modal State ---
-  const [showMissingSectionsModal, setShowMissingSectionsModal] = useState(false);
-  const [missingSections, setMissingSections] = useState<string[]>([]);
-  const [pendingResumeData, setPendingResumeData] = useState<ResumeData | null>(null);
+  // Multiple variations state
+  const [summaryVariations, setSummaryVariations] = useState<string[]>([]);
+  const [objectiveVariations, setObjectiveVariations] = useState<string[]>([]);
+  const [certificationsVariations, setCertificationsVariations] = useState<string[][]>([]);
+  const [achievementsVariations, setAchievementsVariations] = useState<string[][]>([]);
+  
+  // Selection state for variations
+  const [selectedSummaryIndex, setSelectedSummaryIndex] = useState<number>(0);
+  const [selectedObjectiveIndex, setSelectedObjectiveIndex] = useState<number>(0);
+  const [selectedCertificationsIndex, setSelectedCertificationsIndex] = useState<number>(0);
+  const [selectedAchievementsIndex, setSelectedAchievementsIndex] = useState<number>(0);
 
-  // --- Helper to update nested state ---
-  const updateResumeData = useCallback((field: keyof ResumeData, value: any) => {
-    setResumeData((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  // Additional sections state
+  const [customSectionTitle, setCustomSectionTitle] = useState('');
+  const [customSectionDetails, setCustomSectionDetails] = useState('');
+  const [newSkillCategory, setNewSkillCategory] = useState('');
+  const [newSkillItems, setNewSkillItems] = useState('');
 
-  // --- AI Generation Function (simplified for brevity, full logic is in geminiService) ---
-const generateContent = useCallback(
-  async (sectionType: string, data: any, modelToUse?: string) => { // <-- Added modelToUse
+  // UI state
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['basic-info']));
+  const [showVariationsFor, setShowVariationsFor] = useState<string | null>(null);
+
+  // Pre-fill user data when authenticated
+  useEffect(() => {
+    if (user) {
+      setResumeData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        linkedin: user.linkedin || '',
+        github: user.github || '',
+      }));
+    }
+  }, [user]);
+
+  // Generate content with loading state management
+  const generateContent = useCallback(
+    async (sectionType: string, data: any, modelToUse?: string, getMultiple: boolean = false): Promise<string | string[]> => {
+      setIsGeneratingAIContent(true);
+      try {
+        if (getMultiple) {
+          return await generateMultipleAtsVariations(
+            sectionType as any,
+            data,
+            modelToUse || 'deepseek/deepseek-r1:free',
+            3
+          );
+        } else {
+          return await generateAtsOptimizedSection(sectionType as any, data, modelToUse || 'deepseek/deepseek-r1:free');
+        }
+      } catch (error: any) {
+        onShowAlert('Generation Failed', `Failed to generate ${sectionType}: ${error.message}`, 'error');
+        throw error;
+      } finally {
+        setIsGeneratingAIContent(false);
+      }
+    },
+    [onShowAlert]
+  );
+
+  // Check credits and handle guided builds
+  const checkGuidedBuildCredits = useCallback(async (): Promise<boolean> => {
+    if (!isAuthenticated || !user) {
+      onShowAlert('Authentication Required', 'Please sign in to use the guided resume builder.', 'error', 'Sign In', onShowAuth);
+      return false;
+    }
+
+    const latestUserSubscription = await paymentService.getUserSubscription(user.id);
+    if (!latestUserSubscription || (latestUserSubscription.guidedBuildsTotal - latestUserSubscription.guidedBuildsUsed) <= 0) {
+      const planDetails = paymentService.getPlanById(latestUserSubscription?.planId);
+      const planName = planDetails?.name || 'your current plan';
+      const guidedBuildsTotal = planDetails?.guidedBuilds || 0;
+
+      setBuildInterrupted(true);
+      onShowAlert(
+        'Guided Build Credits Exhausted',
+        `You have used all your ${guidedBuildsTotal} Guided Resume Builds from ${planName}. Please upgrade your plan to continue building resumes.`,
+        'warning',
+        'Upgrade Plan',
+        () => onShowSubscriptionPlans('guided-builder')
+      );
+      return false;
+    }
+
+    return true;
+  }, [isAuthenticated, user, onShowAuth, onShowAlert, onShowSubscriptionPlans]);
+
+  // Generate multiple variations for a section
+  const generateVariations = async (sectionType: string, sectionData: any) => {
+    if (!(await checkGuidedBuildCredits())) return;
+
     try {
-      const result = await generateAtsOptimizedSection(sectionType, data, modelToUse); // <-- Pass it here
-      return result;
+      const variations = await generateContent(sectionType, sectionData, 'deepseek/deepseek-r1:free', true) as string[];
+      
+      switch (sectionType) {
+        case 'summary':
+          setSummaryVariations(variations);
+          setShowVariationsFor('summary');
+          break;
+        case 'careerObjective':
+          setObjectiveVariations(variations);
+          setShowVariationsFor('careerObjective');
+          break;
+        case 'certifications':
+          setCertificationsVariations(variations as string[][]);
+          setShowVariationsFor('certifications');
+          break;
+        case 'achievements':
+          setAchievementsVariations(variations as string[][]);
+          setShowVariationsFor('achievements');
+          break;
+      }
+    } catch (error) {
+      console.error(`Error generating ${sectionType} variations:`, error);
+    }
+  };
+
+  // Select a variation and apply it
+  const selectVariation = (sectionType: string, index: number) => {
+    switch (sectionType) {
+      case 'summary':
+        setSelectedSummaryIndex(index);
+        setResumeData(prev => ({ ...prev, summary: summaryVariations[index] }));
+        break;
+      case 'careerObjective':
+        setSelectedObjectiveIndex(index);
+        setResumeData(prev => ({ ...prev, careerObjective: objectiveVariations[index] }));
+        break;
+      case 'certifications':
+        setSelectedCertificationsIndex(index);
+        const selectedCerts = certificationsVariations[index].map(cert => ({ title: cert, description: '' }));
+        setResumeData(prev => ({ ...prev, certifications: selectedCerts }));
+        break;
+      case 'achievements':
+        setSelectedAchievementsIndex(index);
+        // Note: achievements would need to be added to ResumeData type if not already present
+        break;
+    }
+    setShowVariationsFor(null);
+  };
+
+  // Generate single AI content for bullets
+  const generateBullets = async (sectionType: string, index: number, sectionData: any) => {
+    if (!(await checkGuidedBuildCredits())) return;
+
+    try {
+      const bullets = await generateContent(sectionType, sectionData, 'deepseek/deepseek-r1:free') as string[];
+      
+      if (sectionType === 'workExperienceBullets') {
+        const updated = [...resumeData.workExperience];
+        updated[index].bullets = bullets;
+        setResumeData(prev => ({ ...prev, workExperience: updated }));
+      } else if (sectionType === 'projectBullets') {
+        const updated = [...resumeData.projects];
+        updated[index].bullets = bullets;
+        setResumeData(prev => ({ ...prev, projects: updated }));
+      }
     } catch (error) {
       console.error(`Error generating ${sectionType}:`, error);
-      onShowAlert(
-        'AI Generation Failed',
-        `Could not generate content for ${sectionType}. Please try again.`,
-        'error'
-      );
-      return null;
     }
-  },
-  [onShowAlert] // don't include modelToUse in dependencies
-);
+  };
 
-
-
-  // --- Handle AI-powered optimization ---
-  const handleGenerateResume = useCallback(async () => {
-    if (!isAuthenticated) {
-      onShowAuth();
-      return;
-    }
-    if (!userSubscription || (userSubscription.guidedBuildsTotal - userSubscription.guidedBuildsUsed) <= 0) {
-      onShowSubscriptionPlans('guided-builder');
+  // Add custom section
+  const addCustomSection = async () => {
+    if (!customSectionTitle.trim() || !customSectionDetails.trim()) {
+      onShowAlert('Missing Information', 'Please provide both section title and details.', 'warning');
       return;
     }
 
-    setIsGenerating(true);
+    if (!(await checkGuidedBuildCredits())) return;
+
     try {
-      // Ensure user data is up-to-date for the AI call
-      const currentUserName = user?.name || '';
-      const currentUserEmail = user?.email || '';
-      const currentUserPhone = user?.phone || '';
-      const currentUserLinkedin = user?.linkedin || '';
-      const currentUserGithub = user?.github || '';
+      const bullets = await generateContent('additionalSectionBullets', {
+        title: customSectionTitle,
+        details: customSectionDetails,
+        userType: userType,
+      }, 'deepseek/deepseek-r1:free') as string[];
 
-      const generatedResume = await optimizeResume(
-        JSON.stringify(resumeData), // Pass current resumeData as string
-        '', // No job description for guided builder
-        userType,
-        currentUserName,
-        currentUserEmail,
-        currentUserPhone,
-        currentUserLinkedin,
-        currentUserGithub,
-        undefined, // linkedinUrl
-        undefined, // githubUrl
-        resumeData.targetRole,
-        resumeData.additionalSections // NEW: Pass additionalSections to optimizeResume
-      );
+      const newSection: AdditionalSection = {
+        title: customSectionTitle,
+        bullets: bullets,
+      };
 
-      setOptimizedResume(generatedResume);
+      setResumeData(prev => ({
+        ...prev,
+        additionalSections: [...(prev.additionalSections || []), newSection],
+      }));
 
-      // Calculate scores
-      setIsCalculatingScore(true);
-      const initialScore = await getDetailedResumeScore(generatedResume, '', () => {});
-      setInitialDetailedScore(initialScore);
+      setCustomSectionTitle('');
+      setCustomSectionDetails('');
+      onShowAlert('Section Added!', `${customSectionTitle} section has been added to your resume.`, 'success');
+    } catch (error) {
+      console.error('Error generating custom section:', error);
+    }
+  };
 
-      const finalScore = await getDetailedResumeScore(generatedResume, '', () => {});
-      setFinalDetailedScore(finalScore);
+  // Toggle section expansion
+  const toggleSection = (sectionId: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(sectionId)) {
+      newExpanded.delete(sectionId);
+    } else {
+      newExpanded.add(sectionId);
+    }
+    setExpandedSections(newExpanded);
+  };
 
-      // Decrement usage
+  // Handle optimize entire resume
+  const handleOptimizeResume = useCallback(async () => {
+    if (!(await checkGuidedBuildCredits())) return;
+
+    try {
+      setIsGeneratingAIContent(true);
+      
+      // Use guided build credit
       const usageResult = await paymentService.useGuidedBuild(user!.id);
       if (usageResult.success) {
         await refreshUserSubscription();
+        onShowAlert(
+          'Resume Optimized!',
+          'Your guided resume has been successfully built and optimized.',
+          'success'
+        );
       } else {
-        console.error('Failed to decrement guided build usage:', usageResult.error);
+        console.error('Failed to use guided build credit:', usageResult.error);
+        onShowAlert('Usage Update Failed', 'Failed to record guided build usage.', 'error');
       }
-
-      setCurrentStep(steps.length - 1); // Go to final review step
-    } catch (error) {
-      console.error('Error generating resume:', error);
-      onShowAlert('Resume Generation Failed', 'Could not generate your resume. Please try again.', 'error');
+    } catch (error: any) {
+      console.error('Error optimizing resume:', error);
+      onShowAlert('Optimization Failed', `Failed to optimize resume: ${error.message}`, 'error');
     } finally {
-      setIsGenerating(false);
-      setIsCalculatingScore(false);
+      setIsGeneratingAIContent(false);
     }
-  }, [
-    isAuthenticated,
-    userSubscription,
-    onShowAuth,
-    onShowSubscriptionPlans,
-    resumeData,
-    userType,
-    user,
-    onShowAlert,
-    refreshUserSubscription,
-  ]);
+  }, [user, checkGuidedBuildCredits, refreshUserSubscription, onShowAlert]);
 
-  // --- Wizard Steps Configuration ---
+  // Set up tool process trigger
+  useEffect(() => {
+    setToolProcessTrigger(() => handleOptimizeResume);
+    return () => {
+      setToolProcessTrigger(null);
+    };
+  }, [setToolProcessTrigger, handleOptimizeResume]);
+
+  // Re-trigger on credit replenishment
+  useEffect(() => {
+    if (buildInterrupted && userSubscription && (userSubscription.guidedBuildsTotal - userSubscription.guidedBuildsUsed) > 0) {
+      console.log('GuidedResumeBuilder: Credits replenished, resetting interruption flag.');
+      setBuildInterrupted(false);
+    }
+  }, [buildInterrupted, userSubscription]);
+
   const steps = [
-    // ... (existing steps like User Type, Contact, Education, Work Experience, Projects, Skills, Certifications)
-    {
-      id: 'user-type',
-      title: 'Your Profile',
-      icon: <User className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <User className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Tell us about yourself
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
-                What best describes your current career stage?
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['fresher', 'student', 'experienced'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setUserType(type as UserType)}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                      userType === type
-                        ? 'border-green-500 bg-green-50 shadow-md dark:border-green-600 dark:bg-green-900/20'
-                        : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
-                    }`}
-                  >
-                    {type === 'fresher' && <User className={`w-6 h-6 mb-2 ${userType === type ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />}
-                    {type === 'student' && <GraduationCap className={`w-6 h-6 mb-2 ${userType === type ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />}
-                    {type === 'experienced' && <Briefcase className={`w-6 h-6 mb-2 ${userType === type ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />}
-                    <span className={`font-semibold text-sm capitalize ${userType === type ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>
-                      {type === 'fresher' ? 'Fresher' : type}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
-                Target Role (Optional, but recommended for better optimization)
-              </label>
-              <input
-                type="text"
-                value={resumeData.targetRole || ''}
-                onChange={(e) => updateResumeData('targetRole', e.target.value)}
-                placeholder="e.g., Software Engineer, Data Scientist"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-          </div>
-        </div>
-      ),
-      isValid: !!userType,
-    },
-    {
-      id: 'contact-info',
-      title: 'Contact Info',
-      icon: <FileText className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <FileText className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
-            Contact Information
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Full Name</label>
-              <input
-                type="text"
-                value={resumeData.name}
-                onChange={(e) => updateResumeData('name', e.target.value)}
-                placeholder="Your Full Name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Email</label>
-              <input
-                type="email"
-                value={resumeData.email}
-                onChange={(e) => updateResumeData('email', e.target.value)}
-                placeholder="your.email@example.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Phone</label>
-              <input
-                type="tel"
-                value={resumeData.phone}
-                onChange={(e) => updateResumeData('phone', e.target.value)}
-                placeholder="+1234567890"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">LinkedIn URL</label>
-              <input
-                type="url"
-                value={resumeData.linkedin}
-                onChange={(e) => updateResumeData('linkedin', e.target.value)}
-                placeholder="https://linkedin.com/in/yourprofile"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">GitHub URL</label>
-              <input
-                type="url"
-                value={resumeData.github}
-                onChange={(e) => updateResumeData('github', e.target.value)}
-                placeholder="https://github.com/yourprofile"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Location</label>
-              <input
-                type="text"
-                value={resumeData.location || ''}
-                onChange={(e) => updateResumeData('location', e.target.value)}
-                placeholder="City, State, Country"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-            </div>
-          </div>
-        </div>
-      ),
-      isValid: !!resumeData.name && !!resumeData.email && !!resumeData.phone,
-    },
-    {
-      id: 'summary-objective',
-      title: userType === 'experienced' ? 'Summary' : 'Objective',
-      icon: <Sparkles className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Sparkles className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
-            {userType === 'experienced' ? 'Professional Summary' : 'Career Objective'}
-          </h2>
-          <textarea
-            value={userType === 'experienced' ? resumeData.summary || '' : resumeData.careerObjective || ''}
-            onChange={(e) =>
-              userType === 'experienced'
-                ? updateResumeData('summary', e.target.value)
-                : updateResumeData('careerObjective', e.target.value)
-            }
-            placeholder={
-              userType === 'experienced'
-                ? 'A concise overview of your professional experience and career goals...'
-                : 'A brief statement outlining your career aspirations and what you bring to a role...'
-            }
-            className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-          />
-          <button
-            onClick={async () => {
-             const generatedContent = await generateContent(
-  userType === 'experienced' ? 'summary' : 'careerObjective',
-  {
-    userType,
-    targetRole: resumeData.targetRole,
-    experience: resumeData.workExperience,
-    education: resumeData.education,
-  },
-  'deepseek/deepseek-r1:free' // <-- Explicit model
-);
-
-              if (generatedContent) {
-                userType === 'experienced'
-                  ? updateResumeData('summary', generatedContent)
-                  : updateResumeData('careerObjective', generatedContent);
-              }
-            }}
-            className="mt-4 btn-primary flex items-center space-x-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Generate with AI</span>
-          </button>
-        </div>
-      ),
-      isValid:
-        userType === 'experienced'
-          ? !!resumeData.summary && resumeData.summary.length > 0
-          : !!resumeData.careerObjective && resumeData.careerObjective.length > 0,
-    },
-    {
-      id: 'education',
-      title: 'Education',
-      icon: <GraduationCap className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <GraduationCap className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Education
-          </h2>
-          {resumeData.education.map((edu, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-4 mb-4 dark:border-dark-300">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    const updated = [...resumeData.education];
-                    updated.splice(index, 1);
-                    updateResumeData('education', updated);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={edu.degree}
-                  onChange={(e) => {
-                    const updated = [...resumeData.education];
-                    updated[index].degree = e.target.value;
-                    updateResumeData('education', updated);
-                  }}
-                  placeholder="Degree (e.g., B.Tech in Computer Science)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <input
-                  type="text"
-                  value={edu.school}
-                  onChange={(e) => {
-                    const updated = [...resumeData.education];
-                    updated[index].school = e.target.value;
-                    updateResumeData('education', updated);
-                  }}
-                  placeholder="University/Institution Name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <input
-                  type="text"
-                  value={edu.year}
-                  onChange={(e) => {
-                    const updated = [...resumeData.education];
-                    updated[index].year = e.target.value;
-                    updateResumeData('education', updated);
-                  }}
-                  placeholder="Year (e.g., 2020-2024)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <input
-                  type="text"
-                  value={edu.cgpa || ''}
-                  onChange={(e) => {
-                    const updated = [...resumeData.education];
-                    updated[index].cgpa = e.target.value;
-                    updateResumeData('education', updated);
-                  }}
-                  placeholder="CGPA (e.g., 8.5/10)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <input
-                  type="text"
-                  value={edu.location || ''}
-                  onChange={(e) => {
-                    const updated = [...resumeData.education];
-                    updated[index].location = e.target.value;
-                    updateResumeData('education', updated);
-                  }}
-                  placeholder="Location (e.g., City, State)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-              </div>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateResumeData('education', [
-                ...resumeData.education,
-                { degree: '', school: '', year: '' },
-              ])
-            }
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Education</span>
-          </button>
-        </div>
-      ),
-      isValid: resumeData.education.length > 0 && resumeData.education.every((edu) => edu.degree && edu.school && edu.year),
-    },
-    {
-      id: 'work-experience',
-      title: 'Work Experience',
-      icon: <Briefcase className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Briefcase className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Work Experience
-          </h2>
-          {resumeData.workExperience.map((exp, expIndex) => (
-            <div key={expIndex} className="border border-gray-200 rounded-lg p-4 mb-4 dark:border-dark-300">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    const updated = [...resumeData.workExperience];
-                    updated.splice(expIndex, 1);
-                    updateResumeData('workExperience', updated);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-2 mb-4">
-                <input
-                  type="text"
-                  value={exp.role}
-                  onChange={(e) => {
-                    const updated = [...resumeData.workExperience];
-                    updated[expIndex].role = e.target.value;
-                    updateResumeData('workExperience', updated);
-                  }}
-                  placeholder="Role (e.g., Software Engineer)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <input
-                  type="text"
-                  value={exp.company}
-                  onChange={(e) => {
-                    const updated = [...resumeData.workExperience];
-                    updated[expIndex].company = e.target.value;
-                    updateResumeData('workExperience', updated);
-                  }}
-                  placeholder="Company Name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <input
-                  type="text"
-                  value={exp.year}
-                  onChange={(e) => {
-                    const updated = [...resumeData.workExperience];
-                    updated[expIndex].year = e.target.value;
-                    updateResumeData('workExperience', updated);
-                  }}
-                  placeholder="Duration (e.g., Jan 2023 - Present)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-              </div>
-              <h4 className="text-md font-semibold text-gray-800 mb-2 dark:text-gray-200">Bullet Points</h4>
-              {exp.bullets.map((bullet, bulletIndex) => (
-                <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                  <textarea
-                    value={bullet}
-                    onChange={(e) => {
-                      const updated = [...resumeData.workExperience];
-                      updated[expIndex].bullets[bulletIndex] = e.target.value;
-                      updateResumeData('workExperience', updated);
-                    }}
-                    placeholder="Describe your achievement/responsibility"
-                    className="flex-grow px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = [...resumeData.workExperience];
-                      updated[expIndex].bullets.splice(bulletIndex, 1);
-                      updateResumeData('workExperience', updated);
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const updated = [...resumeData.workExperience];
-                  updated[expIndex].bullets.push('');
-                  updateResumeData('workExperience', updated);
-                }}
-                className="btn-secondary flex items-center space-x-2 mt-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Bullet</span>
-              </button>
-              <button
-                onClick={async () => {
-                  const generatedBullets = await generateContent('workExperienceBullets', {
-  role: exp.role,
-  company: exp.company,
-  year: exp.year,
-  description: exp.bullets.join(' '),
-  userType,
-}, 'deepseek/deepseek-r1:free');
-
-                  if (generatedBullets && Array.isArray(generatedBullets)) {
-                    const updated = [...resumeData.workExperience];
-                    updated[expIndex].bullets = generatedBullets;
-                    updateResumeData('workExperience', updated);
-                  }
-                }}
-                className="btn-primary flex items-center space-x-2 mt-4"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Optimize Bullets with AI</span>
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateResumeData('workExperience', [
-                ...resumeData.workExperience,
-                { role: '', company: '', year: '', bullets: [''] },
-              ])
-            }
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Work Experience</span>
-          </button>
-        </div>
-      ),
-      isValid:
-        resumeData.workExperience.length > 0 &&
-        resumeData.workExperience.every(
-          (exp) => exp.role && exp.company && exp.year && exp.bullets.every((b) => b.length > 0)
-        ),
-    },
-    {
-      id: 'projects',
-      title: 'Projects',
-      icon: <Code className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Code className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Projects
-          </h2>
-          {resumeData.projects.map((project, projIndex) => (
-            <div key={projIndex} className="border border-gray-200 rounded-lg p-4 mb-4 dark:border-dark-300">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    const updated = [...resumeData.projects];
-                    updated.splice(projIndex, 1);
-                    updateResumeData('projects', updated);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-2 mb-4">
-                <input
-                  type="text"
-                  value={project.title}
-                  onChange={(e) => {
-                    const updated = [...resumeData.projects];
-                    updated[projIndex].title = e.target.value;
-                    updateResumeData('projects', updated);
-                  }}
-                  placeholder="Project Title"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-              </div>
-              <h4 className="text-md font-semibold text-gray-800 mb-2 dark:text-gray-200">Bullet Points</h4>
-              {project.bullets.map((bullet, bulletIndex) => (
-                <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                  <textarea
-                    value={bullet}
-                    onChange={(e) => {
-                      const updated = [...resumeData.projects];
-                      updated[projIndex].bullets[bulletIndex] = e.target.value;
-                      updateResumeData('projects', updated);
-                    }}
-                    placeholder="Describe project achievement/feature"
-                    className="flex-grow px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = [...resumeData.projects];
-                      updated[projIndex].bullets.splice(bulletIndex, 1);
-                      updateResumeData('projects', updated);
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const updated = [...resumeData.projects];
-                  updated[projIndex].bullets.push('');
-                  updateResumeData('projects', updated);
-                }}
-                className="btn-secondary flex items-center space-x-2 mt-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Bullet</span>
-              </button>
-              <button
-                onClick={async () => {
-                 const generatedBullets = await generateContent('projectBullets', {
-  title: project.title,
-  description: project.bullets.join(' '),
-  userType,
-}, 'deepseek/deepseek-r1:free');
-
-                  if (generatedBullets && Array.isArray(generatedBullets)) {
-                    const updated = [...resumeData.projects];
-                    updated[projIndex].bullets = generatedBullets;
-                    updateResumeData('projects', updated);
-                  }
-                }}
-                className="btn-primary flex items-center space-x-2 mt-4"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Optimize Bullets with AI</span>
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateResumeData('projects', [
-                ...resumeData.projects,
-                { title: '', bullets: [''] },
-              ])
-            }
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Project</span>
-          </button>
-        </div>
-      ),
-      isValid:
-        resumeData.projects.length > 0 &&
-        resumeData.projects.every(
-          (proj) => proj.title && proj.bullets.every((b) => b.length > 0)
-        ),
-    },
-    {
-      id: 'skills',
-      title: 'Skills',
-      icon: <Target className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Target className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Skills
-          </h2>
-          {resumeData.skills.map((skillCategory, catIndex) => (
-            <div key={catIndex} className="border border-gray-200 rounded-lg p-4 mb-4 dark:border-dark-300">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    const updated = [...resumeData.skills];
-                    updated.splice(catIndex, 1);
-                    updateResumeData('skills', updated);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-2 mb-4">
-                <input
-                  type="text"
-                  value={skillCategory.category}
-                  onChange={(e) => {
-                    const updated = [...resumeData.skills];
-                    updated[catIndex].category = e.target.value;
-                    updateResumeData('skills', updated);
-                  }}
-                  placeholder="Skill Category (e.g., Programming Languages)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-              </div>
-              <h4 className="text-md font-semibold text-gray-800 mb-2 dark:text-gray-200">Skills List (comma-separated)</h4>
-              <textarea
-                value={skillCategory.list.join(', ')}
-                onChange={(e) => {
-                  const updated = [...resumeData.skills];
-                  updated[catIndex].list = e.target.value.split(',').map((s) => s.trim());
-                  updateResumeData('skills', updated);
-                }}
-                placeholder="e.g., JavaScript, Python, React, Node.js"
-                className="w-full h-24 p-3 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-              />
-              <button
-                onClick={async () => {
-                  const generatedSkills = await generateContent('skillsList', {
-  category: skillCategory.category,
-  existingSkills: skillCategory.list,
-  userType,
-  targetRole: resumeData.targetRole,
-}, 'deepseek/deepseek-r1:free');
-
-                  if (generatedSkills && Array.isArray(generatedSkills)) {
-                    const updated = [...resumeData.skills];
-                    updated[catIndex].list = generatedSkills;
-                    updateResumeData('skills', updated);
-                  }
-                }}
-                className="btn-primary flex items-center space-x-2 mt-4"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Optimize Skills with AI</span>
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateResumeData('skills', [
-                ...resumeData.skills,
-                { category: '', count: 0, list: [] },
-              ])
-            }
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Skill Category</span>
-          </button>
-        </div>
-      ),
-      isValid:
-        resumeData.skills.length > 0 &&
-        resumeData.skills.every((skill) => skill.category && skill.list.length > 0),
-    },
-    {
-      id: 'certifications',
-      title: 'Certifications',
-      icon: <Award className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Award className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Certifications
-          </h2>
-          {resumeData.certifications.map((cert, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-4 mb-4 dark:border-dark-300">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    const updated = [...resumeData.certifications];
-                    updated.splice(index, 1);
-                    updateResumeData('certifications', updated);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={typeof cert === 'string' ? cert : cert.title}
-                  onChange={(e) => {
-                    const updated = [...resumeData.certifications];
-                    updated[index] = { title: e.target.value, description: '' };
-                    updateResumeData('certifications', updated);
-                  }}
-                  placeholder="Certification Name (e.g., AWS Certified Developer)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-                <textarea
-                  value={typeof cert === 'string' ? '' : cert.description || ''}
-                  onChange={(e) => {
-                    const updated = [...resumeData.certifications];
-                    updated[index] = {
-                      title: typeof cert === 'string' ? cert : cert.title,
-                      description: e.target.value,
-                    };
-                    updateResumeData('certifications', updated);
-                  }}
-                  placeholder="Description (e.g., Issued by Amazon Web Services)"
-                  className="w-full h-24 p-3 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-              </div>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateResumeData('certifications', [
-                ...resumeData.certifications,
-                { title: '', description: '' },
-              ])
-            }
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Certification</span>
-          </button>
-        </div>
-      ),
-      isValid: true, // Certifications are optional
-    },
-    // NEW STEP: Additional Sections
-    {
-      id: 'additional-sections',
-      title: 'Additional Sections',
-      icon: <Plus className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Plus className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-            Custom Sections (e.g., Awards, Volunteer Work, Languages)
-          </h2>
-          {resumeData.additionalSections.map((section, secIndex) => (
-            <div key={secIndex} className="border border-gray-200 rounded-lg p-4 mb-4 dark:border-dark-300">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    const updated = [...resumeData.additionalSections];
-                    updated.splice(secIndex, 1);
-                    updateResumeData('additionalSections', updated);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-2 mb-4">
-                <input
-                  type="text"
-                  value={section.title}
-                  onChange={(e) => {
-                    const updated = [...resumeData.additionalSections];
-                    updated[secIndex].title = e.target.value;
-                    updateResumeData('additionalSections', updated);
-                  }}
-                  placeholder="Section Title (e.g., Awards, Volunteer Experience)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                />
-              </div>
-              <h4 className="text-md font-semibold text-gray-800 mb-2 dark:text-gray-200">Bullet Points</h4>
-              {section.bullets.map((bullet, bulletIndex) => (
-                <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                  <textarea
-                    value={bullet}
-                    onChange={(e) => {
-                      const updated = [...resumeData.additionalSections];
-                      updated[secIndex].bullets[bulletIndex] = e.target.value;
-                      updateResumeData('additionalSections', updated);
-                    }}
-                    placeholder="Describe achievement or detail for this section"
-                    className="flex-grow px-3 py-2 border border-gray-300 rounded-lg dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100"
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = [...resumeData.additionalSections];
-                      updated[secIndex].bullets.splice(bulletIndex, 1);
-                      updateResumeData('additionalSections', updated);
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const updated = [...resumeData.additionalSections];
-                  updated[secIndex].bullets.push('');
-                  updateResumeData('additionalSections', updated);
-                }}
-                className="btn-secondary flex items-center space-x-2 mt-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Bullet</span>
-              </button>
-              <button
-                onClick={async () => {
-                 const generatedBullets = await generateContent('additionalSectionBullets', {
-  title: section.title,
-  details: section.bullets.join(' '),
-  userType,
-}, 'deepseek/deepseek-r1:free');
-
-                  if (generatedBullets && Array.isArray(generatedBullets)) {
-                    const updated = [...resumeData.additionalSections];
-                    updated[secIndex].bullets = generatedBullets;
-                    updateResumeData('additionalSections', updated);
-                  }
-                }}
-                className="btn-primary flex items-center space-x-2 mt-4"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Optimize Bullets with AI</span>
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateResumeData('additionalSections', [
-                ...resumeData.additionalSections,
-                { title: '', bullets: [''] },
-              ])
-            }
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Custom Section</span>
-          </button>
-        </div>
-      ),
-      isValid: true, // Additional sections are optional
-    },
-    {
-      id: 'review-generate',
-      title: 'Review & Generate',
-      icon: <Sparkles className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <Sparkles className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
-            Review & Generate Resume
-          </h2>
-          <div className="text-center space-y-6">
-            <p className="text-gray-700 dark:text-gray-300">
-              You're all set! Review your details and generate your ATS-optimized resume.
-            </p>
-            <button
-              type="button"
-onClick={handleGenerateResume}
-disabled={isGenerating}
-className="w-50 py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 mx-auto shadow-xl hover:shadow-2xl btn-primary"
-
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>Generating...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-6 h-6" />
-                  <span>Generate My Resume</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      ),
-      isValid: true,
-    },
-    {
-      id: 'final-review',
-      title: 'Final Resume',
-      icon: <CheckCircle className="w-6 h-6" />,
-      component: (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-            <CheckCircle className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
-            Your Optimized Resume
-          </h2>
-          {optimizedResume ? (
-            <>
-              <ResumeExportSettings
-                resumeData={optimizedResume}
-                userType={userType}
-                onExport={async (options, format) => {
-                  setExportOptions(options);
-                  if (format === 'pdf') {
-                    setIsExportingPDF(true);
-                    try {
-                      await exportToPDF(optimizedResume, userType, options);
-                      setExportStatus({
-                        type: 'pdf',
-                        status: 'success',
-                        message: 'PDF exported successfully!',
-                      });
-                    } catch (error) {
-                      console.error('PDF export failed:', error);
-                      setExportStatus({
-                        type: 'pdf',
-                        status: 'error',
-                        message: 'PDF export failed. Please try again.',
-                      });
-                    } finally {
-                      setIsExportingPDF(false);
-                    }
-                  } else {
-                    setIsExportingWord(true);
-                    try {
-                      await exportToWord(optimizedResume, userType);
-                      setExportStatus({
-                        type: 'word',
-                        status: 'success',
-                        message: 'Word document exported successfully!',
-                      });
-                    } catch (error) {
-                      console.error('Word export failed:', error);
-                      setExportStatus({
-                        type: 'word',
-                        status: 'error',
-                        message: 'Word document export failed. Please try again.',
-                      });
-                    } finally {
-                      setIsExportingWord(false);
-                    }
-                  }
-                }}
-              />
-              {exportStatus.status && (
-                <div
-                  className={`mt-4 p-3 rounded-lg border ${
-                    exportStatus.status === 'success'
-                      ? 'bg-green-50 border-green-200 text-green-800'
-                      : 'bg-red-50 border-red-200 text-red-800'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    {exportStatus.status === 'success' ? (
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                    )}
-                    <span className="text-sm font-medium">{exportStatus.message}</span>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-gray-600 dark:text-gray-300">Resume not yet generated.</p>
-          )}
-        </div>
-      ),
-      isValid: true,
-    },
+    { id: 'basic-info', title: 'Basic Information', icon: <User className="w-5 h-5" /> },
+    { id: 'education', title: 'Education', icon: <GraduationCap className="w-5 h-5" /> },
+    { id: 'experience', title: 'Work Experience', icon: <Briefcase className="w-5 h-5" /> },
+    { id: 'projects', title: 'Projects', icon: <Code className="w-5 h-5" /> },
+    { id: 'skills', title: 'Skills', icon: <Target className="w-5 h-5" /> },
+    { id: 'certifications', title: 'Certifications', icon: <Award className="w-5 h-5" /> },
+    { id: 'additional', title: 'Additional Sections', icon: <Plus className="w-5 h-5" /> },
+    { id: 'preview', title: 'Preview & Export', icon: <FileText className="w-5 h-5" /> },
   ];
 
-  // --- Wizard Navigation ---
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
+  const renderVariationSelector = (
+    sectionType: string,
+    variations: string[] | string[][],
+    selectedIndex: number,
+    onSelect: (index: number) => void
+  ) => {
+    if (!variations.length) return null;
 
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  // --- Render Logic ---
-  if (isGenerating || isCalculatingScore) {
     return (
-      <LoadingAnimation
-        message={isGenerating ? 'Generating Your Resume...' : 'Calculating Final Score...'}
-        submessage={
-          isGenerating
-            ? 'Our AI is crafting your personalized, ATS-optimized resume.'
-            : 'Analyzing your new resume against industry standards.'
-        }
-      />
-    );
-  }
-
-  const currentStepData = steps[currentStep];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-16 dark:from-dark-50 dark:to-dark-200 transition-colors duration-300">
-      <div className="container-responsive py-8">
-        <button
-          onClick={onNavigateBack}
-          className="mb-6 bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 text-white hover:from-neon-cyan-400 hover:to-neon-blue-400 active:from-neon-cyan-600 active:to-neon-blue-600 shadow-md hover:shadow-neon-cyan py-3 px-5 rounded-xl inline-flex items-center space-x-2 transition-all duration-200"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="hidden sm:block">Back to Home</span>
-        </button>
-
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Progress Indicator */}
-          <div className="bg-white rounded-xl shadow-lg p-3 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Guided Resume Builder</h1>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Step {currentStep + 1} of {steps.length}
-              </div>
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto dark:bg-dark-100">
+          <div className="p-6 border-b border-gray-200 dark:border-dark-300">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Choose Your Preferred {sectionType}
+              </h3>
+              <button
+                onClick={() => setShowVariationsFor(null)}
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-dark-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-
-            <div className="flex items-center justify-between overflow-x-auto pb-2">
-              {steps.map((step, index) => (
-                <React.Fragment key={step.id}>
-                  <div className="flex flex-col items-center flex-shrink-0 px-2">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        index < currentStep
-                          ? 'bg-green-500 text-white'
-                          : index === currentStep
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-500 dark:bg-dark-200 dark:text-gray-400'
-                      }`}
-                    >
-                      {index < currentStep ? <CheckCircle className="w-5 h-5" /> : step.icon}
-                    </div>
-                    <span
-                      className={`text-xs mt-2 font-medium text-center ${
-                        index <= currentStep ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'
-                      }`}
-                    >
-                      {step.title}
-                    </span>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`flex-1 h-1 rounded-full mx-2 transition-all duration-300 ${
-                        index < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-dark-200'
-                      }`}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              Select the variation that best represents your professional profile
+            </p>
           </div>
 
-          {/* Current Step Content */}
-          <div className="transition-all duration-300">{currentStepData.component}</div>
-
-          {/* Navigation Buttons */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-            <div className="flex justify-between items-center gap-2">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 sm:w-auto flex-shrink-0 ${
-                  currentStep === 0
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-dark-200 dark:text-gray-500'
-                    : 'bg-gray-600 hover:bg-gray-700 text-white shadow-lg hover:shadow-xl dark:bg-gray-700 dark:hover:bg-gray-800'
+          <div className="p-6 space-y-4">
+            {(variations as string[]).map((variation, index) => (
+              <div
+                key={index}
+                className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                  selectedIndex === index
+                    ? 'border-blue-500 bg-blue-50 dark:border-neon-cyan-500 dark:bg-neon-cyan-500/20'
+                    : 'border-gray-200 hover:border-blue-300 dark:border-dark-300 dark:hover:border-neon-cyan-400'
                 }`}
+                onClick={() => onSelect(index)}
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Previous</span>
-              </button>
-
-              <div className="text-center flex-grow sm:w-48 flex-shrink-0">
-                <div className="text-sm text-gray-500 mb-1 dark:text-gray-400">Progress</div>
-                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-dark-200">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-                  />
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-2">
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        Option {index + 1}
+                      </span>
+                      {selectedIndex === index && (
+                        <CheckCircle className="w-4 h-4 text-blue-600 ml-2 dark:text-neon-cyan-400" />
+                      )}
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {typeof variation === 'string' ? variation : variation.join(', ')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(typeof variation === 'string' ? variation : variation.join('\n'));
+                      onShowAlert('Copied!', 'Content copied to clipboard.', 'success');
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-2 ml-2 dark:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+            ))}
 
-              {currentStep < steps.length - 1 ? (
-                <button
-                  onClick={handleNext}
-                  disabled={!currentStepData.isValid}
-                  className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 sm:w-auto flex-shrink-0 ${
-                    !currentStepData.isValid
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-dark-200 dark:text-gray-500'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl dark:bg-blue-700 dark:hover:bg-blue-800'
-                  }`}
-                >
-                  <span>Next</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              ) : (
-                <div className="sm:w-24 flex-shrink-0" />
-              )}
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-dark-300">
+              <button
+                onClick={() => setShowVariationsFor(null)}
+                className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-xl transition-colors dark:bg-dark-200 dark:hover:bg-dark-300 dark:text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  selectVariation(sectionType, selectedIndex);
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white font-semibold rounded-xl transition-colors shadow-neon-cyan"
+              >
+                Use Selected Option
+              </button>
             </div>
           </div>
         </div>
       </div>
+    );
+  };
+
+  const renderSection = (sectionId: string) => {
+    const isExpanded = expandedSections.has(sectionId);
+
+    const sectionContent = () => {
+      switch (sectionId) {
+        case 'basic-info':
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={resumeData.name}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Your full name"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={resumeData.email}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="your.email@example.com"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    value={resumeData.phone}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="+1 (555) 123-4567"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={resumeData.location}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="City, State/Country"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    LinkedIn Profile
+                  </label>
+                  <input
+                    type="url"
+                    value={resumeData.linkedin}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, linkedin: e.target.value }))}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    GitHub Profile
+                  </label>
+                  <input
+                    type="url"
+                    value={resumeData.github}
+                    onChange={(e) => setResumeData(prev => ({ ...prev, github: e.target.value }))}
+                    placeholder="https://github.com/yourusername"
+                    className="input-base"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Target Role
+                </label>
+                <input
+                  type="text"
+                  value={resumeData.targetRole}
+                  onChange={(e) => setResumeData(prev => ({ ...prev, targetRole: e.target.value }))}
+                  placeholder="e.g., Software Engineer, Product Manager"
+                  className="input-base"
+                />
+              </div>
+
+              {/* User Type Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Experience Level
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(['fresher', 'experienced', 'student'] as UserType[]).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setUserType(type)}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        userType === type
+                          ? 'border-blue-500 bg-blue-50 dark:border-neon-cyan-500 dark:bg-neon-cyan-500/20'
+                          : 'border-gray-200 hover:border-blue-300 dark:border-dark-300 dark:hover:border-neon-cyan-400'
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                        {type === 'student' ? 'College Student' : type}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* AI-Generated Summary/Objective */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {userType === 'experienced' ? 'Professional Summary' : 'Career Objective'}
+                  </label>
+                  <button
+                    onClick={() => generateVariations(userType === 'experienced' ? 'summary' : 'careerObjective', {
+                      userType: userType,
+                      targetRole: resumeData.targetRole,
+                      experience: resumeData.workExperience,
+                      education: resumeData.education,
+                    })}
+                    disabled={isGeneratingAIContent}
+                    className="btn-primary px-4 py-2 text-sm flex items-center space-x-2"
+                  >
+                    {isGeneratingAIContent ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Generate 3 Options</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <textarea
+                  value={userType === 'experienced' ? (resumeData.summary || '') : (resumeData.careerObjective || '')}
+                  onChange={(e) => {
+                    if (userType === 'experienced') {
+                      setResumeData(prev => ({ ...prev, summary: e.target.value }));
+                    } else {
+                      setResumeData(prev => ({ ...prev, careerObjective: e.target.value }));
+                    }
+                  }}
+                  placeholder={userType === 'experienced' 
+                    ? "Write a compelling professional summary highlighting your experience and achievements..."
+                    : "Write a career objective focusing on your learning goals and aspirations..."
+                  }
+                  rows={3}
+                  className="input-base resize-none"
+                />
+              </div>
+            </div>
+          );
+
+        case 'education':
+          return (
+            <div className="space-y-6">
+              {resumeData.education.map((edu, index) => (
+                <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Education #{index + 1}</h4>
+                    {resumeData.education.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const updated = resumeData.education.filter((_, i) => i !== index);
+                          setResumeData(prev => ({ ...prev, education: updated }));
+                        }}
+                        className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Degree *
+                      </label>
+                      <input
+                        type="text"
+                        value={edu.degree}
+                        onChange={(e) => {
+                          const updated = [...resumeData.education];
+                          updated[index].degree = e.target.value;
+                          setResumeData(prev => ({ ...prev, education: updated }));
+                        }}
+                        placeholder="e.g., Bachelor of Science in Computer Science"
+                        className="input-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Institution *
+                      </label>
+                      <input
+                        type="text"
+                        value={edu.school}
+                        onChange={(e) => {
+                          const updated = [...resumeData.education];
+                          updated[index].school = e.target.value;
+                          setResumeData(prev => ({ ...prev, education: updated }));
+                        }}
+                        placeholder="University/College Name"
+                        className="input-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Year *
+                      </label>
+                      <input
+                        type="text"
+                        value={edu.year}
+                        onChange={(e) => {
+                          const updated = [...resumeData.education];
+                          updated[index].year = e.target.value;
+                          setResumeData(prev => ({ ...prev, education: updated }));
+                        }}
+                        placeholder="e.g., 2020-2024"
+                        className="input-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        CGPA/GPA
+                      </label>
+                      <input
+                        type="text"
+                        value={edu.cgpa}
+                        onChange={(e) => {
+                          const updated = [...resumeData.education];
+                          updated[index].cgpa = e.target.value;
+                          setResumeData(prev => ({ ...prev, education: updated }));
+                        }}
+                        placeholder="e.g., 8.5/10 or 3.8/4.0"
+                        className="input-base"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  setResumeData(prev => ({
+                    ...prev,
+                    education: [...prev.education, { degree: '', school: '', year: '', cgpa: '', location: '' }]
+                  }));
+                }}
+                className="btn-secondary w-full py-3 flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Another Education</span>
+              </button>
+            </div>
+          );
+
+        case 'experience':
+          return (
+            <div className="space-y-6">
+              {resumeData.workExperience.map((work, index) => (
+                <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Experience #{index + 1}</h4>
+                    {resumeData.workExperience.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const updated = resumeData.workExperience.filter((_, i) => i !== index);
+                          setResumeData(prev => ({ ...prev, workExperience: updated }));
+                        }}
+                        className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Job Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={work.role}
+                        onChange={(e) => {
+                          const updated = [...resumeData.workExperience];
+                          updated[index].role = e.target.value;
+                          setResumeData(prev => ({ ...prev, workExperience: updated }));
+                        }}
+                        placeholder="e.g., Software Engineer"
+                        className="input-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Company *
+                      </label>
+                      <input
+                        type="text"
+                        value={work.company}
+                        onChange={(e) => {
+                          const updated = [...resumeData.workExperience];
+                          updated[index].company = e.target.value;
+                          setResumeData(prev => ({ ...prev, workExperience: updated }));
+                        }}
+                        placeholder="Company Name"
+                        className="input-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Duration *
+                      </label>
+                      <input
+                        type="text"
+                        value={work.year}
+                        onChange={(e) => {
+                          const updated = [...resumeData.workExperience];
+                          updated[index].year = e.target.value;
+                          setResumeData(prev => ({ ...prev, workExperience: updated }));
+                        }}
+                        placeholder="e.g., Jan 2023 - Present"
+                        className="input-base"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Key Responsibilities
+                      </label>
+                      <button
+                        onClick={() => generateBullets('workExperienceBullets', index, {
+                          role: work.role,
+                          company: work.company,
+                          year: work.year,
+                          description: work.bullets.join(' '),
+                          userType: userType,
+                        })}
+                        disabled={isGeneratingAIContent}
+                        className="btn-primary px-3 py-1 text-sm flex items-center space-x-1"
+                      >
+                        {isGeneratingAIContent ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" />
+                            <span>Generate with AI</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {work.bullets.map((bullet, bulletIndex) => (
+                      <div key={bulletIndex} className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={bullet}
+                          onChange={(e) => {
+                            const updated = [...resumeData.workExperience];
+                            updated[index].bullets[bulletIndex] = e.target.value;
+                            setResumeData(prev => ({ ...prev, workExperience: updated }));
+                          }}
+                          placeholder="Describe your responsibility/achievement"
+                          className="input-base flex-1"
+                        />
+                        {work.bullets.length > 1 && (
+                          <button
+                            onClick={() => {
+                              const updated = [...resumeData.workExperience];
+                              updated[index].bullets.splice(bulletIndex, 1);
+                              setResumeData(prev => ({ ...prev, workExperience: updated }));
+                            }}
+                            className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const updated = [...resumeData.workExperience];
+                        updated[index].bullets.push('');
+                        setResumeData(prev => ({ ...prev, workExperience: updated }));
+                      }}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center dark:text-neon-cyan-400"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Responsibility
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  setResumeData(prev => ({
+                    ...prev,
+                    workExperience: [...prev.workExperience, { role: '', company: '', year: '', bullets: [''] }]
+                  }));
+                }}
+                className="btn-secondary w-full py-3 flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Work Experience</span>
+              </button>
+            </div>
+          );
+
+        case 'projects':
+          return (
+            <div className="space-y-6">
+              {resumeData.projects.map((project, index) => (
+                <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Project #{index + 1}</h4>
+                    {resumeData.projects.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const updated = resumeData.projects.filter((_, i) => i !== index);
+                          setResumeData(prev => ({ ...prev, projects: updated }));
+                        }}
+                        className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Project Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={project.title}
+                      onChange={(e) => {
+                        const updated = [...resumeData.projects];
+                        updated[index].title = e.target.value;
+                        setResumeData(prev => ({ ...prev, projects: updated }));
+                      }}
+                      placeholder="e.g., E-commerce Website"
+                      className="input-base"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Project Details
+                      </label>
+                      <button
+                        onClick={() => generateBullets('projectBullets', index, {
+                          title: project.title,
+                          description: project.bullets.join(' '),
+                          techStack: 'Modern technologies',
+                          userType: userType,
+                        })}
+                        disabled={isGeneratingAIContent}
+                        className="btn-primary px-3 py-1 text-sm flex items-center space-x-1"
+                      >
+                        {isGeneratingAIContent ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" />
+                            <span>Generate with AI</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {project.bullets.map((bullet, bulletIndex) => (
+                      <div key={bulletIndex} className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={bullet}
+                          onChange={(e) => {
+                            const updated = [...resumeData.projects];
+                            updated[index].bullets[bulletIndex] = e.target.value;
+                            setResumeData(prev => ({ ...prev, projects: updated }));
+                          }}
+                          placeholder="Describe what you built/achieved"
+                          className="input-base flex-1"
+                        />
+                        {project.bullets.length > 1 && (
+                          <button
+                            onClick={() => {
+                              const updated = [...resumeData.projects];
+                              updated[index].bullets.splice(bulletIndex, 1);
+                              setResumeData(prev => ({ ...prev, projects: updated }));
+                            }}
+                            className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const updated = [...resumeData.projects];
+                        updated[index].bullets.push('');
+                        setResumeData(prev => ({ ...prev, projects: updated }));
+                      }}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center dark:text-neon-cyan-400"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Detail
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  setResumeData(prev => ({
+                    ...prev,
+                    projects: [...prev.projects, { title: '', bullets: [''] }]
+                  }));
+                }}
+                className="btn-secondary w-full py-3 flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Project</span>
+              </button>
+            </div>
+          );
+
+        case 'skills':
+          return (
+            <div className="space-y-6">
+              {resumeData.skills.map((skillCategory, index) => (
+                <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">Skill Category #{index + 1}</h4>
+                    {resumeData.skills.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const updated = resumeData.skills.filter((_, i) => i !== index);
+                          setResumeData(prev => ({ ...prev, skills: updated }));
+                        }}
+                        className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={skillCategory.category}
+                      onChange={(e) => {
+                        const updated = [...resumeData.skills];
+                        updated[index].category = e.target.value;
+                        setResumeData(prev => ({ ...prev, skills: updated }));
+                      }}
+                      placeholder="e.g., Programming Languages, Frameworks"
+                      className="input-base"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Skills (comma-separated)
+                    </label>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={newSkillItems}
+                        onChange={(e) => setNewSkillItems(e.target.value)}
+                        placeholder="e.g., JavaScript, React, Node.js"
+                        className="input-base flex-1"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const items = newSkillItems.split(',').map(item => item.trim()).filter(item => item);
+                            const updated = [...resumeData.skills];
+                            updated[index].list = [...updated[index].list, ...items];
+                            updated[index].count = updated[index].list.length;
+                            setResumeData(prev => ({ ...prev, skills: updated }));
+                            setNewSkillItems('');
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          const items = newSkillItems.split(',').map(item => item.trim()).filter(item => item);
+                          const updated = [...resumeData.skills];
+                          updated[index].list = [...updated[index].list, ...items];
+                          updated[index].count = updated[index].list.length;
+                          setResumeData(prev => ({ ...prev, skills: updated }));
+                          setNewSkillItems('');
+                        }}
+                        className="btn-primary px-4 py-2"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {skillCategory.list.map((skill, skillIndex) => (
+                        <span
+                          key={skillIndex}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-neon-cyan-500/20 dark:text-neon-cyan-300"
+                        >
+                          {skill}
+                          <button
+                            onClick={() => {
+                              const updated = [...resumeData.skills];
+                              updated[index].list.splice(skillIndex, 1);
+                              updated[index].count = updated[index].list.length;
+                              setResumeData(prev => ({ ...prev, skills: updated }));
+                            }}
+                            className="ml-2 text-blue-600 hover:text-blue-800 dark:text-neon-cyan-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  setResumeData(prev => ({
+                    ...prev,
+                    skills: [...prev.skills, { category: '', count: 0, list: [] }]
+                  }));
+                }}
+                className="btn-secondary w-full py-3 flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Skill Category</span>
+              </button>
+            </div>
+          );
+
+        case 'certifications':
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Certifications</h3>
+                <button
+                  onClick={() => generateVariations('certifications', {
+                    targetRole: resumeData.targetRole,
+                    skills: resumeData.skills,
+                    userType: userType,
+                    jobDescription: '', // You might want to add a job description field
+                  })}
+                  disabled={isGeneratingAIContent}
+                  className="btn-primary px-4 py-2 flex items-center space-x-2"
+                >
+                  {isGeneratingAIContent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Generate 3 Options</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {resumeData.certifications.map((cert, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={typeof cert === 'string' ? cert : cert.title}
+                      onChange={(e) => {
+                        const updated = [...resumeData.certifications];
+                        if (typeof cert === 'string') {
+                          updated[index] = e.target.value;
+                        } else {
+                          updated[index] = { ...cert, title: e.target.value };
+                        }
+                        setResumeData(prev => ({ ...prev, certifications: updated }));
+                      }}
+                      placeholder="e.g., AWS Certified Solutions Architect"
+                      className="input-base flex-1"
+                    />
+                    <button
+                      onClick={() => {
+                        const updated = resumeData.certifications.filter((_, i) => i !== index);
+                        setResumeData(prev => ({ ...prev, certifications: updated }));
+                      }}
+                      className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    setResumeData(prev => ({
+                      ...prev,
+                      certifications: [...prev.certifications, '']
+                    }));
+                  }}
+                  className="btn-secondary w-full py-3 flex items-center justify-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Certification</span>
+                </button>
+              </div>
+            </div>
+          );
+
+        case 'additional':
+          return (
+            <div className="space-y-6">
+              {/* Custom Section Creator */}
+              <div className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <Plus className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
+                  Add Custom Section
+                </h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Section Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSectionTitle}
+                    onChange={(e) => setCustomSectionTitle(e.target.value)}
+                    placeholder="e.g., Achievements, Languages, Volunteer Work"
+                    className="input-base"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Section Details/Context *
+                  </label>
+                  <textarea
+                    value={customSectionDetails}
+                    onChange={(e) => setCustomSectionDetails(e.target.value)}
+                    placeholder="Provide details or context that AI can use to generate content for this section..."
+                    rows={3}
+                    className="input-base resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={addCustomSection}
+                  disabled={isGeneratingAIContent || !customSectionTitle.trim() || !customSectionDetails.trim()}
+                  className="btn-primary w-full py-3 flex items-center justify-center space-x-2"
+                >
+                  {isGeneratingAIContent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Generating Section...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Generate & Add Section</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Existing Additional Sections */}
+              {resumeData.additionalSections && resumeData.additionalSections.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Your Additional Sections</h3>
+                  {resumeData.additionalSections.map((section, index) => (
+                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-3 dark:border-dark-300">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{section.title}</h4>
+                        <button
+                          onClick={() => {
+                            const updated = resumeData.additionalSections?.filter((_, i) => i !== index) || [];
+                            setResumeData(prev => ({ ...prev, additionalSections: updated }));
+                          }}
+                          className="text-red-600 hover:text-red-700 p-2 dark:text-red-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <ul className="space-y-2">
+                        {section.bullets.map((bullet, bulletIndex) => (
+                          <li key={bulletIndex} className="flex items-start">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0 dark:bg-neon-cyan-400"></span>
+                            <span className="text-gray-700 dark:text-gray-300">{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Achievements Section */}
+              <div className="border border-gray-200 rounded-xl p-4 space-y-4 dark:border-dark-300">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" />
+                    Achievements
+                  </h3>
+                  <button
+                    onClick={() => generateVariations('achievements', {
+                      userType: userType,
+                      targetRole: resumeData.targetRole,
+                      experienceLevel: userType,
+                      context: 'Professional achievements and accomplishments',
+                    })}
+                    disabled={isGeneratingAIContent}
+                    className="btn-primary px-4 py-2 flex items-center space-x-2"
+                  >
+                    {isGeneratingAIContent ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Generate 3 Options</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Add your professional achievements, awards, or notable accomplishments.
+                </p>
+              </div>
+            </div>
+          );
+
+        case 'preview':
+          return (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  🎉 Your Resume is Ready!
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Review your AI-generated resume and export it when you're satisfied.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <ResumePreview resumeData={resumeData} userType={userType} />
+                </div>
+                <div className="space-y-4">
+                  <div className="card p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                      Resume Summary
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Experience Level:</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                          {userType === 'student' ? 'College Student' : userType}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Work Experience:</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {resumeData.workExperience.filter(w => w.role.trim()).length} entries
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Projects:</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {resumeData.projects.filter(p => p.title.trim()).length} projects
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Skills Categories:</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {resumeData.skills.filter(s => s.category.trim()).length} categories
+                        </span>
+                      </div>
+                      {resumeData.additionalSections && resumeData.additionalSections.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Additional Sections:</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {resumeData.additionalSections.length} sections
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <ExportButtons
+                    resumeData={resumeData}
+                    userType={userType}
+                    targetRole={resumeData.targetRole}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+
+        default:
+          return <div>Section not implemented</div>;
+      }
+    };
+
+    return (
+      <div className="card">
+        <button
+          onClick={() => toggleSection(sectionId)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors dark:hover:bg-dark-200"
+        >
+          <div className="flex items-center space-x-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              isExpanded ? 'bg-blue-100 text-blue-600 dark:bg-neon-cyan-500/20 dark:text-neon-cyan-400' : 'bg-gray-100 text-gray-500 dark:bg-dark-200 dark:text-gray-400'
+            }`}>
+              {steps.find(s => s.id === sectionId)?.icon}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                {steps.find(s => s.id === sectionId)?.title}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {isExpanded ? 'Click to collapse' : 'Click to expand and edit'}
+              </p>
+            </div>
+          </div>
+          {isExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+
+        {isExpanded && (
+          <div className="p-6 border-t border-gray-200 dark:border-dark-300">
+            {sectionContent()}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-dark-50 dark:to-dark-200 transition-colors duration-300">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 dark:bg-dark-50 dark:border-dark-300">
+        <div className="container-responsive">
+          <div className="flex items-center justify-between h-16">
+            <button
+              onClick={onNavigateBack}
+              className="bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 text-white hover:from-neon-cyan-400 hover:to-neon-blue-400 active:from-neon-cyan-600 active:to-neon-blue-600 shadow-md hover:shadow-neon-cyan py-3 px-5 rounded-xl inline-flex items-center space-x-2 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:block">Back to Home</span>
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Guided Resume Builder</h1>
+            <div className="w-24"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container-responsive py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Progress Indicator */}
+          <div className="mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Build Your Professional Resume
+                </h2>
+                {isAuthenticated && userSubscription && (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Guided Builds: {userSubscription.guidedBuildsTotal - userSubscription.guidedBuildsUsed} remaining
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sections */}
+          <div className="space-y-4">
+            {steps.map((step) => renderSection(step.id))}
+          </div>
+
+          {/* Final Optimize Button */}
+          <div className="mt-8 text-center">
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                Ready to Finalize Your Resume?
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Complete the guided resume building process and get your professional resume.
+              </p>
+              <button
+                onClick={handleOptimizeResume}
+                disabled={isGeneratingAIContent || !isAuthenticated}
+                className="btn-primary px-8 py-4 text-lg font-bold flex items-center space-x-3 mx-auto shadow-xl hover:shadow-2xl"
+              >
+                {isGeneratingAIContent ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Finalizing Resume...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-6 h-6" />
+                    <span>{isAuthenticated ? 'Complete Resume Build' : 'Sign In to Complete'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Variation Selection Modal */}
+      {showVariationsFor === 'summary' && renderVariationSelector(
+        'summary',
+        summaryVariations,
+        selectedSummaryIndex,
+        (index) => selectVariation('summary', index)
+      )}
+
+      {showVariationsFor === 'careerObjective' && renderVariationSelector(
+        'careerObjective',
+        objectiveVariations,
+        selectedObjectiveIndex,
+        (index) => selectVariation('careerObjective', index)
+      )}
+
+      {showVariationsFor === 'certifications' && renderVariationSelector(
+        'certifications',
+        certificationsVariations,
+        selectedCertificationsIndex,
+        (index) => selectVariation('certifications', index)
+      )}
+
+      {showVariationsFor === 'achievements' && renderVariationSelector(
+        'achievements',
+        achievementsVariations,
+        selectedAchievementsIndex,
+        (index) => selectVariation('achievements', index)
+      )}
     </div>
   );
 };
-
-export default GuidedResumeBuilder;
