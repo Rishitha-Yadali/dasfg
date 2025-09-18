@@ -971,11 +971,12 @@ const generateContent = useCallback(
               </button>
               <button
                 onClick={async () => {
-                  const generatedBullets = await generateContent('additionalSectionBullets', {
-                    title: section.title,
-                    details: section.bullets.join(' '),
-                    userType,
-                  });
+                 const generatedBullets = await generateContent('additionalSectionBullets', {
+  title: section.title,
+  details: section.bullets.join(' '),
+  userType,
+}, 'deepseek/deepseek-r1:free');
+
                   if (generatedBullets && Array.isArray(generatedBullets)) {
                     const updated = [...resumeData.additionalSections];
                     updated[secIndex].bullets = generatedBullets;
