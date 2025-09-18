@@ -367,7 +367,7 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
                   targetRole: resumeData.targetRole,
                   experience: resumeData.workExperience,
                   education: resumeData.education,
-                }
+                },
                 'deepseek/deepseek-r1:free'
               );
               if (generatedContent) {
