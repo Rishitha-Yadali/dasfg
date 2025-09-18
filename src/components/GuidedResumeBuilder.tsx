@@ -13,7 +13,7 @@ import { SubscriptionStatus } from './payment/SubscriptionStatus';
 import { MissingSectionsModal } from './MissingSectionsModal';
 import { InputWizard } from './InputWizard';
 import { LoadingAnimation } from './LoadingAnimation';
-import { optimizeResume, generateAtsOptimizedSection } from '../services/geminiService';
+import { optimizeResume, generateAtsOptimizedSection, generateMultipleAtsVariations } from '../services/geminiService';
 import { generateBeforeScore, generateAfterScore, getDetailedResumeScore, reconstructResumeText } from '../services/scoringService';
 import { paymentService } from '../services/paymentService';
 import { ResumeData, UserType, MatchScore, DetailedScore, ExtractionResult, ScoringMode } from '../types/resume';
@@ -165,6 +165,12 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [currentBulletGenerationIndex, setCurrentBulletGenerationIndex] = useState<number | null>(null);
   const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | 'skills' | 'certifications' | 'additionalSections' | null>(null);
   // --- End AI Bullet Generation States ---
+
+  // --- AI Objective/Summary Generation States ---
+  const [showAIOptionsModal, setShowAIOptionsModal] = useState(false);
+  const [aiGeneratedOptions, setAIGeneratedOptions] = useState<string[]>([]);
+  const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
+  // --- End AI Objective/Summary Generation States ---
 
   const handleStartNewResume = useCallback(() => { // Memoize
     setOptimizedResume({
@@ -1187,6 +1193,47 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   };
   // --- End Additional Sections Handlers ---
 
+  // --- Objective/Summary AI Generation Handlers ---
+  const handleGenerateObjectiveSummary = async () => {
+    if (!optimizedResume) return;
+    setIsGeneratingOptions(true);
+    try {
+      const sectionType = userType === 'experienced' ? 'summary' : 'careerObjective';
+      const generated = await generateMultipleAtsVariations(
+        sectionType,
+        {
+          userType: userType,
+          targetRole: targetRole, // Pass target role if available
+          experience: optimizedResume.workExperience,
+          education: optimizedResume.education,
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
+      );
+      setAIGeneratedOptions(generated);
+      setShowAIOptionsModal(true);
+    } catch (error) {
+      console.error('Error generating objective/summary:', error);
+      alert('Failed to generate objective/summary. Please try again.');
+    } finally {
+      setIsGeneratingOptions(false);
+    }
+  };
+
+  const handleSelectAIOption = (selectedText: string) => {
+    setOptimizedResume(prev => ({
+      ...prev!,
+      [userType === 'experienced' ? 'summary' : 'careerObjective']: selectedText
+    }));
+    setShowAIOptionsModal(false);
+    setAIGeneratedOptions([]);
+  };
+
+  const handleRegenerateAIOptions = () => {
+    handleGenerateObjectiveSummary(); // Simply call the generation function again
+  };
+  // --- End Objective/Summary AI Generation Handlers ---
+
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
     if (!optimizedResume) {
@@ -1352,12 +1399,16 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             />
             <div className="flex justify-end mt-2">
               <button
-                // onClick={handleGenerateAI} // Placeholder for AI generation
+                onClick={handleGenerateObjectiveSummary}
                 className="btn-secondary flex items-center space-x-2"
-                disabled // Disable for now until AI integration is ready
+                disabled={isGeneratingOptions}
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Generate with AI</span>
+                {isGeneratingOptions ? (
+                  <RotateCcw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span>{isGeneratingOptions ? 'Generating...' : 'Generate with AI'}</span>
               </button>
             </div>
           </div>
@@ -2263,6 +2314,55 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
               <div className="flex justify-end mt-6">
                 <button onClick={() => setShowAIBulletOptions(false)} className="btn-secondary">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Options Modal for Objective/Summary */}
+      {showAIOptionsModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-8 h-8 text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your AI-Generated {userType === 'experienced' ? 'Summary' : 'Objective'}</h2>
+                <p className="text-gray-600">Select the best option or regenerate for new suggestions.</p>
+              </div>
+
+              {isGeneratingOptions ? (
+                <div className="text-center py-8">
+                  <RotateCcw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Generating new options...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {aiGeneratedOptions.map((option, optionIndex) => (
+                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-2">Option {optionIndex + 1}</h3>
+                      <p className="text-gray-700">{option}</p>
+                      <button
+                        onClick={() => handleSelectAIOption(option)}
+                        className="mt-4 btn-primary w-full"
+                      >
+                        Select This Option
+                      </button>
+                    </div>
+                  ))}
+                  <button onClick={handleRegenerateAIOptions} className="btn-secondary w-full flex items-center space-x-2">
+                    <RotateCcw className="w-5 h-5" />
+                    <span>Regenerate Options</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <button onClick={() => setShowAIOptionsModal(false)} className="btn-secondary">
                   Close
                 </button>
               </div>
