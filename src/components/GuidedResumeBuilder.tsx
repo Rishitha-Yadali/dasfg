@@ -841,6 +841,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         updatedAdditionalSections[currentBulletGenerationIndex].bullets = bullets;
         return { ...prev!, additionalSections: updatedAdditionalSections };
       });
+    } else if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'skills') { // NEW: Handle skills
+      setOptimizedResume(prev => {
+        const updatedSkills = [...(prev?.skills || [])];
+        updatedSkills[currentBulletGenerationIndex].list = bullets;
+        updatedSkills[currentBulletGenerationIndex].count = bullets.length; // Update count
+        return { ...prev!, skills: updatedSkills };
+      });
     }
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
@@ -1052,7 +1059,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setOptimizedResume(prev => {
         const updatedSkills = [...(prev?.skills || [])];
         updatedSkills[currentBulletGenerationIndex].list = skillsList;
-        updatedSkills[currentBulletGenerationIndex].count = skillsList.length;
+        updatedSkills[currentBulletGenerationIndex].count = skillsList.length; // Update count
         return { ...prev!, skills: updatedSkills };
       });
     }
@@ -1929,7 +1936,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               Review Your Resume
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Take a moment to review all the information you've entered. Ensure everything is accurate and complete before generating the final optimized resume.
+              Take a moment to review all the information you've entered. Ensure everything is accurate and complete before generating the final AI-optimized resume.
             </p>
             <div className="space-y-4">
               {/* Review Section: Contact Information */}
