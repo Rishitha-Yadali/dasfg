@@ -57,7 +57,7 @@ type ManualProject = {
   oneLiner: string;
 };
 
-const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
+export const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
   isAuthenticated,
   onShowAuth,
   onShowProfile,
