@@ -6,7 +6,7 @@ import { Header } from './components/Header';
 import { Navigation } from './components/navigation/Navigation';
 import ResumeOptimizer from './components/ResumeOptimizer';
 import { HomePage } from './components/pages/HomePage';
-import GuidedResumeBuilder from './components/GuidedResumeBuilder';
+import { GuidedResumeBuilder } from './components/GuidedResumeBuilder';
 import { ResumeScoreChecker } from './components/ResumeScoreChecker';
 import { LinkedInMessageGenerator } from './components/LinkedInMessageGenerator';
 import { AboutUs } from './components/pages/AboutUs';
