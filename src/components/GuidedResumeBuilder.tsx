@@ -112,9 +112,9 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
 
   // --- AI Generation Function (simplified for brevity, full logic is in geminiService) ---
 const generateContent = useCallback(
-  async (sectionType: string, data: any, modelOverride?: string) => {
+  async (sectionType: string, data: any, modelToUse?: string) => {
     try {
-      const result = await generateAtsOptimizedSection(sectionType, data, modelOverride);
+      const result = await generateAtsOptimizedSection(sectionType, data, modelToUse);
       return result;
     } catch (error) {
       console.error(`Error generating ${sectionType}:`, error);
