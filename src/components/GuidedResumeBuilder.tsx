@@ -111,15 +111,24 @@ export const GuidedResumeBuilder: React.FC<GuidedResumeBuilderProps> = ({
   }, []);
 
   // --- AI Generation Function (simplified for brevity, full logic is in geminiService) ---
-const generatedObjective = await generateContent(
-  'careerObjective',
-  {
-    userType: userType,
-    education: education,
-    targetRole: targetRole,
+const generateContent = useCallback(
+  async (sectionType: string, data: any, modelToUse?: string) => {
+    try {
+      const result = await generateAtsOptimizedSection(sectionType, data, modelToUse);
+      return result;
+    } catch (error) {
+      console.error(`Error generating ${sectionType}:`, error);
+      onShowAlert(
+        'AI Generation Failed',
+        `Could not generate content for ${sectionType}. Please try again.`,
+        'error'
+      );
+      return null;
+    }
   },
-  'deepseek/deepseek-r1:free' // <-- Add this argument
+  [onShowAlert]
 );
+
 
   // --- Handle AI-powered optimization ---
   const handleGenerateResume = useCallback(async () => {
