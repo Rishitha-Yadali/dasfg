@@ -112,7 +112,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [isCalculatingScore, setIsCalculatingScore] = useState(false);
   const [isProcessingMissingSections, setIsProcessingMissingSections] = useState(false);
   const [activeTab, setActiveTab] = useState<'resume'>('resume');
-  // const [currentStep, setCurrentStep = useState(0); // This state is now replaced by currentSectionIndex
+  // const [currentStep, setCurrentStep] = useState(0); // This state is now replaced by currentSectionIndex
 
   const [showProjectAnalysis, setShowProjectAnalysis] = useState(false);
   const [showMissingSectionsModal, setShowMissingSectionsModal] = useState(false);
@@ -249,10 +249,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const proceedWithFinalOptimization = useCallback(async (resumeData: ResumeData, initialScore: DetailedScore, accessToken: string) => { // Memoize
     try {
       setIsOptimizing(true);
-      // MODIFIED: Pass undefined for jobDescription and targetRole to ensure general ATS-based optimization
       const finalOptimizedResume = await optimizeResume(
         reconstructResumeText(resumeData),
-        undefined, // Pass undefined for jobDescription
+        jobDescription,
         userType,
         userName,
         userEmail,
@@ -261,7 +260,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         userGithub,
         undefined,
         undefined,
-        undefined // Pass undefined for targetRole
+        targetRole
       );
       const beforeScoreData = generateBeforeScore(reconstructResumeText(resumeData));
       setBeforeScore(beforeScoreData);
@@ -281,8 +280,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         setShowMobileInterface(true);
       }
       setActiveTab('resume');
-      // MODIFIED: Navigate to /optimizer and pass the generated resume data
-      navigate('/optimizer', { state: { optimizedResume: finalOptimizedResume, userType: userType } });
+      setOptimizedResume(finalOptimizedResume);
     } catch (error) {
       console.error('Error in final optimization pass:', error);
       alert('Failed to complete resume optimization. Please try again.');
@@ -290,7 +288,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setIsOptimizing(false);
       setIsCalculatingScore(false);
     }
-  }, [jobDescription, userType, userName, userEmail, userPhone, userLinkedin, userGithub, targetRole, user, checkSubscriptionStatus, navigate]); // Added navigate to dependencies
+  }, [jobDescription, userType, userName, userEmail, userPhone, userLinkedin, userGithub, targetRole, user, checkSubscriptionStatus]); // Dependencies for memoized function
 
   const handleInitialResumeProcessing = useCallback(async (resumeData: ResumeData, accessToken: string) => { // Memoize
     try {
@@ -399,8 +397,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         } else {
           // Parse from extractionResult.text via AI as before
           const parsedResume = await optimizeResume(
-           reconstructResumeText(optimizedResume), // Use optimizedResume directly
-            undefined, // Pass undefined for jobDescription
+           extractionResult.text,
+            jobDescription,
             userType,
             userName,
             userEmail,
@@ -409,7 +407,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             userGithub,
             undefined,
             undefined,
-            undefined // Pass undefined for targetRole
+            targetRole
           );
           baseResume = parsedResume;
           setParsedResumeData(parsedResume);
@@ -448,6 +446,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     userPhone,
     userLinkedin,
     userGithub,
+    targetRole,
     checkForMissingSections,
     continueOptimizationProcess,
     parsedResumeData // ⬅️ added dependency because we branch on it
@@ -639,7 +638,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                 targetRole={targetRole}
                 onShowProfile={onShowProfile}
                 walletRefreshKey={walletRefreshKey}
-                isAuthenticated={isAuthenticated} // Pass isAuthenticated
               />
             )}
           </>
@@ -2247,7 +2245,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                   targetRole={targetRole}
                   onShowProfile={onShowProfile}
                   walletRefreshKey={walletRefreshKey}
-                  isAuthenticated={isAuthenticated} // Pass isAuthenticated
                 />
               ) : (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
