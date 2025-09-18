@@ -559,10 +559,11 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
           'HTTP-Referer': 'https://primoboost.ai',
           'X-Title': 'PrimoBoost AI'
         },
-        const modelToSend = modelOverride || 'google/gemini-flash-1.5';
-        console.log("Sending request to OpenRouter with model:", modelToSend); // Add this line
+          const modelToSend= modelOverride || 'google/gemini-flash-1.5';
+             console.log("Sending request to OpenRouter with model:", modelToSend);
         body: JSON.stringify({
-          model: modelToSend,
+          model:modelToSend,
+          console.log("Sending request to OpenRouter with model:", modelToSend);
           messages: [{ role: 'user', content: prompt }]
         })
       });
