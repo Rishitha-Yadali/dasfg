@@ -22,11 +22,6 @@ import { exportToPDF, exportToWord } from '../utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import { ExportButtons } from './ExportButtons';
 
-// --- NEW IMPORTS FOR GUIDED BUILDER SECTIONS ---
-import { ProfileSection } from './guided-builder/ProfileSection';
-import { ObjectiveSummarySection } from './guided-builder/ObjectiveSummarySection';
-// --- END NEW IMPORTS ---
-
 // src/components/GuidedResumeBuilder.tsx
 const cleanResumeText = (text: string): string => {
   let cleaned = text;
@@ -694,9 +689,109 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
     switch (resumeSections[currentSectionIndex]) {
       case 'profile':
-        return <ProfileSection resumeData={optimizedResume} setResumeData={setOptimizedResume} user={user} />;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <User className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Contact Information
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Full Name *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={optimizedResume?.name || ''}
+                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, name: e.target.value }))}
+                  placeholder="Your Full Name"
+                  className="input-base"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Email *</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={optimizedResume?.email || ''}
+                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, email: e.target.value }))}
+                  placeholder="your.email@example.com"
+                  className="input-base"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Phone (Optional)</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={optimizedResume?.phone || ''}
+                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, phone: e.target.value }))}
+                  placeholder="+1 (123) 456-7890"
+                  className="input-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">LinkedIn Profile URL (Optional)</label>
+                <input
+                  type="url"
+                  name="linkedin"
+                  value={optimizedResume?.linkedin || ''}
+                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, linkedin: e.target.value }))}
+                  placeholder="https://linkedin.com/in/yourprofile"
+                  className="input-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">GitHub Profile URL (Optional)</label>
+                <input
+                  type="url"
+                  name="github"
+                  value={optimizedResume?.github || ''}
+                  onChange={(e) => setOptimizedResume(prev => ({ ...prev!, github: e.target.value }))}
+                  placeholder="https://github.com/yourusername"
+                  className="input-base"
+                />
+              </div>
+            </div>
+          </div>
+        );
       case 'objective_summary':
-        return <ObjectiveSummarySection resumeData={optimizedResume} setResumeData={setOptimizedResume} userType={userType} />;
+        return (
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+              <FileText className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+              {userType === 'experienced' ? 'Professional Summary' : 'Career Objective'}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              {userType === 'experienced'
+                ? 'Craft a compelling 2-3 sentence summary highlighting your experience and value.'
+                : 'Write a concise 2-sentence objective focusing on your career goals and skills.'}
+            </p>
+            <textarea
+              name={userType === 'experienced' ? 'summary' : 'careerObjective'}
+              value={userType === 'experienced' ? (optimizedResume?.summary || '') : (optimizedResume?.careerObjective || '')}
+              onChange={(e) => setOptimizedResume(prev => ({ ...prev!, [e.target.name]: e.target.value }))}
+              placeholder={
+                userType === 'experienced'
+                  ? 'e.g., Highly motivated Software Engineer with 5+ years of experience in developing scalable web applications. Proven ability to lead cross-functional teams and deliver high-quality software solutions.'
+                  : 'e.g., Enthusiastic Computer Science student seeking an entry-level software development role. Eager to apply strong programming skills and problem-solving abilities to contribute to innovative projects.'
+              }
+              className="w-full h-32 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none transition-all duration-200 bg-gray-50 focus:bg-white text-sm dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100 dark:focus:bg-dark-100"
+              required
+            />
+            <div className="flex justify-end mt-2">
+              <button
+                // onClick={handleGenerateAI} // Placeholder for AI generation
+                className="btn-secondary flex items-center space-x-2"
+                disabled // Disable for now until AI integration is ready
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Generate with AI</span>
+              </button>
+            </div>
+          </div>
+        );
       case 'education':
         return <div className="p-6 bg-white rounded-xl shadow-lg">Education Section (Coming Soon)</div>;
       case 'work_experience':
