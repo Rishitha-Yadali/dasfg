@@ -552,7 +552,8 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
   while (retryCount < maxRetries) {
     try {
       const modelToSend = modelOverride || 'google/gemini-flash-1.5';
-console.log("Sending request to OpenRouter with model:", modelToSend);
+console.log("[ATS_OPTIMIZER_CALL] Sending request to OpenRouter with model:", modelToSend);
+
 
 const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
   method: 'POST',
