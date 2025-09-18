@@ -36,18 +36,18 @@ const deepCleanComments = (val: any): any => {
     cleanedInput = lines.join('\n');
 
     // 4. Remove excessive newlines
-    cleanedInput = cleanedOut.replace(/\n{3,}/g, '\n\n');
+    cleanedInput = cleanedInput.replace(/\n{3,}/g, '\n\n'); // Fixed: changed 'cleanedOut' to 'cleanedInput'
 
     return cleanedInput.trim();
-};
-if (typeof val === 'string') return stripLineComments(val);
-if (Array.isArray(val)) return val.map(deepCleanComments);
-if (val && typeof val === 'object') {
-  const out: Record<string, any> = {};
-  for (const k of Object.keys(val)) out[k] = deepCleanComments(val[k]);
-  return out;
-}
-return val;
+  };
+  if (typeof val === 'string') return stripLineComments(val);
+  if (Array.isArray(val)) return val.map(deepCleanComments);
+  if (val && typeof val === 'object') {
+    const out: Record<string, any> = {};
+    for (const k of Object.keys(val)) out[k] = deepCleanComments(val[k]);
+    return out;
+  }
+  return val;
 };
 
 export const optimizeResume = async (
