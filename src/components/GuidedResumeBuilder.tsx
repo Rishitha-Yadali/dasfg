@@ -22,6 +22,11 @@ import { exportToPDF, exportToWord } from '../utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import { ExportButtons } from './ExportButtons';
 
+// --- NEW IMPORTS FOR GUIDED BUILDER SECTIONS ---
+import { ProfileSection } from './guided-builder/ProfileSection';
+import { ObjectiveSummarySection } from './guided-builder/ObjectiveSummarySection';
+// --- END NEW IMPORTS ---
+
 // src/components/GuidedResumeBuilder.tsx
 const cleanResumeText = (text: string): string => {
   let cleaned = text;
@@ -56,102 +61,6 @@ type ManualProject = {
   techStack: string[];
   oneLiner: string;
 };
-
-// --- NEW: Profile Section Component ---
-interface ProfileSectionProps {
-  resumeData: ResumeData;
-  setResumeData: React.Dispatch<React.SetStateAction<ResumeData | null>>;
-  user: any; // Supabase user object
-}
-
-const ProfileSection: React.FC<ProfileSectionProps> = ({ resumeData, setResumeData, user }) => {
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setResumeData(prev => ({ ...prev!, [name]: value }));
-  };
-
-  useEffect(() => {
-    // Pre-fill from authenticated user's profile if available
-    if (user) {
-      setResumeData(prev => ({
-        ...prev!,
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        linkedin: user.linkedin || '',
-        github: user.github || '',
-      }));
-    }
-  }, [user, setResumeData]);
-
-  return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-        <User className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-        Contact Information
-      </h2>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Full Name *</label>
-          <input
-            type="text"
-            name="name"
-            value={resumeData?.name || ''}
-            onChange={handleInputChange}
-            placeholder="Your Full Name"
-            className="input-base"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Email *</label>
-          <input
-            type="email"
-            name="email"
-            value={resumeData?.email || ''}
-            onChange={handleInputChange}
-            placeholder="your.email@example.com"
-            className="input-base"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Phone (Optional)</label>
-          <input
-            type="tel"
-            name="phone"
-            value={resumeData?.phone || ''}
-            onChange={handleInputChange}
-            placeholder="+1 (123) 456-7890"
-            className="input-base"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">LinkedIn Profile URL (Optional)</label>
-          <input
-            type="url"
-            name="linkedin"
-            value={resumeData?.linkedin || ''}
-            onChange={handleInputChange}
-            placeholder="https://linkedin.com/in/yourprofile"
-            className="input-base"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">GitHub Profile URL (Optional)</label>
-          <input
-            type="url"
-            name="github"
-            value={resumeData?.github || ''}
-            onChange={handleInputChange}
-            placeholder="https://github.com/yourusername"
-            className="input-base"
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-// --- END NEW: Profile Section Component ---
-
 
 const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   isAuthenticated,
@@ -741,8 +650,32 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // --- NEW: Navigation Handlers ---
   const handleNextSection = () => {
-    if (currentSectionIndex < resumeSections.length - 1) {
+    // Basic validation for the current section before moving next
+    let isValid = true;
+    if (optimizedResume) {
+      switch (resumeSections[currentSectionIndex]) {
+        case 'profile':
+          isValid = !!optimizedResume.name && !!optimizedResume.email;
+          break;
+        case 'objective_summary':
+          if (userType === 'experienced') {
+            isValid = !!optimizedResume.summary && optimizedResume.summary.trim().length > 0;
+          } else {
+            isValid = !!optimizedResume.careerObjective && optimizedResume.careerObjective.trim().length > 0;
+          }
+          break;
+        // Add validation for other sections as they are implemented
+        default:
+          isValid = true; // Assume valid for unimplemented sections
+      }
+    } else {
+      isValid = false; // No resume data, so not valid
+    }
+
+    if (isValid && currentSectionIndex < resumeSections.length - 1) {
       setCurrentSectionIndex(prev => prev + 1);
+    } else if (!isValid) {
+      alert('Please fill in all required fields for the current section before proceeding.');
     }
   };
 
@@ -755,11 +688,15 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // --- NEW: Conditional Section Rendering ---
   const renderCurrentSection = () => {
+    if (!optimizedResume) {
+      return <div className="p-6 bg-white rounded-xl shadow-lg">Loading resume data...</div>;
+    }
+
     switch (resumeSections[currentSectionIndex]) {
       case 'profile':
-        return <ProfileSection resumeData={optimizedResume!} setResumeData={setOptimizedResume} user={user} />;
+        return <ProfileSection resumeData={optimizedResume} setResumeData={setOptimizedResume} user={user} />;
       case 'objective_summary':
-        return <div className="p-6 bg-white rounded-xl shadow-lg">Objective/Summary Section (Coming Soon)</div>;
+        return <ObjectiveSummarySection resumeData={optimizedResume} setResumeData={setOptimizedResume} userType={userType} />;
       case 'education':
         return <div className="p-6 bg-white rounded-xl shadow-lg">Education Section (Coming Soon)</div>;
       case 'work_experience':
@@ -814,7 +751,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             </button>
             <button
               onClick={handleNextSection}
-              disabled={currentSectionIndex === resumeSections.length - 1} // Add validation here later
+              // The disabled state will now be handled by the validation inside handleNextSection
               className="btn-primary flex items-center space-x-2"
             >
               <span>Next</span>
