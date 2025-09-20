@@ -739,7 +739,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleAddWorkExperience = () => {
     setOptimizedResume(prev => ({
       ...prev!,
-      workExperience: [...(prev?.workExperience || []), { role: '', company: '', year: '', bullets: [''] }]
+      workExperience: [...(prev?.workExperience || []), { role: '', company: '', year: '', bullets: [] }] // Changed bullets: [''] to bullets: []
     }));
   };
 
@@ -824,13 +824,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
         if (currentBulletGenerationSection === 'workExperience') {
             newResume.workExperience = [...newResume.workExperience!];
-            newResume.workExperience[currentBulletGenerationIndex].bullets = selectedOption;
+            newResume.workExperience[currentBulletGenerationIndex].bullets = [...newResume.workExperience[currentBulletGenerationIndex].bullets, selectedOption[0]]; // Append selected bullet
         } else if (currentBulletGenerationSection === 'projects') {
             newResume.projects = [...newResume.projects!];
-            newResume.projects[currentBulletGenerationIndex].bullets = selectedOption;
+            newResume.projects[currentBulletGenerationIndex].bullets = [...newResume.projects[currentBulletGenerationIndex].bullets, selectedOption[0]]; // Append selected bullet
         } else if (currentBulletGenerationSection === 'additionalSections') {
             newResume.additionalSections = [...newResume.additionalSections!];
-            newResume.additionalSections[currentBulletGenerationIndex].bullets = selectedOption;
+            newResume.additionalSections[currentBulletGenerationIndex].bullets = [...newResume.additionalSections[currentBulletGenerationIndex].bullets, selectedOption[0]]; // Append selected bullet
         } else if (currentBulletGenerationSection === 'skills') {
             newResume.skills = [...newResume.skills!];
             newResume.skills[currentBulletGenerationIndex].list = selectedOption;
@@ -944,7 +944,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleAddProject = () => {
     setOptimizedResume(prev => ({
       ...prev!,
-      projects: [...(prev?.projects || []), { title: '', bullets: [''] }]
+      projects: [...(prev?.projects || []), { title: '', bullets: [] }] // Changed bullets: [''] to bullets: []
     }));
   };
 
@@ -1042,7 +1042,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setOptimizedResume(prev => {
       const updatedSkills = [...(prev?.skills || [])];
       updatedSkills[categoryIndex].list.push('');
-      updatedSkills[categoryIndex].count = updatedSkills[categoryIndex].list.length;
       return { ...prev!, skills: updatedSkills };
     });
   };
