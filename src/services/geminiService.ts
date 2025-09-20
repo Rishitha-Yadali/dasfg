@@ -639,8 +639,8 @@ CRITICAL ATS OPTIMIZATION RULES:
 2. Highlight relevant skills and academic achievements
 3. Use industry-standard keywords
 4. Keep it concise (30-50 words max)
-5. Avoid personal pronouns ("I", "my")
-6. Show enthusiasm and potential
+5. Show enthusiasm and potential
+6. Avoid personal pronouns ("I", "my")
 7. Make it ATS-friendly with clear language
 
 Return ONLY the career objective text, no additional formatting or explanations.`;
@@ -823,8 +823,11 @@ const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         sectionType === 'skillsList'        // Added for JSON parsing
       ) {
         try {
+          console.log(`Parsing JSON for ${sectionType}:`, result); // Log the result before parsing
           return JSON.parse(result);
-        } catch {
+        } catch (parseError) {
+          console.error(`JSON parsing error for ${sectionType}:`, parseError); // Log parsing error
+          console.error('Raw response that failed to parse:', result); // Log the raw response
           // Fallback to splitting by lines if JSON parsing fails
           return result.split('\n')
             .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
