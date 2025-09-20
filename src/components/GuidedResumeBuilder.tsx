@@ -640,7 +640,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -789,7 +789,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setCurrentBulletGenerationSection('workExperience');
     try {
       const currentWork = optimizedResume.workExperience[workIndex];
-      const generated = await generateAtsOptimizedSection(
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
         'workExperienceBullets',
         {
           role: currentWork.role,
@@ -797,9 +797,11 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           year: currentWork.year,
           description: currentWork.bullets.join(' '), // Pass existing bullets as description
           userType: userType,
-        }
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
       );
-      setAIGeneratedBullets([generated as string[]]); // FIX: Wrap in an array
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating bullets:', error);
@@ -860,10 +862,10 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setIsGeneratingBullets(true);
       setSelectedBulletOptionIndex(null); // Clear selection on regenerate
       try {
-        let generated: string[] | string[][];
+        let generated: string[][] | string[]; // Can be string[][] for multiple variations or string[] for single
         if (currentBulletGenerationSection === 'workExperience') {
           const currentWork = optimizedResume.workExperience[currentBulletGenerationIndex];
-          generated = await generateAtsOptimizedSection(
+          generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
             'workExperienceBullets',
             {
               role: currentWork.role,
@@ -871,31 +873,37 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               year: currentWork.year,
               description: currentWork.bullets.join(' '), // Pass existing bullets as description
               userType: userType,
-            }
+            },
+            undefined, // modelOverride
+            3 // Request 3 variations
           );
         } else if (currentBulletGenerationSection === 'projects') {
           const currentProject = optimizedResume.projects[currentBulletGenerationIndex];
-          generated = await generateAtsOptimizedSection(
+          generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
             'projectBullets',
             {
               title: currentProject.title,
               description: currentProject.bullets.join(' '), // Pass existing bullets as description
               userType: userType,
-            }
+            },
+            undefined, // modelOverride
+            3 // Request 3 variations
           );
         } else if (currentBulletGenerationSection === 'additionalSections') {
           const currentSection = optimizedResume.additionalSections![currentBulletGenerationIndex];
-          generated = await generateAtsOptimizedSection(
+          generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
             'additionalSectionBullets',
             {
               title: currentSection.title,
               details: currentSection.bullets.join(' '), // Pass existing bullets as details
               userType: userType,
-            }
+            },
+            undefined, // modelOverride
+            3 // Request 3 variations
           );
         } else if (currentBulletGenerationSection === 'certifications') { // ADDED: Certifications regeneration logic
           const currentCert = optimizedResume.certifications[currentBulletGenerationIndex];
-          generated = await generateAtsOptimizedSection(
+          generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
             'certifications',
             {
               userType: userType,
@@ -903,12 +911,25 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               skills: optimizedResume.skills,
               currentCertTitle: currentCert.title,
               currentCertDescription: currentCert.description
-            }
+            },
+            undefined, // modelOverride
+            3 // Request 3 variations
           );
-        } else {
-          throw new Error("Unknown section for bullet regeneration");
+        } else if (currentBulletGenerationSection === 'skills') { // ADDED: Skills regeneration logic
+          const currentCategory = optimizedResume.skills[currentBulletGenerationIndex];
+          generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
+            'skillsList',
+            {
+              category: currentCategory.category,
+              existingSkills: currentCategory.list.join(', '), // Pass existing skills as existingSkills
+              userType: userType,
+              jobDescription: jobDescription, // Pass JD for relevance
+            },
+            undefined, // modelOverride
+            3 // Request 3 variations
+          );
         }
-        setAIGeneratedBullets([generated as string[]]);
+        setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
       } catch (error) {
         console.error('Error regenerating bullets:', error);
         alert('Failed to regenerate bullets. Please try again.');
@@ -973,15 +994,17 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setCurrentBulletGenerationSection('projects');
     try {
       const currentProject = optimizedResume.projects[projectIndex];
-      const generated = await generateAtsOptimizedSection(
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
         'projectBullets',
         {
           title: currentProject.title,
           description: currentProject.bullets.join(' '), // Pass existing bullets as description
           userType: userType,
-        }
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
       );
-      setAIGeneratedBullets([generated as string[]]);
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating project bullets:', error);
@@ -1048,16 +1071,18 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setCurrentBulletGenerationSection('skills');
     try {
       const currentCategory = optimizedResume.skills[categoryIndex];
-      const generated = await generateAtsOptimizedSection(
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
         'skillsList',
         {
           category: currentCategory.category,
           existingSkills: currentCategory.list.join(', '), // Pass existing skills as existingSkills
           userType: userType,
           jobDescription: jobDescription, // Pass JD for relevance
-        }
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
       );
-      setAIGeneratedBullets([generated as string[]]); // Expecting string[] of skills
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating skills:', error);
@@ -1130,9 +1155,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         jobDescription: jobDescription,
         skills: optimizedResume.skills,
         currentCertTitle: currentCert.title, // Pass current title
-        currentCertDescription: currentCert.description // Pass current description
+        currentCertDescription: currentCert.description
       });
-      const generated = await generateAtsOptimizedSection(
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
         'certifications',
         {
           userType: userType,
@@ -1140,11 +1165,11 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           skills: optimizedResume.skills,
           currentCertTitle: currentCert.title,
           currentCertDescription: currentCert.description
-        }
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
       );
-      console.log('AI generated certifications:', generated);
-      // FIX: Map each generated title into its own array for setAIGeneratedBullets
-      setAIGeneratedBullets((generated as string[]).map(title => [title]));
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating certifications:', error);
@@ -1227,15 +1252,17 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setCurrentBulletGenerationSection('additionalSections');
     try {
       const currentSection = optimizedResume.additionalSections![sectionIndex];
-      const generated = await generateAtsOptimizedSection(
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
         'additionalSectionBullets',
         {
           title: currentSection.title,
           details: currentSection.bullets.join(' '), // Pass existing bullets as details
           userType: userType,
-        }
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
       );
-      setAIGeneratedBullets([generated as string[]]);
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating additional section bullets:', error);
