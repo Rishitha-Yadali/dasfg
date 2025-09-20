@@ -171,12 +171,16 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [isGeneratingBullets, setIsGeneratingBullets] = useState(false);
   const [currentBulletGenerationIndex, setCurrentBulletGenerationIndex] = useState<number | null>(null);
   const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | 'skills' | 'certifications' | 'additionalSections' | null>(null);
+  // NEW: State for selected bullet option
+  const [selectedBulletOptionIndex, setSelectedBulletOptionIndex] = useState<number | null>(null);
   // --- End AI Bullet Generation States ---
 
   // --- AI Objective/Summary Generation States ---
   const [showAIOptionsModal, setShowAIOptionsModal] = useState(false);
   const [aiGeneratedOptions, setAIGeneratedOptions] = useState<string[]>([]);
   const [isGeneratingOptions, setIsGeneratingOptions] = useState(false);
+  // NEW: State for selected AI option (summary/objective)
+  const [selectedAIOptionIndex, setSelectedAIOptionIndex] = useState<number | null>(null);
   // --- End AI Objective/Summary Generation States ---
 
   // --- Review Section State ---
@@ -849,11 +853,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
     setCurrentBulletGenerationSection(null);
+    setSelectedBulletOptionIndex(null); // Reset selection
 };
 
   const handleRegenerateAIBullets = async () => {
     if (currentBulletGenerationIndex !== null && optimizedResume) {
       setIsGeneratingBullets(true);
+      setSelectedBulletOptionIndex(null); // Clear selection on regenerate
       try {
         let generated: string[] | string[][];
         if (currentBulletGenerationSection === 'workExperience') {
@@ -1075,6 +1081,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
     setCurrentBulletGenerationSection(null);
+    setSelectedBulletOptionIndex(null); // Reset selection
   };
   // --- End Skills Section Handlers ---
 
@@ -1163,6 +1170,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
     setCurrentBulletGenerationSection(null);
+    setSelectedBulletOptionIndex(null); // Reset selection
   };
   // --- End Certifications Section Handlers ---
 
@@ -1243,6 +1251,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleGenerateObjectiveSummary = async () => {
     if (!optimizedResume) return;
     setIsGeneratingOptions(true);
+    setSelectedAIOptionIndex(null); // Clear selection on regenerate
     try {
       const sectionType = userType === 'experienced' ? 'summary' : 'careerObjective';
       const generated = await generateMultipleAtsVariations(
@@ -1273,6 +1282,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }));
     setShowAIOptionsModal(false);
     setAIGeneratedOptions([]);
+    setSelectedAIOptionIndex(null); // Reset selection
   };
 
   const handleRegenerateAIOptions = () => {
@@ -2512,7 +2522,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                 <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Sparkles className="w-8 h-8 text-blue-600" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your AI-Generated Bullets</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Your AI-Generated Options</h2>
                 <p className="text-gray-600">Select the best option or regenerate for new suggestions.</p>
               </div>
 
@@ -2524,21 +2534,44 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               ) : (
                 <div className="space-y-4">
                   {aiGeneratedBullets.map((option, optionIndex) => (
-                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900 mb-2">Option {optionIndex + 1}</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                        {option.map((bullet, bulletIndex) => (
-                          <li key={bulletIndex}>{bullet}</li>
-                        ))}
-                      </ul>
-                      <button
-                        onClick={() => handleSelectAIGeneratedOption(option)}
-                        className="mt-4 btn-primary w-full"
-                      >
-                        Select This Option
-                      </button>
-                    </div>
+                    <label
+                      key={optionIndex}
+                      className={`block border rounded-lg p-4 cursor-pointer transition-all ${
+                        selectedBulletOptionIndex === optionIndex
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="aiBulletOption"
+                        className="hidden"
+                        checked={selectedBulletOptionIndex === optionIndex}
+                        onChange={() => setSelectedBulletOptionIndex(optionIndex)}
+                      />
+                      <div className="flex items-start">
+                        <div className="flex-grow">
+                          <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                            {option.map((bullet, bulletIndex) => (
+                              <li key={bulletIndex}>{bullet}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 flex items-center justify-center">
+                          {selectedBulletOptionIndex === optionIndex && (
+                            <CheckCircle className="w-3 h-3 text-blue-600" />
+                          )}
+                        </div>
+                      </div>
+                    </label>
                   ))}
+                  <button
+                    onClick={() => handleSelectAIGeneratedOption(aiGeneratedBullets[selectedBulletOptionIndex!])}
+                    className="mt-4 btn-primary w-full"
+                    disabled={selectedBulletOptionIndex === null}
+                  >
+                    Select This Option
+                  </button>
                   <button onClick={handleRegenerateAIBullets} className="btn-secondary w-full flex items-center space-x-2">
                     <RotateCcw className="w-5 h-5" />
                     <span>Regenerate Options</span>
@@ -2577,17 +2610,40 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               ) : (
                 <div className="space-y-4">
                   {aiGeneratedOptions.map((option, optionIndex) => (
-                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900 mb-2">Option {optionIndex + 1}</h3>
-                      <p className="text-gray-700">{option}</p>
-                      <button
-                        onClick={() => handleSelectAIOption(option)}
-                        className="mt-4 btn-primary w-full"
-                      >
-                        Select This Option
-                      </button>
-                    </div>
+                    <label
+                      key={optionIndex}
+                      className={`block border rounded-lg p-4 cursor-pointer transition-all ${
+                        selectedAIOptionIndex === optionIndex
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="aiOption"
+                        className="hidden"
+                        checked={selectedAIOptionIndex === optionIndex}
+                        onChange={() => setSelectedAIOptionIndex(optionIndex)}
+                      />
+                      <div className="flex items-start">
+                        <div className="flex-grow">
+                          <p className="text-gray-700">{option}</p>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 flex items-center justify-center">
+                          {selectedAIOptionIndex === optionIndex && (
+                            <CheckCircle className="w-3 h-3 text-blue-600" />
+                          )}
+                        </div>
+                      </div>
+                    </label>
                   ))}
+                  <button
+                    onClick={() => handleSelectAIOption(aiGeneratedOptions[selectedAIOptionIndex!])}
+                    className="mt-4 btn-primary w-full"
+                    disabled={selectedAIOptionIndex === null}
+                  >
+                    Select This Option
+                  </button>
                   <button onClick={handleRegenerateAIOptions} className="btn-secondary w-full flex items-center space-x-2">
                     <RotateCcw className="w-5 h-5" />
                     <span>Regenerate Options</span>
