@@ -636,7 +636,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -1863,26 +1863,26 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                     rows={2}
                   />
                 </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleGenerateCertifications(index)} // Pass the index of the current certification
+                    className="btn-primary flex items-center space-x-2"
+                    disabled={isGeneratingBullets}
+                  >
+                    {isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'certifications' ? (
+                      <RotateCcw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-5 h-5" />
+                    )}
+                    <span>{isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'certifications' ? 'Generating...' : 'Generate with AI'}</span>
+                  </button>
+                </div>
               </div>
             ))}
-            <div className="flex space-x-2">
-              <button onClick={handleAddCertification} className="btn-secondary flex items-center space-x-2">
-                <Plus className="w-5 h-5" />
-                <span>Add Certification</span>
-              </button>
-              <button
-                onClick={() => handleGenerateCertifications(index)} // Pass the index of the current certification
-                className="btn-primary flex items-center space-x-2"
-                disabled={isGeneratingBullets}
-              >
-                {isGeneratingBullets && currentBulletGenerationSection === 'certifications' ? (
-                  <RotateCcw className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-5 h-5" />
-                )}
-                <span>{isGeneratingBullets && currentBulletGenerationSection === 'certifications' ? 'Generating...' : 'Generate with AI'}</span>
-              </button>
-            </div>
+            <button onClick={handleAddCertification} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Certification</span>
+            </button>
           </div>
         );
       case 'additional_sections':
