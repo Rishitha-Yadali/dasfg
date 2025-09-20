@@ -757,7 +757,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   });
 };
 
-
   const handleRemoveWorkExperience = (index: number) => {
     setOptimizedResume(prev => {
       const updatedWorkExperience = (prev?.workExperience || []).filter((_, i) => i !== index);
