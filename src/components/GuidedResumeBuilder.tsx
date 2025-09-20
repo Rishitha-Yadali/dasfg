@@ -2298,22 +2298,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             </div>
 
             {/* Export Buttons */}
-            <div className="card p-6 mb-6 shadow-lg"> {/* Enclosed in a card */}
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Download Resume</h2> {/* Title for the card */}
-              {optimizedResume ? (
-                <ExportButtons
-                  resumeData={optimizedResume}
-                  userType={userType}
-                  targetRole={targetRole}
-                  onShowProfile={onShowProfile}
-                  walletRefreshKey={walletRefreshKey}
-                />
-              ) : (
-                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                  Complete your resume to enable export.
-                </div>
-              )}
-            </div>
+            {/* Removed the entire Export Buttons div */}
           </div>
         </div>
       </div>
