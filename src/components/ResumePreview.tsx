@@ -96,8 +96,8 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     return (
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="p-8 text-center">
-          <div className="text-gray-500 mb-4">Invalid resume data</div>
-          <div className="text-sm text-gray-400">Resume name is missing or empty</div>
+          <div className="text-gray-500 mb-4">Start building your resume!</div>
+          <div className="text-sm text-gray-400">Fill in your details on the left to generate a live preview here</div>
         </div>
       </div>
     );
