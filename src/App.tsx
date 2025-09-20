@@ -79,8 +79,11 @@ function App() {
     setAuthModalInitialView('login');
     console.log('showAuthModal set to true');
     setShowMobileMenu(false);
-    if (callback) {
+    // Ensure postAuthCallback is a function or null
+    if (typeof callback === 'function') { // Explicitly check if it's a function
       setPostAuthCallback(() => callback);
+    } else {
+      setPostAuthCallback(null); // Set to null if no valid callback is provided
     }
   }, []);
 
