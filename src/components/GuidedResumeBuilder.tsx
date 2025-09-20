@@ -744,18 +744,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }));
   };
 
-  const handleUpdateWorkBullet = (workIndex: number, bulletIndex: number, value: string) => {
-  setOptimizedResume(prev => {
-    const updatedWorkExperience = [...(prev?.workExperience || [])];
-    const updatedBullets = [...updatedWorkExperience[workIndex].bullets];
-    updatedBullets[bulletIndex] = value;
-    updatedWorkExperience[workIndex] = {
-      ...updatedWorkExperience[workIndex],
-      bullets: updatedBullets,
-    };
-    return { ...prev!, workExperience: updatedWorkExperience };
-  });
-};
+  const handleUpdateWorkExperience = (index: number, field: keyof ResumeData['workExperience'][0], value: string) => {
+    setOptimizedResume(prev => {
+      const updatedWorkExperience = [...(prev?.workExperience || [])];
+      updatedWorkExperience[index] = { ...updatedWorkExperience[index], [field]: value };
+      return { ...prev!, workExperience: updatedWorkExperience };
+    });
+  };
 
   const handleRemoveWorkExperience = (index: number) => {
     setOptimizedResume(prev => {
