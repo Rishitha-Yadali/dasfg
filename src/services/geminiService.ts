@@ -438,7 +438,7 @@ export const generateMultipleAtsVariations = async (
   modelOverride?: string,
   variationCount: number = 3,
   draftText?: string // NEW: Optional draft text to polish
-): Promise<string[]> => {
+): Promise<string[][]> => { // Changed return type to string[][]
   const getPromptForMultipleVariations = (type: string, sectionData: any, count: number, draft?: string) => {
     const baseInstructions = `
 CRITICAL ATS OPTIMIZATION RULES:
@@ -500,22 +500,95 @@ Each objective should be 2 sentences (30-50 words max) and have a different appr
 - Variation 3: Career goals and enthusiasm-focused
 Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
 
-      case 'certifications':
+      case 'workExperienceBullets': // NEW/MODIFIED PROMPT FOR POLISHING
+        return `Generate exactly ${count} sets of 3 concise, ATS-optimized bullet points for a resume.
+The following are DRAFT bullet points provided by the user for a work experience entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided role, company, and duration context.
+
+DRAFT BULLET POINTS TO POLISH:
+${sectionData.description}
+
+CONTEXT:
+- Role: ${sectionData.role}
+- Company: ${sectionData.company}
+- Duration: ${sectionData.year}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 20 words or less
+2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
+3. NO weak verbs (helped, assisted, worked on, responsible for)
+4. Include quantifiable achievements and metrics
+5. Use industry-standard keywords
+6. Focus on impact and results, not just responsibilities
+7. Avoid repetitive words across bullets
+8. Make each bullet distinct and valuable
+
+Return ONLY a JSON array of arrays, where each inner array contains 3 polished bullet points:
+[["polished_bullet1_set1", "polished_bullet2_set1", "polished_bullet3_set1"], ["polished_bullet1_set2", ...], ...]`;
+
+      case 'projectBullets': // NEW/MODIFIED PROMPT FOR POLISHING
+        return `Generate exactly ${count} sets of 3 concise, ATS-optimized bullet points for a resume project.
+The following are DRAFT bullet points provided by the user for a project entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided project title, tech stack, and user type context.
+
+DRAFT BULLET POINTS TO POLISH:
+${sectionData.description}
+
+CONTEXT:
+- Project Title: ${sectionData.title}
+- Tech Stack: ${sectionData.techStack || 'Modern technologies'}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 20 words or less
+2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
+3. Include specific technologies mentioned in tech stack
+4. Focus on technical achievements and impact
+5. Include quantifiable results where possible
+6. Use industry-standard technical keywords
+7. Highlight problem-solving and innovation
+8. Make each bullet showcase different aspects
+
+Return ONLY a JSON array of arrays, where each inner array contains 3 polished bullet points:
+[["polished_bullet1_set1", "polished_bullet2_set1", "polished_bullet3_set1"], ["polished_bullet1_set2", ...], ...]`;
+
+      case 'additionalSectionBullets': // NEW/MODIFIED PROMPT FOR POLISHING
+        return `Generate exactly ${count} sets of 3 concise, ATS-optimized bullet points for a custom resume section.
+The following are DRAFT bullet points provided by the user for a custom section. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided section title and user type context.
+
+DRAFT BULLET POINTS TO POLISH:
+${sectionData.details}
+
+CONTEXT:
+- Section Title: ${sectionData.title}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 20 words or less
+2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
+3. Focus on achievements, contributions, or relevant details for the section type
+4. Use industry-standard keywords where applicable
+5. Quantify results where possible
+6. Avoid repetitive words across bullets
+7. Make each bullet distinct and valuable
+
+Return ONLY a JSON array of arrays, where each inner array contains 3 polished bullet points:
+[["polished_bullet1_set1", "polished_bullet2_set1", "polished_bullet3_set1"], ["polished_bullet1_set2", ...], ...]`;
+
+      case 'certifications': // NEW/MODIFIED PROMPT FOR POLISHING
         return `You are an expert resume writer specializing in ATS optimization.
 
-Generate ${count} different certification variations relevant to:
+Given the following certification details and context:
+- Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
+- Current Certification Description: "${sectionData.currentCertDescription || 'Not provided'}"
 - Target Role: ${sectionData.targetRole || 'Professional Role'}
 - Current Skills: ${JSON.stringify(sectionData.skills || [])}
 - Job Description Context: ${sectionData.jobDescription || 'General professional context'}
 
-${baseInstructions}
+Your task is to generate ${count} distinctly different polished and ATS-friendly titles for this certification.
+Each title should be concise, professional, and highlight the most relevant aspect of the certification for a resume.
+If the provided title/description is generic, make the generated titles more impactful and specific.
 
-Each variation should include 3-5 relevant certifications with brief descriptions:
-- Variation 1: Industry-standard certifications
-- Variation 2: Technology-specific certifications
-- Variation 3: Leadership and management certifications
-
-Return ONLY a JSON array with exactly ${count} certification lists: [["cert1", "cert2"], ["cert3", "cert4"], ["cert5", "cert6"]]`;
+Return ONLY a JSON array with exactly ${count} polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
 
       case 'achievements':
         return `You are an expert resume writer specializing in ATS optimization.
@@ -523,7 +596,8 @@ Return ONLY a JSON array with exactly ${count} certification lists: [["cert1", "
 Generate ${count} different achievement variations based on:
 - User Type: ${sectionData.userType}
 - Experience Level: ${sectionData.experienceLevel || 'Professional'}
-- Context: ${sectionData.context || 'General achievements'}
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Context: ${sectionData.context || 'General professional achievements'}
 
 ${baseInstructions}
 
@@ -534,12 +608,29 @@ Each variation should include 3-4 quantified achievements:
 
 Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement1", "achievement2"], ["achievement3", "achievement4"], ["achievement5", "achievement6"]]`;
 
+      case 'skillsList': // NEW/MODIFIED PROMPT FOR POLISHING
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Given the following skill category and existing skills:
+- Category: ${sectionData.category}
+- Existing Skills (DRAFT): ${sectionData.existingSkills || 'None'}
+- User Type: ${sectionData.userType}
+- Job Description: ${sectionData.jobDescription || 'None'}
+
+Your task is to POLISH and EXPAND upon the DRAFT skills provided, generating ${count} distinctly different lists of skills for the given category.
+Each list should contain 5-8 specific and relevant skills.
+Prioritize skills mentioned in the job description or commonly associated with the user type and category.
+Ensure skills are ATS-friendly.
+
+Return ONLY a JSON array of arrays, where each inner array is a list of skills:
+[["skill1", "skill2", "skill3", "skill4", "skill5"], ["skill6", "skill7", ...], ...]`;
+
       default:
         return `Generate ${count} ATS-optimized variations for ${type}.`;
     }
   };
 
-  const prompt = getPromptForMultipleVariations(sectionType, data, variationCount, draftText); // Pass draftText
+  const prompt = getPromptForMultipleVariations(sectionType, data, variationCount, draftText);
 
   const maxRetries = 3;
   let retryCount = 0;
@@ -588,21 +679,23 @@ Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement
 
       try {
         const parsedResult = JSON.parse(result);
-        if (Array.isArray(parsedResult)) {
+        if (Array.isArray(parsedResult) && parsedResult.every(Array.isArray)) { // Ensure it's an array of arrays
           return parsedResult.slice(0, variationCount);
+        } else if (Array.isArray(parsedResult)) { // If it's a single array (e.g., from certifications)
+          return [parsedResult.slice(0, variationCount)]; // Wrap it in an array to make it string[][]
         } else {
-          // Fallback: split by lines if not properly formatted JSON array
-          return result.split('\n')
+          // Fallback: if not a proper JSON array, treat as single string and wrap
+          return [[result.split('\n')
             .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
             .filter(line => line.length > 0)
-            .slice(0, variationCount);
+            .slice(0, variationCount)]]; // Wrap in an array of arrays
         }
       } catch {
-        // Fallback parsing
-        return result.split('\n')
+        // Fallback parsing: always return string[][]
+        return [[result.split('\n')
           .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
           .filter(line => line.length > 0)
-          .slice(0, variationCount);
+          .slice(0, variationCount)]]; // Wrap in an array of arrays
       }
     } catch (error: any) {
       if (retryCount === maxRetries - 1) {
@@ -625,7 +718,7 @@ export const generateAtsOptimizedSection = async (
 ): Promise<string | string[]> => {
   const getPromptForSection = (type: string, sectionData: any, draft?: string) => {
     const baseInstructions = `
-      CRITICAL ATS_OPTIMIZATION RULES:
+      CRITICAL ATS OPTIMIZATION RULES:
       1. Highlight key skills and measurable achievements
       2. Use strong action verbs and industry keywords
       3. Focus on value proposition and career goals
@@ -802,7 +895,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
     }
   };
 
-  const prompt = getPromptForSection(sectionType, data, draftText); // Pass draftText
+  const prompt = getPromptForSection(sectionType, data, draftText);
 
   const maxRetries = 3;
   let retryCount = 0;
