@@ -560,8 +560,8 @@ Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement
         }
       }
 
-      const responseData = await response.json();
-      let result = responseData?.choices?.[0]?.message?.content;
+      const data = await response.json();
+      let result = data?.choices?.[0]?.message?.content;
       
       if (!result) {
         throw new Error('No response content from OpenRouter API');
@@ -803,7 +803,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
         }
       }
 
-      const responseData = await response.json();
+      const data = await response.json();
       let result = responseData?.choices?.[0]?.message?.content;
       
       if (!result) {
