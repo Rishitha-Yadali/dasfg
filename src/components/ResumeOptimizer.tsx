@@ -257,8 +257,11 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
       setInitialResumeScore(initialScore);
       setOptimizedResume(resumeData);
       setParsedResumeData(resumeData);
-      // Removed the conditional check for projects here
-      await proceedWithFinalOptimization(resumeData, initialScore, accessToken);
+      if (resumeData.projects && resumeData.projects.length > 0) {
+        setShowProjectAnalysis(true);
+      } else {
+        await proceedWithFinalOptimization(resumeData, initialScore, accessToken);
+      }
     } catch (error) {
       console.error('Error in initial resume processing:', error);
       alert('Failed to process resume. Please try again.');
@@ -307,7 +310,7 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
     }
   }, [pendingResumeData, handleInitialResumeProcessing]);
 
-  const handleOptimize = useCallback(async (skipInterruptionChecks: boolean = false) => { // Added skipInterruptionChecks parameter
+  const handleOptimize = useCallback(async () => { // Memoize
     if (!extractionResult.text.trim() || !jobDescription.trim()) {
       alert('Please provide both resume content and job description');
       return;
@@ -369,25 +372,14 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
           setParsedResumeData(parsedResume);
         }
 
-        // --- START MODIFICATION: Conditional interruption checks ---
-        if (!skipInterruptionChecks) { // Only perform these checks if not explicitly skipped
-          const missing = checkForMissingSections(baseResume);
-          if (missing.length > 0) {
-            setMissingSections(missing);
-            setPendingResumeData(baseResume);
-            setShowMissingSectionsModal(true);
-            setIsOptimizing(false);
-            return;
-          }
-
-          if (baseResume.projects && baseResume.projects.length > 0) {
-            // This is where you'd typically check project analysis, if needed
-            // For now, we'll just bypass it if skipInterruptionChecks is true
-            // If you had a specific condition for showing ProjectAnalysisModal, it would go here
-            // For example: if (someConditionForProjectAnalysis) { setShowProjectAnalysis(true); setIsOptimizing(false); return; }
-          }
+        const missing = checkForMissingSections(baseResume);
+        if (missing.length > 0) {
+          setMissingSections(missing);
+          setPendingResumeData(baseResume);
+          setShowMissingSectionsModal(true);
+          setIsOptimizing(false);
+          return;
         }
-        // --- END MODIFICATION ---
 
         await continueOptimizationProcess(baseResume, session.access_token);
       } catch (error: any) {
@@ -571,7 +563,9 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
         message: `${format.toUpperCase()} exported successfully!`
       });
       
-      setTimeout(() => { setExportStatus({ type: null, status: null, message: '' }); }, 3000);
+      setTimeout(() => {
+        setExportStatus({ type: null, status: null, message: '' });
+      }, 3000);
     } catch (error) {
       console.error(`${format.toUpperCase()} export failed:`, error);
       setExportStatus({
@@ -897,8 +891,26 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
         onProjectsAdded={handleProjectsUpdated}
       />
 
-      {/* Removed MissingSectionsModal from JSX rendering */}
-      {/* Removed ProjectAnalysisModal from JSX rendering */}
+      <ProjectAnalysisModal
+        isOpen={showProjectAnalysis}
+        onClose={() => setShowProjectAnalysis(false)}
+        resumeData={parsedResumeData || optimizedResume || { name: '', phone: '', email: '', linkedin: '', github: '', education: [], workExperience: [], projects: [], skills: [], certifications: [] }}
+        jobDescription={jobDescription}
+        targetRole={targetRole}
+        onProjectsUpdated={handleProjectsUpdated}
+      />
+
+      <MissingSectionsModal
+        isOpen={showMissingSectionsModal}
+        onClose={() => {
+          setShowMissingSectionsModal(false);
+          setMissingSections([]);
+          setPendingResumeData(null);
+          setIsOptimizing(false);
+        }}
+        missingSections={missingSections}
+        onSectionsProvided={handleMissingSectionsProvided}
+      />
     </div>
   );
 };
