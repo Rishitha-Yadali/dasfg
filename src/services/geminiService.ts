@@ -540,7 +540,81 @@ Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement
   };
 
   const prompt = getPromptForMultipleVariations(sectionType, data, variationCount, draftText); // Pass draftText
-  // ... (rest of the function remains the same)
+
+  const maxRetries = 3;
+  let retryCount = 0;
+  let delay = 1000;
+
+  while (retryCount < maxRetries) {
+    try {
+      const modelToSend = modelOverride || 'google/gemini-flash-1.5';
+      console.log("[MULTIPLE_VARIATIONS_CALL] Sending request to OpenRouter with model:", modelToSend);
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://primoboost.ai',
+          'X-Title': 'PrimoBoost AI'
+        },
+        body: JSON.stringify({
+          model: modelToSend,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 429 || response.status >= 500) {
+          retryCount++;
+          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2;
+          continue;
+        } else {
+          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+      }
+
+      const data = await response.json();
+      let result = data?.choices?.[0]?.message?.content;
+      
+      if (!result) {
+        throw new Error('No response content from OpenRouter API');
+      }
+
+      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      try {
+        const parsedResult = JSON.parse(result);
+        if (Array.isArray(parsedResult)) {
+          return parsedResult.slice(0, variationCount);
+        } else {
+          // Fallback: split by lines if not properly formatted JSON array
+          return result.split('\n')
+            .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+            .filter(line => line.length > 0)
+            .slice(0, variationCount);
+        }
+      } catch {
+        // Fallback parsing
+        return result.split('\n')
+          .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+          .filter(line => line.length > 0)
+          .slice(0, variationCount);
+      }
+    } catch (error: any) {
+      if (retryCount === maxRetries - 1) {
+        throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
+      }
+      retryCount++;
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+
+  throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
 };
 
 export const generateAtsOptimizedSection = async (
@@ -551,7 +625,7 @@ export const generateAtsOptimizedSection = async (
 ): Promise<string | string[]> => {
   const getPromptForSection = (type: string, sectionData: any, draft?: string) => {
     const baseInstructions = `
-      CRITICAL ATS OPTIMIZATION RULES:
+      CRITICAL ATS_OPTIMIZATION RULES:
       1. Highlight key skills and measurable achievements
       2. Use strong action verbs and industry keywords
       3. Focus on value proposition and career goals
@@ -729,5 +803,91 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
   };
 
   const prompt = getPromptForSection(sectionType, data, draftText); // Pass draftText
-  // ... (rest of the function remains the same)
+
+  const maxRetries = 3;
+  let retryCount = 0;
+  let delay = 1000;
+
+  while (retryCount < maxRetries) {
+    try {
+      const modelToSend = modelOverride || 'google/gemini-flash-1.5';
+      console.log("[AT_OPTIMIZER_CALL] Sending request to OpenRouter with model:", modelToSend);
+
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://primoboost.ai',
+          'X-Title': 'PrimoBoost AI'
+        },
+        body: JSON.stringify({
+          model: modelToSend,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[GEMINI_SERVICE] API Error Response Status: ${response.status}`); // Log status
+        console.error(`[GEMINI_SERVICE] API Error Response Text: ${errorText}`); // Log full error text
+        if (response.status === 429 || response.status >= 500) {
+          retryCount++;
+          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2;
+          continue;
+        } else {
+          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        }
+      }
+
+      const responseData = await response.json();
+      let result = responseData?.choices?.[0]?.message?.content;
+      
+      if (!result) {
+        throw new Error('No response content from OpenRouter API');
+      }
+
+      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+      console.log(`[GEMINI_SERVICE] Raw result for ${sectionType}:`, result); // Log raw result
+
+      // MODIFIED: Consolidated JSON parsing for all array-returning section types
+      if (
+        sectionType === 'workExperienceBullets' ||
+        sectionType === 'projectBullets' ||
+        sectionType === 'additionalSectionBullets' ||
+        sectionType === 'certifications' || // Added for JSON parsing
+        sectionType === 'achievements' ||   // Added for JSON parsing
+        sectionType === 'skillsList'        // Added for JSON parsing
+      ) {
+        try {
+          console.log(`Parsing JSON for ${sectionType}:`, result); // Log the result before parsing
+          const parsed = JSON.parse(result);
+          console.log(`[GEMINI_SERVICE] Parsed result for ${sectionType}:`, parsed); // Log parsed result
+          return parsed;
+        } catch (parseError) {
+          console.error(`JSON parsing error for ${sectionType}:`, parseError); // Log parsing error
+          console.error('Raw response that failed to parse:', result); // Log the raw response
+          // Fallback to splitting by lines if JSON parsing fails
+          return result.split('\n')
+            .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+            .filter(line => line.length > 0)
+            .slice(0, 5); // Limit to 5 for fallback, adjust as needed
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      if (retryCount === maxRetries - 1) {
+        throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
+      }
+      retryCount++;
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+    }
+  }
+
+  throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
 };
