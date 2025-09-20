@@ -640,7 +640,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -795,7 +795,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           role: currentWork.role,
           company: currentWork.company,
           year: currentWork.year,
-          description: currentWork.bullets.join(' '),
+          description: currentWork.bullets.join(' '), // Pass existing bullets as description
           userType: userType,
         }
       );
@@ -834,10 +834,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             newResume.skills[currentBulletGenerationIndex].list = selectedOption;
             newResume.skills[currentBulletGenerationIndex].count = selectedOption.length; // Update count
         } else if (currentBulletGenerationSection === 'certifications') {
-            // Create a new array for certifications
+            // Create a new Certification object for the one being updated
             newResume.certifications = newResume.certifications!.map((cert, idx) => {
                 if (idx === currentBulletGenerationIndex) {
-                    // Create a new Certification object for the one being updated
                     return {
                         ...cert, // Copy existing properties
                         title: selectedOption[0] // Update the title with the selected AI option (assuming selectedOption is [string])
@@ -870,7 +869,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               role: currentWork.role,
               company: currentWork.company,
               year: currentWork.year,
-              description: currentWork.bullets.join(' '),
+              description: currentWork.bullets.join(' '), // Pass existing bullets as description
               userType: userType,
             }
           );
@@ -880,7 +879,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             'projectBullets',
             {
               title: currentProject.title,
-              description: currentProject.bullets.join(' '),
+              description: currentProject.bullets.join(' '), // Pass existing bullets as description
               userType: userType,
             }
           );
@@ -890,7 +889,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             'additionalSectionBullets',
             {
               title: currentSection.title,
-              details: currentSection.bullets.join(' '),
+              details: currentSection.bullets.join(' '), // Pass existing bullets as details
               userType: userType,
             }
           );
@@ -978,7 +977,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         'projectBullets',
         {
           title: currentProject.title,
-          description: currentProject.bullets.join(' '),
+          description: currentProject.bullets.join(' '), // Pass existing bullets as description
           userType: userType,
         }
       );
@@ -1053,7 +1052,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         'skillsList',
         {
           category: currentCategory.category,
-          existingSkills: currentCategory.list.join(', '),
+          existingSkills: currentCategory.list.join(', '), // Pass existing skills as existingSkills
           userType: userType,
           jobDescription: jobDescription, // Pass JD for relevance
         }
@@ -1232,7 +1231,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         'additionalSectionBullets',
         {
           title: currentSection.title,
-          details: currentSection.bullets.join(' '),
+          details: currentSection.bullets.join(' '), // Pass existing bullets as details
           userType: userType,
         }
       );
@@ -1254,6 +1253,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setSelectedAIOptionIndex(null); // Clear selection on regenerate
     try {
       const sectionType = userType === 'experienced' ? 'summary' : 'careerObjective';
+      const currentDraft = userType === 'experienced' ? optimizedResume.summary : optimizedResume.careerObjective;
       const generated = await generateMultipleAtsVariations(
         sectionType,
         {
@@ -1263,7 +1263,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           education: optimizedResume.education,
         },
         undefined, // modelOverride
-        3 // Request 3 variations
+        3, // Request 3 variations
+        currentDraft || '' // Pass current draft text
       );
       setAIGeneratedOptions(generated);
       setShowAIOptionsModal(true);
@@ -2551,11 +2552,16 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                       />
                       <div className="flex items-start">
                         <div className="flex-grow">
-                          <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                            {option.map((bullet, bulletIndex) => (
-                              <li key={bulletIndex}>{bullet}</li>
-                            ))}
-                          </ul>
+                          {/* Render bullets or single title based on content */}
+                          {option.length > 1 ? (
+                            <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                              {option.map((bullet, bulletIndex) => (
+                                <li key={bulletIndex}>{bullet}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-gray-700">{option[0]}</p>
+                          )}
                         </div>
                         <div className="w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 flex items-center justify-center">
                           {selectedBulletOptionIndex === optionIndex && (
