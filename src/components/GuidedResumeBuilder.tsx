@@ -740,7 +740,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleAddWorkExperience = () => {
     setOptimizedResume(prev => ({
       ...prev!,
-      workExperience: [...(prev?.workExperience || []), { role: '', company: '', year: '', bullets: [] }] // Changed bullets: [''] to bullets: []
+      workExperience: [...(prev?.workExperience || []), { role: '', company: '', year: '', bullets: [''] }] // Changed bullets: [''] to bullets: []
     }));
   };
 
