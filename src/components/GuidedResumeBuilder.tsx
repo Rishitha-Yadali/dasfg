@@ -636,7 +636,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -1137,7 +1137,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         }
       );
       console.log('AI generated certifications:', generated);
-      setAIGeneratedBullets([generated as string[]]); // Assuming it returns string[] of titles
+      // FIX: Map each generated title into its own array for setAIGeneratedBullets
+      setAIGeneratedBullets((generated as string[]).map(title => [title]));
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating certifications:', error);
