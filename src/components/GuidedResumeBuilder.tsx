@@ -297,11 +297,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       setInitialResumeScore(initialScore);
       setOptimizedResume(resumeData);
       setParsedResumeData(resumeData);
-      if (resumeData.projects && resumeData.projects.length > 0) {
-        setShowProjectAnalysis(true);
-      } else {
-        await proceedWithFinalOptimization(resumeData, initialScore, accessToken);
-      }
+      // MODIFIED: Directly proceed to final optimization, skipping project analysis
+      await proceedWithFinalOptimization(resumeData, initialScore, accessToken);
     } catch (error) {
       console.error('Error in initial resume processing:', error);
       alert('Failed to process resume. Please try again.');
@@ -387,42 +384,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       }
       setIsOptimizing(true);
       try {
-        // ⬇️ NEW LOGIC: prefer already-parsed + complete data; skip re-parsing if possible
-        let baseResume: ResumeData;
-        let processedResumeText = cleanResumeText(extractionResult.text); // Add this line to clean the text
+        // Directly use optimizedResume as the base for final processing
+        // MODIFIED: Removed checkForMissingSections and related modal logic
+        await continueOptimizationProcess(optimizedResume, session.access_token);
 
-        if (parsedResumeData && checkForMissingSections(parsedResumeData).length === 0) {
-          // Already have a complete parsed resume (perhaps after user filled missing sections)
-          baseResume = parsedResumeData;
-        } else {
-          // Parse from extractionResult.text via AI as before
-          const parsedResume = await optimizeResume(
-           extractionResult.text,
-            jobDescription,
-            userType,
-            userName,
-            userEmail,
-            userPhone,
-            userLinkedin,
-            userGithub,
-            undefined,
-            undefined,
-            targetRole
-          );
-          baseResume = parsedResume;
-          setParsedResumeData(parsedResume);
-        }
+        // After successful optimization, ensure the UI transitions to the final_resume step
+        setCurrentSectionIndex(resumeSections.indexOf('final_resume'));
 
-        const missing = checkForMissingSections(baseResume);
-        if (missing.length > 0) {
-          setMissingSections(missing);
-          setPendingResumeData(baseResume);
-          setShowMissingSectionsModal(true);
-          setIsOptimizing(false);
-          return;
-        }
-
-        await continueOptimizationProcess(baseResume, session.access_token);
       } catch (error: any) {
         console.error('Error optimizing resume:', error);
         alert('Failed to optimize resume. Please try again.');
@@ -447,9 +415,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     userLinkedin,
     userGithub,
     targetRole,
-    checkForMissingSections,
     continueOptimizationProcess,
-    parsedResumeData // ⬅️ added dependency because we branch on it
+    resumeSections // Added resumeSections to dependencies
   ]); // Dependencies for memoized function
 
   useEffect(() => {
@@ -574,7 +541,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     console.log('[ResumeOptimizer] handleExportFile - optimizedResume data being exported:', optimizedResume);
     console.log('[ResumeOptimizer] Contact details in export data:');
     console.log('  - name:', optimizedResume.name);
-    console.log('  - phone:', optimizedResume.phone);
+    console.log('  - - phone:', optimizedResume.phone);
     console.log('  - email:', optimizedResume.email);
     console.log('  - linkedin:', optimizedResume.linkedin);
     console.log('  - github:', optimizedResume.github);
@@ -603,7 +570,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         message: `${format.toUpperCase()} exported successfully!`
       });
       
-      setTimeout(() => { setExportStatus({ type: null, status: null, message: '' }); }, 3000);
+      setTimeout(() => {
+        setExportStatus({ type: null, status: null, message: '' });
+      }, 3000);
     } catch (error) {
       console.error(`${format.toUpperCase()} export failed:`, error);
       setExportStatus({
@@ -656,9 +625,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      subMessage = "We're updating your resume with the new sections you provided.";
+      submessage = "We're updating your resume with the new sections you provided.";
     }
-    return <LoadingAnimation message={loadingMessage} submessage={subMessage} />;
+    return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
   }
 
   // --- NEW: Navigation Handlers ---
@@ -2559,4 +2528,3 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 };
 
 export default GuidedResumeBuilder;
-
