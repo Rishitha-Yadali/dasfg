@@ -560,8 +560,8 @@ Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement
         }
       }
 
-      const data = await response.json();
-      let result = data?.choices?.[0]?.message?.content;
+      const responseData = await response.json();
+      let result = responseData?.choices?.[0]?.message?.content;
       
       if (!result) {
         throw new Error('No response content from OpenRouter API');
@@ -710,19 +710,18 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
       case 'certifications':
         return `You are an expert resume writer specializing in ATS optimization.
 
-Generate exactly 5 relevant certifications for a professional based on:
+Given the following certification details and context:
+- Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
+- Current Certification Description: "${sectionData.currentCertDescription || 'Not provided'}"
 - Target Role: ${sectionData.targetRole || 'Professional Role'}
 - Current Skills: ${JSON.stringify(sectionData.skills || [])}
 - Job Description Context: ${sectionData.jobDescription || 'General professional context'}
 
-CRITICAL REQUIREMENTS:
-1. Each certification should be industry-relevant and realistic
-2. Include both technical and professional certifications
-3. Focus on certifications that add value to the target role
-4. Use actual certification names from recognized organizations
-5. Include a mix of beginner and advanced certifications
+Your task is to generate 3 polished and ATS-friendly titles for this certification.
+Each title should be concise, professional, and highlight the most relevant aspect of the certification for a resume.
+If the provided title/description is generic, make the generated titles more impactful and specific.
 
-Return ONLY a JSON array with exactly 5 certifications: ["cert1", "cert2", "cert3", "cert4", "cert5"]`;
+Return ONLY a JSON array with exactly 3 polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
 
       case 'achievements':
         return `You are an expert resume writer specializing in ATS optimization.
@@ -765,6 +764,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
   };
 
   const prompt = getPromptForSection(sectionType, data);
+  console.log(`[GEMINI_SERVICE] Prompt for ${sectionType}:`, prompt); // Log the prompt
 
   const maxRetries = 3;
   let retryCount = 0;
@@ -773,22 +773,22 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
   while (retryCount < maxRetries) {
     try {
       const modelToSend = modelOverride || 'google/gemini-flash-1.5';
-console.log("[AT_OPTIMIZER_CALL] Sending request to OpenRouter with model:", modelToSend);
+      console.log("[AT_OPTIMIZER_CALL] Sending request to OpenRouter with model:", modelToSend);
 
 
-const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-    'Content-Type': 'application/json',
-    'HTTP-Referer': 'https://primoboost.ai',
-    'X-Title': 'PrimoBoost AI'
-  },
-  body: JSON.stringify({
-    model: modelToSend,
-    messages: [{ role: 'user', content: prompt }]
-  })
-});
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://primoboost.ai',
+          'X-Title': 'PrimoBoost AI'
+        },
+        body: JSON.stringify({
+          model: modelToSend,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -803,14 +803,15 @@ const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         }
       }
 
-      const data = await response.json();
-      let result = data?.choices?.[0]?.message?.content;
+      const responseData = await response.json();
+      let result = responseData?.choices?.[0]?.message?.content;
       
       if (!result) {
         throw new Error('No response content from OpenRouter API');
       }
 
       result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+      console.log(`[GEMINI_SERVICE] Raw result for ${sectionType}:`, result); // Log raw result
 
       // MODIFIED: Consolidated JSON parsing for all array-returning section types
       if (
@@ -823,7 +824,9 @@ const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       ) {
         try {
           console.log(`Parsing JSON for ${sectionType}:`, result); // Log the result before parsing
-          return JSON.parse(result);
+          const parsed = JSON.parse(result);
+          console.log(`[GEMINI_SERVICE] Parsed result for ${sectionType}:`, parsed); // Log parsed result
+          return parsed;
         } catch (parseError) {
           console.error(`JSON parsing error for ${sectionType}:`, parseError); // Log parsing error
           console.error('Raw response that failed to parse:', result); // Log the raw response
