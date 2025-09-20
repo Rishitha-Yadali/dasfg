@@ -636,7 +636,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -1090,7 +1090,22 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setIsGeneratingBullets(true);
     setCurrentBulletGenerationIndex(null); // Not tied to a specific entry
     setCurrentBulletGenerationSection('certifications');
+
+    // --- NEW: Context check and warning ---
+    const hasJobDescription = jobDescription.trim().length > 0;
+    const hasSkills = optimizedResume.skills && optimizedResume.skills.length > 0 && optimizedResume.skills.some(s => s.list && s.list.length > 0);
+
+    if (!hasJobDescription && !hasSkills) {
+      alert('Warning: No job description or skills provided. AI-generated certifications might be very generic. Please fill in more details for better results.');
+    }
+    // --- END NEW ---
+
     try {
+      console.log('Generating certifications with context:', {
+        userType: userType,
+        jobDescription: jobDescription,
+        skills: optimizedResume.skills,
+      });
       const generated = await generateAtsOptimizedSection(
         'certifications',
         {
@@ -1099,7 +1114,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           skills: optimizedResume.skills,
         }
       );
-      // Assuming generated is an array of {title: string, description: string}
+      console.log('AI generated certifications:', generated);
+      // Assuming generated is an array of strings (certification titles)
       setAIGeneratedBullets([generated as string[]]); // Cast to string[] for display in generic modal
       setShowAIBulletOptions(true);
     } catch (error) {
@@ -1111,10 +1127,16 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   };
 
   const handleSelectAICertifications = (certs: string[]) => {
-    setOptimizedResume(prev => ({
-      ...prev!,
-      certifications: certs.map(c => ({ title: c, description: '' })) // Convert back to structured if needed
-    }));
+    console.log('Selecting AI certifications:', certs);
+    setOptimizedResume(prev => {
+      const updatedResume = {
+        ...prev!,
+        // Map each string to a Certification object with title and empty description
+        certifications: certs.map(c => ({ title: c, description: '' }))
+      };
+      console.log('OptimizedResume after selecting certifications:', updatedResume.certifications);
+      return updatedResume;
+    });
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
