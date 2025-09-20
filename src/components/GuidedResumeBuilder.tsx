@@ -2127,33 +2127,39 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         );
       case 'final_resume':
         return (
-          <div className="card p-6 mb-6 shadow-lg">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
-              <Sparkles className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-              Generate Optimized Resume
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              You're almost there! Review the checklist below to ensure everything is ready before generating your final AI-optimized resume.
-            </p>
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center space-x-3 text-green-600 dark:text-green-400">
-                <CheckCircle className="w-5 h-5" />
-                <span>All required sections completed.</span>
-              </div>
-              <div className="flex items-center space-x-3 text-green-600 dark:text-green-400">
-                <CheckCircle className="w-5 h-5" />
-                <span>Resume preview is ready.</span>
-              </div>
-              <div className="flex items-center space-x-3 text-blue-600 dark:text-blue-400">
-                <FileText className="w-5 h-5" />
-                <span>Final review of content is recommended.</span>
-              </div>
-            </div>
-            <button onClick={handleOptimize} className="btn-primary w-full flex items-center justify-center space-x-2">
-              <Sparkles className="w-5 h-5" />
-              <span>Generate Final Resume</span>
-            </button>
-          </div>
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
+  <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center dark:text-gray-100">
+    <Sparkles className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+    Your Resume is Ready!
+  </h2>
+  <div className="text-center space-y-6">
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 dark:from-blue-900/20 dark:to-purple-900/20">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 dark:text-gray-100">
+        Your resume is ready to export as PDF or Word.
+      </h3>
+      <p className="text-gray-600 dark:text-gray-300 mb-4">
+        You can download it now, or proceed to the JD-Based Optimizer for further tailoring.
+      </p>
+      {/* You might want to add direct export buttons here if they are not already present elsewhere */}
+      {/* For example: */}
+      {/* <div className="flex justify-center space-x-4">
+        <button className="btn-primary">Export PDF</button>
+        <button className="btn-secondary">Export Word</button>
+      </div> */}
+    </div>
+
+    <button
+      onClick={() => navigate('/optimizer')} // Assuming 'navigate' is available from useNavigate hook
+      className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
+        bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl cursor-pointer"
+      type="button"
+    >
+      <Target className="w-6 h-6" />
+      <span>Apply JD-Based Optimization</span>
+      <ArrowRight className="w-5 h-5" />
+    </button>
+  </div>
+</div>
         );
       default:
         return <div className="card p-6 mb-6 shadow-lg">Unknown Section</div>;
