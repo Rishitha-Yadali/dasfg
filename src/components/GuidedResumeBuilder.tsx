@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target } from 'lucide-react'; // Added Target import
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target } from 'lucide-react';
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -22,7 +22,7 @@ import { exportToPDF, exportToWord } from '../utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import { ExportButtons } from './ExportButtons';
 
-// src/components/GuidedResumeBuilder.tsx
+// src/components/ResumeOptimizer.tsx
 const cleanResumeText = (text: string): string => {
   let cleaned = text;
   // Remove "// Line XXX" patterns anywhere in the text
@@ -535,6 +535,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }, [checkSubscriptionStatus, onShowPlanSelection]); // Dependencies for memoized function
 
   const handleExportFile = useCallback(async (options: ExportOptions, format: 'pdf' | 'word') => {
+    // MODIFIED: Add authentication check
+    if (!isAuthenticated) {
+      alert('Please sign in to download your resume.');
+      onShowAuth(); // Prompt user to sign in
+      return; // Stop the function execution
+    }
+
     if (!optimizedResume) return;
     
     // ADDED: Debug logging for export data
@@ -589,7 +596,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         setIsExportingWord(false);
       }
     }
-  }, [optimizedResume, userType, isExportingPDF, isExportingWord]);
+  }, [isAuthenticated, onShowAuth, optimizedResume, userType, isExportingPDF, isExportingWord]); // Added isAuthenticated and onShowAuth to dependencies
 
   if (showMobileInterface && optimizedResume) {
     const mobileSections = [
