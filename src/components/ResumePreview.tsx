@@ -9,10 +9,10 @@ const ptToPx = (pt: number) => pt * 1.333; // 1pt = 1.333px at 96 DPI
 
 // Replicate PDF_CONFIG creation logic from exportUtils.ts
 const createPDFConfigForPreview = (options: ExportOptions) => {
-  const layoutConfig = options.layoutType === 'compact' ?
-    { margins: { top: 10, bottom: 10, left: 15, right: 15 } } :
-    { margins: { top: 15, bottom: 15, left: 20, right: 20 } };
-
+  const layoutConfig = options.layoutType === 'compact' ? 
+    { margins: { top: 10, bottom: 10, left: 15, right: 15 } } : 
+    { margins: { top: 15, bottom: 15, left: 20, right: 20 } }; 
+  
   const paperConfig = options.paperSize === 'letter' ?
     { pageWidth: 216, pageHeight: 279 } :
     { pageWidth: 210, pageHeight: 297 };
@@ -247,11 +247,11 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   const getSectionOrder = () => {
     // Fallback to user type based ordering
     if (userType === 'experienced') {
-      return ['summary', 'workExperience', 'skills', 'projects', 'certifications', 'education'];
+      return ['summary', 'workExperience', 'skills', 'projects', 'certifications', 'additionalSections', 'education'];
     } else if (userType === 'student') {
-      return ['summary', 'education', 'skills', 'projects', 'workExperience', 'certifications', 'achievementsAndExtras'];
+      return ['summary', 'education', 'skills', 'projects', 'workExperience', 'certifications', 'additionalSections', 'achievementsAndExtras'];
     } else { // 'fresher'
-      return ['summary', 'education', 'workExperience', 'projects', 'skills', 'certifications', 'achievementsAndExtras'];
+      return ['summary', 'education', 'workExperience', 'projects', 'skills', 'certifications', 'additionalSections', 'achievementsAndExtras'];
     }
   };
 
@@ -517,6 +517,43 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           </div>
         );
 
+      case 'additionalSections': // NEW CASE FOR ADDITIONAL SECTIONS
+        if (!resumeData.additionalSections || resumeData.additionalSections.length === 0) return null;
+
+        return (
+          <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
+            <h2 style={sectionTitleStyle}>
+              ADDITIONAL SECTIONS
+            </h2>
+            <div style={sectionUnderlineStyle}></div>
+
+            {resumeData.additionalSections.map((section, index) => (
+              <div key={index} style={{
+                marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 2),
+              }}>
+                <div style={{
+                  fontSize: ptToPx(PDF_CONFIG.fonts.jobTitle.size),
+                  fontWeight: 'bold',
+                  fontFamily: `${PDF_CONFIG.fontFamily}, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif`,
+                  marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5)
+                }}>
+                  {section.title}
+                </div>
+                {section.bullets && section.bullets.length > 0 && (
+                  <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none' }}>
+                    {section.bullets.map((bullet, bulletIndex) => (
+                      <li key={bulletIndex} style={listItemStyle}>
+                        <span style={{ marginRight: '4px' }}>•</span> {/* Bullet character */}
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+
       case 'achievementsAndExtras': // Combined section for freshers and students
         const hasAchievements = resumeData.achievements && resumeData.achievements.length > 0;
         // Removed hasExtraCurricular check
@@ -637,3 +674,4 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     </div>
   );
 };
+
