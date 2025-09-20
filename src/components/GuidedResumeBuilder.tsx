@@ -31,6 +31,7 @@ const cleanResumeText = (text: string): string => {
   // Remove "// MODIFIED:" patterns anywhere in the text (e.g., "// MODIFIED: listStyleType to 'none'")
   cleaned = cleaned.replace(/\/\/\s*MODIFIED:\s*.*?(?=\n|$)/g, ''); // Catches the whole comment line
   // Also remove any remaining single-line comments that might have slipped through or were on their own line
+  cleaned = cleaned.replace(/\/\/\s*Line\s*\d+\s*/g, ''); // Ensure this is also removed
   cleaned = cleaned.split('\n')
                    .filter(line => !line.trim().startsWith('//')) // Remove lines that start with //
                    .join('\n');
@@ -1201,7 +1202,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleAddAdditionalSection = () => {
     setOptimizedResume(prev => ({
       ...prev!,
-      additionalSections: [...(prev?.additionalSections || []), { title: '', bullets: [''] }]
+      additionalSections: [...(prev?.additionalSections || []), { title: '', bullets: [] }] // Changed bullets: [''] to bullets: []
     }));
   };
 
