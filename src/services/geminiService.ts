@@ -792,6 +792,8 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`[GEMINI_SERVICE] API Error Response Status: ${response.status}`); // Log status
+        console.error(`[GEMINI_SERVICE] API Error Response Text: ${errorText}`); // Log full error text
         if (response.status === 429 || response.status >= 500) {
           retryCount++;
           if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
@@ -803,7 +805,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
         }
       }
 
-      const data = await response.json();
+      const responseData = await response.json();
       let result = responseData?.choices?.[0]?.message?.content;
       
       if (!result) {
