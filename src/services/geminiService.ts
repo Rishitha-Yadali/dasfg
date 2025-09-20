@@ -560,8 +560,8 @@ Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement
         }
       }
 
-      const responseData = await response.json();
-      let result = responseData?.choices?.[0]?.message?.content;
+      const data = await response.json();
+      let result = data?.choices?.[0]?.message?.content;
       
       if (!result) {
         throw new Error('No response content from OpenRouter API');
@@ -713,8 +713,7 @@ Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "b
 Generate exactly 5 relevant certifications for a professional based on:
 - Target Role: ${sectionData.targetRole || 'Professional Role'}
 - Current Skills: ${JSON.stringify(sectionData.skills || [])}
-- User Type: ${sectionData.userType}
-- Industry Context: ${sectionData.jobDescription || 'General professional context'}
+- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
 
 CRITICAL REQUIREMENTS:
 1. Each certification should be industry-relevant and realistic
@@ -804,8 +803,8 @@ const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         }
       }
 
-      const responseData = await response.json();
-      let result = responseData?.choices?.[0]?.message?.content;
+      const data = await response.json();
+      let result = data?.choices?.[0]?.message?.content;
       
       if (!result) {
         throw new Error('No response content from OpenRouter API');
