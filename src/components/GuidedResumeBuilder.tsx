@@ -808,40 +808,43 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleSelectAIGeneratedOption = (selectedOption: string[]) => { // selectedOption will be an array of strings (bullets or titles)
     if (!optimizedResume) return;
 
-    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection) {
-        setOptimizedResume(prev => {
-            const newResume = { ...prev! }; // Create a mutable copy
+    setOptimizedResume(prev => {
+        const newResume = { ...prev! }; // Create a mutable copy
 
-            if (currentBulletGenerationSection === 'workExperience') {
-                newResume.workExperience = [...newResume.workExperience!];
-                newResume.workExperience[currentBulletGenerationIndex].bullets = selectedOption;
-            } else if (currentBulletGenerationSection === 'projects') {
-                newResume.projects = [...newResume.projects!];
-                newResume.projects[currentBulletGenerationIndex].bullets = selectedOption;
-            } else if (currentBulletGenerationSection === 'additionalSections') {
-                newResume.additionalSections = [...newResume.additionalSections!];
-                newResume.additionalSections[currentBulletGenerationIndex].bullets = selectedOption;
-            } else if (currentBulletGenerationSection === 'skills') {
-                newResume.skills = [...newResume.skills!];
-                newResume.skills[currentBulletGenerationIndex].list = selectedOption;
-                newResume.skills[currentBulletGenerationIndex].count = selectedOption.length;
-            } else if (currentBulletGenerationSection === 'certifications') {
-                // For certifications, selectedOption is an array of generated titles.
-                // We need to update the title of the specific certification entry.
-                newResume.certifications = [...newResume.certifications!];
-                // Assuming selectedOption contains only one chosen title, or we take the first one.
-                // If the modal allows selecting one out of multiple, this logic needs to be adjusted
-                // to pass the single selected title, not an array of all options.
-                // For now, let's assume selectedOption is the array of generated titles,
-                // and we'll take the first one to update the current cert.
-                // If the user selects an option from the modal, the modal should pass the *single* selected string.
-                // Let's adjust the modal's onClick to pass the single string.
-                newResume.certifications[currentBulletGenerationIndex].title = selectedOption[0]; // Take the first generated title
-            }
-            return newResume;
-        });
-        console.log('OptimizedResume after selecting AI option:', optimizedResume); // Log after state update
-    }
+        if (currentBulletGenerationIndex === null || currentBulletGenerationSection === null) {
+            console.error("No active generation context (index or section) found.");
+            return newResume; // Return current state if context is missing
+        }
+
+        if (currentBulletGenerationSection === 'workExperience') {
+            newResume.workExperience = [...newResume.workExperience!];
+            newResume.workExperience[currentBulletGenerationIndex].bullets = selectedOption;
+        } else if (currentBulletGenerationSection === 'projects') {
+            newResume.projects = [...newResume.projects!];
+            newResume.projects[currentBulletGenerationIndex].bullets = selectedOption;
+        } else if (currentBulletGenerationSection === 'additionalSections') {
+            newResume.additionalSections = [...newResume.additionalSections!];
+            newResume.additionalSections[currentBulletGenerationIndex].bullets = selectedOption;
+        } else if (currentBulletGenerationSection === 'skills') {
+            newResume.skills = [...newResume.skills!];
+            newResume.skills[currentBulletGenerationIndex].list = selectedOption;
+            newResume.skills[currentBulletGenerationIndex].count = selectedOption.length; // Update count
+        } else if (currentBulletGenerationSection === 'certifications') {
+            // Create a new array for certifications
+            newResume.certifications = newResume.certifications!.map((cert, idx) => {
+                if (idx === currentBulletGenerationIndex) {
+                    // Create a new Certification object for the one being updated
+                    return {
+                        ...cert, // Copy existing properties
+                        title: selectedOption[0] // Update the title with the selected AI option (assuming selectedOption is [string])
+                    };
+                }
+                return cert; // Return other certifications as they are
+            });
+        }
+        console.log('OptimizedResume after selecting AI option:', newResume); // Log the new state
+        return newResume;
+    });
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
