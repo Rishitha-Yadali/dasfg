@@ -636,7 +636,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -831,6 +831,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         updatedSkills[currentBulletGenerationIndex].count = bullets.length; // Update count
         return { ...prev!, skills: updatedSkills };
       });
+    } else if (currentBulletGenerationSection === 'certifications') { // Handle certifications
+      setOptimizedResume(prev => {
+        const updatedCertifications = bullets.map(c => ({ title: c, description: '' }));
+        console.log('Updated certifications in state:', updatedCertifications); // Log the new certs
+        return { ...prev!, certifications: updatedCertifications };
+      });
+      console.log('OptimizedResume after selecting certifications:', optimizedResume?.certifications); // Log after state update
     }
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
@@ -1134,7 +1141,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         // Map each string to a Certification object with title and empty description
         certifications: certs.map(c => ({ title: c, description: '' }))
       };
-      console.log('OptimizedResume after selecting certifications:', updatedResume.certifications);
+      console.log('OptimizedResume after selecting certifications:', updatedResume.certifications); // Log the new certs
       return updatedResume;
     });
     setShowAIBulletOptions(false);
