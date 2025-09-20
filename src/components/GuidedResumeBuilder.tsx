@@ -640,10 +640,10 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      submessage = "We're updating your resume with the new sections you provided.";
+      subMessage = "We're updating your resume with the new sections you provided.";
     }
     return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
   }
@@ -2580,14 +2580,14 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                       <div className="flex items-start">
                         <div className="flex-grow">
                           {/* Render bullets or single title based on content */}
-                          {option.length > 1 ? (
+                          {Array.isArray(option) ? ( // Check if option is an array (for bullets/skills)
                             <ul className="list-disc pl-5 space-y-1 text-gray-700">
                               {option.map((bullet, bulletIndex) => (
                                 <li key={bulletIndex}>{bullet}</li>
                               ))}
                             </ul>
                           ) : (
-                            <p className="text-gray-700">{option[0]}</p>
+                            <p className="text-gray-700">{option}</p> // Render as plain text if not an array (e.g., single certification title)
                           )}
                         </div>
                         <div className="w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 flex items-center justify-center">
