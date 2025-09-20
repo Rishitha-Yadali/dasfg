@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target } from 'lucide-react'; // Added Target import
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
