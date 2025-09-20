@@ -500,8 +500,8 @@ Each objective should be 2 sentences (30-50 words max) and have a different appr
 - Variation 3: Career goals and enthusiasm-focused
 Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
 
-      case 'workExperienceBullets': // NEW/MODIFIED PROMPT FOR POLISHING
-        return `Generate exactly ${count} sets of 3 concise, ATS-optimized bullet points for a resume.
+      case 'workExperienceBullets': // MODIFIED PROMPT: Generate individual bullet points
+        return `You are an expert resume writer specializing in ATS optimization.
 The following are DRAFT bullet points provided by the user for a work experience entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided role, company, and duration context.
 
 DRAFT BULLET POINTS TO POLISH:
@@ -523,11 +523,12 @@ CRITICAL ATS OPTIMIZATION RULES:
 7. Avoid repetitive words across bullets
 8. Make each bullet distinct and valuable
 
-Return ONLY a JSON array of arrays, where each inner array contains 3 polished bullet points:
-[["polished_bullet1_set1", "polished_bullet2_set1", "polished_bullet3_set1"], ["polished_bullet1_set2", ...], ...]`;
+Generate exactly ${count} individual polished bullet points.
+Return ONLY a JSON array of strings, where each string is a single polished bullet point:
+["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
 
-      case 'projectBullets': // NEW/MODIFIED PROMPT FOR POLISHING
-        return `Generate exactly ${count} sets of 3 concise, ATS-optimized bullet points for a resume project.
+      case 'projectBullets': // MODIFIED PROMPT: Generate individual bullet points
+        return `You are an expert resume writer specializing in ATS optimization.
 The following are DRAFT bullet points provided by the user for a project entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided project title, tech stack, and user type context.
 
 DRAFT BULLET POINTS TO POLISH:
@@ -548,11 +549,12 @@ CRITICAL ATS OPTIMIZATION RULES:
 7. Highlight problem-solving and innovation
 8. Make each bullet showcase different aspects
 
-Return ONLY a JSON array of arrays, where each inner array contains 3 polished bullet points:
-[["polished_bullet1_set1", "polished_bullet2_set1", "polished_bullet3_set1"], ["polished_bullet1_set2", ...], ...]`;
+Generate exactly ${count} individual polished bullet points.
+Return ONLY a JSON array of strings, where each string is a single polished bullet point:
+["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
 
       case 'additionalSectionBullets': // NEW/MODIFIED PROMPT FOR POLISHING
-        return `Generate exactly ${count} sets of 3 concise, ATS-optimized bullet points for a custom resume section.
+        return `You are an expert resume writer specializing in ATS optimization.
 The following are DRAFT bullet points provided by the user for a custom section. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided section title and user type context.
 
 DRAFT BULLET POINTS TO POLISH:
@@ -571,8 +573,9 @@ CRITICAL ATS OPTIMIZATION RULES:
 6. Avoid repetitive words across bullets
 7. Make each bullet distinct and valuable
 
-Return ONLY a JSON array of arrays, where each inner array contains 3 polished bullet points:
-[["polished_bullet1_set1", "polished_bullet2_set1", "polished_bullet3_set1"], ["polished_bullet1_set2", ...], ...]`;
+Generate exactly ${count} individual polished bullet points.
+Return ONLY a JSON array of strings, where each string is a single polished bullet point:
+["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
 
       case 'certifications': // NEW/MODIFIED PROMPT FOR POLISHING
         return `You are an expert resume writer specializing in ATS optimization.
@@ -679,10 +682,13 @@ Return ONLY a JSON array of arrays, where each inner array is a list of skills:
 
       try {
         const parsedResult = JSON.parse(result);
-        if (Array.isArray(parsedResult) && parsedResult.every(Array.isArray)) { // Ensure it's an array of arrays
+        // MODIFIED: Handle cases where AI returns a simple array of strings (individual bullet points)
+        if (Array.isArray(parsedResult) && !parsedResult.every(Array.isArray)) {
+          // If it's an array of strings, map each string to an array containing just that string
+          return parsedResult.map((item: string) => [item]);
+        } else if (Array.isArray(parsedResult) && parsedResult.every(Array.isArray)) {
+          // If it's already an array of arrays (e.g., skillsList, achievements), return directly
           return parsedResult.slice(0, variationCount);
-        } else if (Array.isArray(parsedResult)) { // If it's a single array (e.g., from certifications)
-          return [parsedResult.slice(0, variationCount)]; // Wrap it in an array to make it string[][]
         } else {
           // Fallback: if not a proper JSON array, treat as single string and wrap
           return [[result.split('\n')
