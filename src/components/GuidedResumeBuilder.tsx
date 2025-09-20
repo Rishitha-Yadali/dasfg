@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target } from 'lucide-react';
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -151,6 +151,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }>({ type: null, status: null, message: '' });
 
   const [optimizationInterrupted, setOptimizationInterrupted] = useState(false);
+
+  // NEW STATE: To control visibility of PDF/Word export buttons
+  const [showExportOptions, setShowExportOptions] = useState(false);
 
   const userName = (user as any)?.user_metadata?.name || '';
   const userEmail = user?.email || ''; // Correctly accesses email from user object
@@ -2116,24 +2119,92 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       <p className="text-gray-600 dark:text-gray-300 mb-4">
         You can download it now, or proceed to the JD-Based Optimizer for further tailoring.
       </p>
-      {/* You might want to add direct export buttons here if they are not already present elsewhere */}
-      {/* For example: */}
-      {/* <div className="flex justify-center space-x-4">
-        <button className="btn-primary">Export PDF</button>
-        <button className="btn-secondary">Export Word</button>
-      </div> */}
     </div>
 
-    <button
-      onClick={() => navigate('/optimizer')} // Assuming 'navigate' is available from useNavigate hook
-      className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
-        bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl cursor-pointer"
-      type="button"
-    >
-      <Target className="w-6 h-6" />
-      <span>Apply JD-Based Optimization</span>
-      <ArrowRight className="w-5 h-5" />
-    </button>
+    {isAuthenticated ? (
+      <>
+        {/* Download Resume Button */}
+        <button
+          onClick={() => setShowExportOptions(!showExportOptions)} // Toggle export options visibility
+          className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
+            bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl cursor-pointer"
+          type="button"
+        >
+          <Download className="w-6 h-6" />
+          <span>Download Resume</span>
+        </button>
+
+        {/* Export Options (PDF/Word) - conditionally rendered */}
+        {showExportOptions && (
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <button
+              onClick={(e) => handleExportFile(exportOptions, 'pdf')}
+              disabled={isExportingPDF || isExportingWord}
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                isExportingPDF || isExportingWord
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
+              {isExportingPDF ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Exporting PDF...</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-5 h-5" />
+                  <span>PDF</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={(e) => handleExportFile(exportOptions, 'word')}
+              disabled={isExportingWord || isExportingPDF}
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
+                isExportingWord || isExportingPDF
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : 'bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white hover:shadow-neon-cyan'
+              }`}
+            >
+              {isExportingWord ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Exporting Word...</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-5 h-5" />
+                  <span>Word</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Apply JD-Based Optimization Button */}
+        <button
+          onClick={() => navigate('/optimizer')}
+          className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
+            bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl cursor-pointer"
+          type="button"
+        >
+          <Target className="w-6 h-6" />
+          <span>Apply JD-Based Optimization</span>
+          <ArrowRight className="w-5 h-5" />
+        </button>
+      </>
+    ) : (
+      <button
+        onClick={onShowAuth}
+        className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
+          bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white shadow-xl hover:shadow-2xl cursor-pointer"
+        type="button"
+      >
+        <User className="w-6 h-6" />
+        <span>Sign In to Download & Optimize</span>
+      </button>
+    )}
   </div>
 </div>
         );
