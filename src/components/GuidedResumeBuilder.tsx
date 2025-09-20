@@ -21,6 +21,7 @@ import { ExportOptions, defaultExportOptions } from '../types/export';
 import { exportToPDF, exportToWord } from '../utils/exportUtils';
 import { useNavigate } from 'react-router-dom';
 import { ExportButtons } from './ExportButtons';
+import { ExportOptionsModal } from './ExportOptionsModal'; // Import the new modal component
 
 // src/components/ResumeOptimizer.tsx
 const cleanResumeText = (text: string): string => {
@@ -154,6 +155,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // NEW STATE: To control visibility of PDF/Word export buttons
   const [showExportOptions, setShowExportOptions] = useState(false);
+  // NEW STATE: To control visibility of the new ExportOptionsModal
+  const [showExportOptionsModal, setShowExportOptionsModal] = useState(false);
+
 
   const userName = (user as any)?.user_metadata?.name || '';
   const userEmail = user?.email || ''; // Correctly accesses email from user object
@@ -2132,9 +2136,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
     {isAuthenticated ? (
       <>
-        {/* Download Resume Button */}
+        {/* Download Resume Button - now opens the modal */}
         <button
-          onClick={() => setShowExportOptions(!showExportOptions)} // Toggle export options visibility
+          onClick={() => setShowExportOptionsModal(true)} // Open the modal
           className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
             bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl cursor-pointer"
           type="button"
@@ -2142,54 +2146,6 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           <Download className="w-6 h-6" />
           <span>Download Resume</span>
         </button>
-
-        {/* Export Options (PDF/Word) - conditionally rendered */}
-        {showExportOptions && (
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <button
-              onClick={(e) => handleExportFile(exportOptions, 'pdf')}
-              disabled={isExportingPDF || isExportingWord}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-                isExportingPDF || isExportingWord
-                  ? 'bg-gray-400 cursor-not-allowed text-white'
-                  : 'bg-red-600 hover:bg-red-700 text-white'
-              }`}
-            >
-              {isExportingPDF ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Exporting PDF...</span>
-                </>
-              ) : (
-                <>
-                  <FileText className="w-5 h-5" />
-                  <span>PDF</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={(e) => handleExportFile(exportOptions, 'word')}
-              disabled={isExportingWord || isExportingPDF}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-                isExportingWord || isExportingPDF
-                  ? 'bg-gray-400 cursor-not-allowed text-white'
-                  : 'bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white hover:shadow-neon-cyan'
-              }`}
-            >
-              {isExportingWord ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Exporting Word...</span>
-                </>
-              ) : (
-                <>
-                  <FileText className="w-5 h-5" />
-                  <span>Word</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
 
         {/* Apply JD-Based Optimization Button */}
         <button
@@ -2297,8 +2253,17 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
               </div>
             </div>
 
-            {/* Export Buttons */}
-            {/* Removed the entire Export Buttons div */}
+            {/* Export Options Modal (rendered outside the main flow) */}
+            <ExportOptionsModal
+              isOpen={showExportOptionsModal}
+              onClose={() => setShowExportOptionsModal(false)}
+              optimizedResume={optimizedResume}
+              userType={userType}
+              handleExportFile={handleExportFile}
+              isExportingPDF={isExportingPDF}
+              isExportingWord={isExportingWord}
+              exportStatus={exportStatus}
+            />
           </div>
         </div>
       </div>
