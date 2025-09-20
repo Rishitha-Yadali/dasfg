@@ -636,7 +636,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
       submessage = "We're updating your resume with the new sections you provided.";
@@ -805,45 +805,48 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     }
   };
 
-  const handleSelectAIBullets = (bullets: string[]) => {
-    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'workExperience') {
-      setOptimizedResume(prev => {
-        const updatedWorkExperience = [...(prev?.workExperience || [])];
-        updatedWorkExperience[currentBulletGenerationIndex].bullets = bullets;
-        return { ...prev!, workExperience: updatedWorkExperience };
-      });
-    } else if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'projects') {
-      setOptimizedResume(prev => {
-        const updatedProjects = [...(prev?.projects || [])];
-        updatedProjects[currentBulletGenerationIndex].bullets = bullets;
-        return { ...prev!, projects: updatedProjects };
-      });
-    } else if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'additionalSections') {
-      setOptimizedResume(prev => {
-        const updatedAdditionalSections = [...(prev?.additionalSections || [])];
-        updatedAdditionalSections[currentBulletGenerationIndex].bullets = bullets;
-        return { ...prev!, additionalSections: updatedAdditionalSections };
-      });
-    } else if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'skills') { // NEW: Handle skills
-      setOptimizedResume(prev => {
-        const updatedSkills = [...(prev?.skills || [])];
-        updatedSkills[currentBulletGenerationIndex].list = bullets;
-        updatedSkills[currentBulletGenerationIndex].count = bullets.length; // Update count
-        return { ...prev!, skills: updatedSkills };
-      });
-    } else if (currentBulletGenerationSection === 'certifications') { // Handle certifications
-      setOptimizedResume(prev => {
-        const updatedCertifications = bullets.map(c => ({ title: c, description: '' }));
-        console.log('Updated certifications in state:', updatedCertifications); // Log the new certs
-        return { ...prev!, certifications: updatedCertifications };
-      });
-      console.log('OptimizedResume after selecting certifications:', optimizedResume?.certifications); // Log after state update
+  const handleSelectAIGeneratedOption = (selectedOption: string[]) => { // selectedOption will be an array of strings (bullets or titles)
+    if (!optimizedResume) return;
+
+    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection) {
+        setOptimizedResume(prev => {
+            const newResume = { ...prev! }; // Create a mutable copy
+
+            if (currentBulletGenerationSection === 'workExperience') {
+                newResume.workExperience = [...newResume.workExperience!];
+                newResume.workExperience[currentBulletGenerationIndex].bullets = selectedOption;
+            } else if (currentBulletGenerationSection === 'projects') {
+                newResume.projects = [...newResume.projects!];
+                newResume.projects[currentBulletGenerationIndex].bullets = selectedOption;
+            } else if (currentBulletGenerationSection === 'additionalSections') {
+                newResume.additionalSections = [...newResume.additionalSections!];
+                newResume.additionalSections[currentBulletGenerationIndex].bullets = selectedOption;
+            } else if (currentBulletGenerationSection === 'skills') {
+                newResume.skills = [...newResume.skills!];
+                newResume.skills[currentBulletGenerationIndex].list = selectedOption;
+                newResume.skills[currentBulletGenerationIndex].count = selectedOption.length;
+            } else if (currentBulletGenerationSection === 'certifications') {
+                // For certifications, selectedOption is an array of generated titles.
+                // We need to update the title of the specific certification entry.
+                newResume.certifications = [...newResume.certifications!];
+                // Assuming selectedOption contains only one chosen title, or we take the first one.
+                // If the modal allows selecting one out of multiple, this logic needs to be adjusted
+                // to pass the single selected title, not an array of all options.
+                // For now, let's assume selectedOption is the array of generated titles,
+                // and we'll take the first one to update the current cert.
+                // If the user selects an option from the modal, the modal should pass the *single* selected string.
+                // Let's adjust the modal's onClick to pass the single string.
+                newResume.certifications[currentBulletGenerationIndex].title = selectedOption[0]; // Take the first generated title
+            }
+            return newResume;
+        });
+        console.log('OptimizedResume after selecting AI option:', optimizedResume); // Log after state update
     }
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
     setCurrentBulletGenerationSection(null);
-  };
+};
 
   const handleRegenerateAIBullets = async () => {
     if (currentBulletGenerationIndex !== null && optimizedResume) {
@@ -883,12 +886,15 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
             }
           );
         } else if (currentBulletGenerationSection === 'certifications') { // ADDED: Certifications regeneration logic
+          const currentCert = optimizedResume.certifications[currentBulletGenerationIndex];
           generated = await generateAtsOptimizedSection(
             'certifications',
             {
               userType: userType,
               jobDescription: jobDescription,
               skills: optimizedResume.skills,
+              currentCertTitle: currentCert.title,
+              currentCertDescription: currentCert.description
             }
           );
         } else {
@@ -1092,11 +1098,13 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     });
   };
 
-  const handleGenerateCertifications = async () => {
+  const handleGenerateCertifications = async (index: number) => { // Pass index to know which cert to update
     if (!optimizedResume) return;
     setIsGeneratingBullets(true);
-    setCurrentBulletGenerationIndex(null); // Not tied to a specific entry
+    setCurrentBulletGenerationIndex(index); // Store the index
     setCurrentBulletGenerationSection('certifications');
+
+    const currentCert = optimizedResume.certifications[index]; // Get current cert data
 
     // --- NEW: Context check and warning ---
     const hasJobDescription = jobDescription.trim().length > 0;
@@ -1112,6 +1120,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         userType: userType,
         jobDescription: jobDescription,
         skills: optimizedResume.skills,
+        currentCertTitle: currentCert.title, // Pass current title
+        currentCertDescription: currentCert.description // Pass current description
       });
       const generated = await generateAtsOptimizedSection(
         'certifications',
@@ -1119,11 +1129,12 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
           userType: userType,
           jobDescription: jobDescription,
           skills: optimizedResume.skills,
+          currentCertTitle: currentCert.title,
+          currentCertDescription: currentCert.description
         }
       );
       console.log('AI generated certifications:', generated);
-      // Assuming generated is an array of strings (certification titles)
-      setAIGeneratedBullets([generated as string[]]); // Cast to string[] for display in generic modal
+      setAIGeneratedBullets([generated as string[]]); // Assuming it returns string[] of titles
       setShowAIBulletOptions(true);
     } catch (error) {
       console.error('Error generating certifications:', error);
@@ -1857,7 +1868,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                 <span>Add Certification</span>
               </button>
               <button
-                onClick={handleGenerateCertifications}
+                onClick={() => handleGenerateCertifications(index)} // Pass the index of the current certification
                 className="btn-primary flex items-center space-x-2"
                 disabled={isGeneratingBullets}
               >
@@ -2517,7 +2528,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
                         ))}
                       </ul>
                       <button
-                        onClick={() => handleSelectAIBullets(option)}
+                        onClick={() => handleSelectAIGeneratedOption(option)}
                         className="mt-4 btn-primary w-full"
                       >
                         Select This Option
