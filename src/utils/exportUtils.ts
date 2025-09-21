@@ -1089,7 +1089,7 @@ const generateWordHTMLContent = (
       : '';
 
   const careerObjectiveHtml =
-    data.careerObjective && data.careerObjective.trim() !== ''
+    String(data.careerObjective || '').trim() !== ''
       ? `
   <div style="margin-top: 5pt;">
     <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">CAREER OBJECTIVE</div>
@@ -1099,9 +1099,9 @@ const generateWordHTMLContent = (
       : '';
 
   let objectiveOrSummaryHtml = '';
-  if ((userType === 'fresher' || userType === 'student') && data.careerObjective && data.careerObjective.trim() !== '') {
+  if ((userType === 'fresher' || userType === 'student') && String(data.careerObjective || '').trim() !== '') {
     objectiveOrSummaryHtml = careerObjectiveHtml;
-  } else if (data.summary && data.summary.trim() !== '') {
+  }else if (String(data.summary || '').trim() !== '') {
     objectiveOrSummaryHtml = summaryHtml;
   }
 
