@@ -960,15 +960,25 @@ const generateWordHTMLContent = (
   if (contactParts.length === 0) return ''; // Return empty string if no valid contact info
   const contactInfo = contactParts.join(' | ');
 
-  const summaryHtml =
-    data.summary && data.summary.trim() !== ''
-      ? `
-  <div style="margin-top: 5pt;">
-    <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">PROFESSIONAL SUMMARY</div>
-    <div class="section-underline" style="border-bottom: 0.5pt solid #808080; margin-bottom: 4pt; height: 1px;"></div>
-    <p style="margin-bottom: 12pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10pt;">${data.summary}</p>
-  </div>`
-      : '';
+ const summaryHtml =
+  String(data.summary || '').trim() !== '' // Safely convert to string before trimming
+    ? `
+<div style="margin-top: 5pt;">
+  <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">PROFESSIONAL SUMMARY</div>
+  <div class="section-underline" style="border-bottom: 0.5pt solid #808080; margin-bottom: 4pt; height: 1px;"></div>
+  <p style="margin-bottom: 12pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10pt;">${data.summary}</p>
+</div>`
+    : '';
+
+const careerObjectiveHtml =
+  String(data.careerObjective || '').trim() !== '' // Safely convert to string before trimming
+    ? `
+<div style="margin-top: 5pt;">
+  <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">CAREER OBJECTIVE</div>
+  <div class="section-underline" style="border-bottom: 0.5pt solid #808080; margin-bottom: 4pt; height: 1px;"></div>
+  <p style="margin-bottom: 12pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10pt;">${data.careerObjective}</p>
+</div>`
+    : '';
 
   const educationHtml =
     data.education && data.education.length > 0
