@@ -405,7 +405,8 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
         } else {
           parsedResult.phone = '';
         }
-
+parsedResult.summary = String(parsedResult.summary || '');
+parsedResult.careerObjective = String(parsedResult.careerObjective || '');
         parsedResult.origin = 'jd_optimized';
 
         return parsedResult;
