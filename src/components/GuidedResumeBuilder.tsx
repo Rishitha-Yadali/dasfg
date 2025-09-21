@@ -37,7 +37,32 @@ const cleanResumeText = (text: string): string => {
                    .join('\n');
   return cleaned;
 };
+const cleanBulletPoints = (resumeData: ResumeData): ResumeData => {
+  const cleanedData = { ...resumeData };
 
+  if (cleanedData.workExperience) {
+    cleanedData.workExperience = cleanedData.workExperience.map(exp => ({
+      ...exp,
+      bullets: exp.bullets ? exp.bullets.filter(bullet => bullet.trim().length > 0) : []
+    }));
+  }
+
+  if (cleanedData.projects) {
+    cleanedData.projects = cleanedData.projects.map(proj => ({
+      ...proj,
+      bullets: proj.bullets ? proj.bullets.filter(bullet => bullet.trim().length > 0) : []
+    }));
+  }
+
+  if (cleanedData.additionalSections) {
+    cleanedData.additionalSections = cleanedData.additionalSections.map(section => ({
+      ...section,
+      bullets: section.bullets ? section.bullets.filter(bullet => bullet.trim().length > 0) : []
+    }));
+  }
+
+  return cleanedData;
+};
 
 interface ResumeOptimizerProps {
   isAuthenticated: boolean;
