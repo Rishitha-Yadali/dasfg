@@ -1,5 +1,5 @@
 // src/components/ResumeScoreChecker.tsx
-import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Upload,
   FileText,
@@ -230,7 +230,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
         _analyzeResumeInternal(); // Proceed with analysis using the newly activated trial credits
       } catch (error: any) {
         console.error('analyzeResume: Error activating free trial:', error);
-        onShowAlert('Free Trial Activation Failed', `Failed to activate free trial: ${error.message || 'Unknown error'}. Please try again.', 'error');
+        onShowAlert('Free Trial Activation Failed', `Failed to activate free trial: ${error.message || 'Unknown error'}. Please try again.`, 'error');
       }
     } else {
       // No credits and no free trial available. Show exhaustion message and prompt for payment.
@@ -270,7 +270,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
     // AND if credits are now available.
     if (analysisInterrupted && isAuthenticated && userSubscription && (userSubscription.scoreChecksTotal - userSubscription.scoreChecksUsed) > 0) {
       console.log('ResumeScoreChecker: Analysis was interrupted, credits now available, attempting to re-trigger with internal retry.');
-      setAnalysisInterrupted(false); // Reset the flag immediately
+      setAnalysisInterrupted(false); // Reset flag as credits are now available
       setHasShownCreditExhaustedAlert(false); // Reset alert flag
 
       let retryCount = 0;
@@ -381,7 +381,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
             </div>
           </div>
 
-          <div className="flex-grow flex items-center justify-center py-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-dark-100 dark:via-dark-200 dark:to-dark-300"> {/* Added subtle background gradient */}
+          <div className="flex-grow flex items-center justify-center py-8">
             {currentStep === 0 && (
               <div className="container-responsive">
                  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl">
