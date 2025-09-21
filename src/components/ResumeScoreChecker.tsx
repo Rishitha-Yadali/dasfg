@@ -206,61 +206,77 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
     }
 
     // --- Credit Check Logic ---
-    const currentSubscription = await paymentService.getUserSubscription(user.id);
-    const hasScoreCheckCredits = currentSubscription && (currentSubscription.scoreChecksTotal - currentSubscription.scoreChecksUsed) > 0;
-    const liteCheckPlan = paymentService.getPlanById('lite_check');
-    const hasFreeTrialAvailable = liteCheckPlan && (!currentSubscription || currentSubscription.planId !== 'lite_check');
+   // --- Credit Check Logic ---
+const currentSubscription = await paymentService.getUserSubscription(user.id);
+const hasScoreCheckCredits =
+  currentSubscription &&
+  currentSubscription.scoreChecksTotal - currentSubscription.scoreChecksUsed > 0;
 
-    console.log('DEBUG: analyzeResume - currentSubscription:', currentSubscription);
-    console.log('DEBUG: analyzeResume - hasScoreCheckCredits:', hasScoreCheckCredits);
-    console.log('DEBUG: analyzeResume - hasFreeTrialAvailable:', hasFreeTrialAvailable);
+const liteCheckPlan = paymentService.getPlanById("lite_check");
+const hasFreeTrialAvailable =
+  liteCheckPlan &&
+  (!currentSubscription || currentSubscription.planId !== "lite_check");
 
-    if (hasScoreCheckCredits) {
-      // User has credits, proceed with analysis
-      console.log('analyzeResume: User has credits. Proceeding with internal analysis.');
-      _analyzeResumeInternal();
-    } else if (hasFreeTrialAvailable) {
-      // No credits, but free trial is available. Activate it and then analyze.
-      console.log('analyzeResume: No credits, but free trial available. Activating free trial...');
-      onShowAlert('Activating Free Trial', 'Activating your free trial for Resume Score Check...', 'info');
-      try {
-        await paymentService.activateFreeTrial(user.id);
-        await refreshUserSubscription(); // Refresh subscription state after trial activation
-        onShowAlert('Free Trial Activated!', 'Your free trial has been activated. Analyzing your resume now.', 'success');
-        _analyzeResumeInternal(); // Proceed with analysis using the newly activated trial credits
-      } catch (error: any) {
-        console.error('analyzeResume: Error activating free trial:', error);
-        onShowAlert('Free Trial Activation Failed', `Failed to activate free trial: ${error.message || 'Unknown error'}. Please try again.', 'error');
-      }
-    } else {
-      // No credits and no free trial available. Show exhaustion message and prompt for payment.
-      console.log('analyzeResume: Credits exhausted and no free trial available. Showing payment prompt.');
-      const planName = currentSubscription ? paymentService.getPlanById(currentSubscription.planId)?.name || 'your current plan' : 'your account';
-      const totalCredits = currentSubscription?.scoreChecksTotal || 0;
-      const usedCredits = currentSubscription?.scoreChecksUsed || 0;
-      const remainingCredits = totalCredits - usedCredits;
+if (hasScoreCheckCredits) {
+  _analyzeResumeInternal();
+} else if (hasFreeTrialAvailable) {
+  onShowAlert(
+    "Activating Free Trial",
+    "Activating your free trial for Resume Score Check...",
+    "info"
+  );
+  try {
+    await paymentService.activateFreeTrial(user.id);
+    await refreshUserSubscription();
+    onShowAlert(
+      "Free Trial Activated!",
+      "Your free trial has been activated. Analyzing your resume now.",
+      "success"
+    );
+    _analyzeResumeInternal();
+  } catch (error: any) {
+    onShowAlert(
+      "Free Trial Activation Failed",
+      "Failed to activate free trial: " + (error.message || "Unknown error"),
+      "error"
+    );
+  }
+} else {
+  const planName = currentSubscription
+    ? paymentService.getPlanById(currentSubscription.planId)?.name ||
+      "your current plan"
+    : "your account";
 
-      let message = '';
-      if (currentSubscription && remainingCredits <= 0) {
-       message = `You have used all your ${totalCredits} Resume Score Checks from ${planName}.`;
+  const totalCredits = currentSubscription?.scoreChecksTotal || 0;
+  const usedCredits = currentSubscription?.scoreChecksUsed || 0;
+  const remainingCredits = totalCredits - usedCredits;
 
-      } else if (!currentSubscription) {
-        message = `You don't have any active plan for Resume Score Checks.`;
-      } else {
-        message = `Your Resume Score Check credits are exhausted.`;
-      }
-      message += ' Please upgrade your plan to continue checking scores.';
+  let message = "";
+  if (currentSubscription && remainingCredits <= 0) {
+    message =
+      "You have used all your " +
+      totalCredits +
+      " Resume Score Checks from " +
+      planName +
+      ".";
+  } else if (!currentSubscription) {
+    message = "You don't have any active plan for Resume Score Checks.";
+  } else {
+    message = "Your Resume Score Check credits are exhausted.";
+  }
+  message += " Please upgrade your plan to continue checking scores.";
 
-      onShowAlert(
-        'Resume Score Check Credits Exhausted',
-        message,
-        'warning',
-        'Upgrade Plan',
-        () => onShowSubscriptionPlans('score-checker')
-      );
-      setHasShownCreditExhaustedAlert(true); // Set flag to prevent repeated alerts
-      setAnalysisInterrupted(true); // Indicate analysis was interrupted due to credits
-    }
+  onShowAlert(
+    "Resume Score Check Credits Exhausted",
+    message,
+    "warning",
+    "Upgrade Plan",
+    () => onShowSubscriptionPlans("score-checker")
+  );
+
+  setHasShownCreditExhaustedAlert(true);
+  setAnalysisInterrupted(true);
+}
 
   }, [extractionResult, jobDescription, jobTitle, scoringMode, isAuthenticated, onShowAuth, onShowSubscriptionPlans, onShowAlert, refreshUserSubscription, user, _analyzeResumeInternal]); // Depend on _analyzeResumeInternal
 
