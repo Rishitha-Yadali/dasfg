@@ -1221,13 +1221,28 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     });
   };
 
-  const handleAddAdditionalBullet = (sectionIndex: number) => {
-    setOptimizedResume(prev => {
-      const updatedSections = [...(prev?.additionalSections || [])];
-      updatedSections[sectionIndex].bullets.push('');
-      return { ...prev!, additionalSections: updatedSections };
-    });
-  };
+ const handleAddAdditionalBullet = (sectionIndex: number) => {
+  console.count(`[AdditionalSections] handleAddAdditionalBullet called for index ${sectionIndex}`); // <-- Check for this line
+  setOptimizedResume(prev => {
+    const currentAdditionalSections = prev?.additionalSections ? [...prev.additionalSections] : [];
+    const currentBullets = currentAdditionalSections[sectionIndex]?.bullets ? [...currentAdditionalSections[sectionIndex].bullets] : [];
+    
+    console.log(`[AdditionalSections] Before push:`, currentBullets); // <-- Check for this line
+    
+    // Only add a new empty bullet if the last one is not empty, or if there are no bullets yet
+    if (currentBullets.length === 0 || currentBullets[currentBullets.length - 1].trim() !== '') {
+      const newBullets = [...currentBullets, '']; // Immutable add
+      currentAdditionalSections[sectionIndex] = { // Immutable update of the section object
+        ...currentAdditionalSections[sectionIndex],
+        bullets: newBullets
+      };
+    }
+    
+    console.log(`[AdditionalSections] After push:`, currentAdditionalSections[sectionIndex].bullets); // <-- Check for this line
+    return { ...prev!, additionalSections: currentAdditionalSections }; // Immutable update of the top-level array
+  });
+};
+
 
   const handleUpdateAdditionalBullet = (sectionIndex: number, bulletIndex: number, value: string) => {
     setOptimizedResume(prev => {
