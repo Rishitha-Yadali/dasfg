@@ -37,32 +37,7 @@ const cleanResumeText = (text: string): string => {
                    .join('\n');
   return cleaned;
 };
-const cleanBulletPoints = (resumeData: ResumeData): ResumeData => {
-  const cleanedData = { ...resumeData };
 
-  if (cleanedData.workExperience) {
-    cleanedData.workExperience = cleanedData.workExperience.map(exp => ({
-      ...exp,
-      bullets: exp.bullets ? exp.bullets.filter(bullet => bullet.trim().length > 0) : []
-    }));
-  }
-
-  if (cleanedData.projects) {
-    cleanedData.projects = cleanedData.projects.map(proj => ({
-      ...proj,
-      bullets: proj.bullets ? proj.bullets.filter(bullet => bullet.trim().length > 0) : []
-    }));
-  }
-
-  if (cleanedData.additionalSections) {
-    cleanedData.additionalSections = cleanedData.additionalSections.map(section => ({
-      ...section,
-      bullets: section.bullets ? section.bullets.filter(bullet => bullet.trim().length > 0) : []
-    }));
-  }
-
-  return cleanedData;
-};
 
 interface ResumeOptimizerProps {
   isAuthenticated: boolean;
@@ -675,105 +650,61 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }
 
   // --- NEW: Navigation Handlers ---
- // src/components/GuidedResumeBuilder.tsx
-
-const handleNextSection = useCallback(() => {
-  // --- STEP 1: Create safe clone ---
-  const safeOptimizedResume = optimizedResume
-    ? {
-        ...optimizedResume,
-        careerObjective: String(optimizedResume.careerObjective || ''),
-        summary: String(optimizedResume.summary || ''),
+  const handleNextSection = () => {
+    // Basic validation for the current section before moving next
+    let isValid = true;
+    if (optimizedResume) {
+      switch (resumeSections[currentSectionIndex]) {
+        case 'experience_level':
+          isValid = !!userType; // Ensure a user type is selected
+          break;
+        case 'profile':
+          isValid = !!optimizedResume.name && !!optimizedResume.email;
+          break;
+        case 'objective_summary':
+          if (userType === 'experienced') {
+            isValid = !!optimizedResume.summary && optimizedResume.summary.trim().length > 0;
+          } else {
+            isValid = !!optimizedResume.careerObjective && optimizedResume.careerObjective.trim().length > 0;
+          }
+          break;
+        case 'education':
+          isValid = optimizedResume.education.some(edu => edu.degree.trim() && edu.school.trim() && edu.year.trim());
+          break;
+        case 'work_experience':
+          isValid = optimizedResume.workExperience.some(we => we.role.trim() && we.company.trim() && we.year.trim());
+          break;
+        case 'projects':
+          isValid = optimizedResume.projects.some(p => p.title.trim() && p.bullets.some(b => b.trim()));
+          break;
+        case 'skills':
+          isValid = optimizedResume.skills.some(s => s.category.trim() && s.list.some(item => item.trim()));
+          break;
+        case 'certifications':
+          isValid = optimizedResume.certifications.some(c => (typeof c === 'string' ? c.trim() : c.title?.trim()));
+          break;
+        case 'additional_sections':
+          isValid = true; // Additional sections are optional, so always valid to proceed
+          break;
+        case 'review':
+          isValid = true; // Review section is just a display, always valid
+          break;
+        case 'final_resume':
+          isValid = true; // Final step, always valid
+          break;
+        default:
+          isValid = true; // Assume valid for unimplemented sections
       }
-    : null;
+    } else {
+      isValid = false; // No resume data, so not valid
+    }
 
-  let updatedResumeData = safeOptimizedResume;
-
-  // --- STEP 2: Switch logic for steps ---
-  switch (currentStep) {
-    case 0: // Profile step
-      if (!updatedResumeData?.name?.trim() || !updatedResumeData?.email?.trim()) {
-        alert('Please provide your name and email to proceed.');
-        return;
-      }
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 1: // Objective/Summary step
-      if (userType === 'experienced') {
-        if (!updatedResumeData?.summary || updatedResumeData.summary.trim().length < 30) {
-          alert('Please provide a professional summary of at least 30 characters.');
-          return;
-        }
-      } else {
-        if (
-          !updatedResumeData?.careerObjective ||
-          updatedResumeData.careerObjective.trim().length < 20
-        ) {
-          alert('Please provide a career objective of at least 20 characters.');
-          return;
-        }
-      }
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 2: // Education step
-      if (!updatedResumeData?.education || updatedResumeData.education.length === 0) {
-        alert('Please add at least one education entry.');
-        return;
-      }
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 3: // Work experience step
-      if (!updatedResumeData?.workExperience || updatedResumeData.workExperience.length === 0) {
-        alert('Please add at least one work experience entry.');
-        return;
-      }
-      // Clean bullets before proceeding
-      updatedResumeData = cleanBulletPoints(updatedResumeData);
-      setOptimizedResume(updatedResumeData);
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 4: // Projects step
-      if (!updatedResumeData?.projects || updatedResumeData.projects.length === 0) {
-        alert('Please add at least one project.');
-        return;
-      }
-      updatedResumeData = cleanBulletPoints(updatedResumeData);
-      setOptimizedResume(updatedResumeData);
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 5: // Skills step
-      if (!updatedResumeData?.skills || updatedResumeData.skills.length === 0) {
-        alert('Please add at least one skill category.');
-        return;
-      }
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 6: // Certifications step
-      // certifications optional but if present, clean them
-      updatedResumeData = cleanBulletPoints(updatedResumeData!);
-      setOptimizedResume(updatedResumeData);
-      setCurrentStep(currentStep + 1);
-      break;
-
-    case 7: // Additional sections step
-      updatedResumeData = cleanBulletPoints(updatedResumeData!);
-      setOptimizedResume(updatedResumeData);
-      setCurrentStep(currentStep + 1);
-      break;
-
-    default:
-      alert('You have completed all steps.');
-      break;
-  }
-}, [currentStep, optimizedResume, userType]);
-
-
+    if (isValid && currentSectionIndex < resumeSections.length - 1) {
+      setCurrentSectionIndex(prev => prev + 1);
+    } else if (!isValid) {
+      alert('Please fill in all required fields for the current section before proceeding.');
+    }
+  };
 
   const handlePreviousSection = () => {
     if (currentSectionIndex > 0) {
