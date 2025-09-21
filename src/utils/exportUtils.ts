@@ -92,16 +92,19 @@ interface PageState {
 }
 
 const isValidField = (
-  field?: string | null,
-  fieldType: 'phone' | 'email' | 'url' | 'text' = 'text'
+  field?: unknown, // Change type to unknown to handle any input
+  fieldType: 'phone' | 'email' | 'url' | 'text' = 'text'
 ): boolean => {
-  console.log(`[isValidField] Checking field: "${field}" | type: ${fieldType}`);
-  let result = true;
+  console.log(`[isValidField] Checking field: "${field}" | type: ${fieldType}`);
+  let result = true;
 
-  if (!field || field.trim() === '') {
-    result = false;
-  } else {
-    const lower = field.trim().toLowerCase();
+  // Ensure field is a string before attempting to trim or use string methods
+  const safeField = typeof field === 'string' ? field : '';
+
+  if (!safeField || safeField.trim() === '') {
+    result = false;
+  } else {
+    const lower = safeField.trim().toLowerCase();
     const invalidValues = ['n/a', 'not specified', 'none'];
     if (invalidValues.includes(lower)) {
       result = false;
