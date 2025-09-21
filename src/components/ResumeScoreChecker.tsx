@@ -242,7 +242,8 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
 
       let message = '';
       if (currentSubscription && remainingCredits <= 0) {
-        message = `You have used all your ${totalCredits} Resume Score Checks from ${planName}.`;
+       message = `You have used all your ${totalCredits} Resume Score Checks from ${planName}.`;
+
       } else if (!currentSubscription) {
         message = `You don't have any active plan for Resume Score Checks.`;
       } else {
