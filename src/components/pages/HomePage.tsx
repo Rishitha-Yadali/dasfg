@@ -156,8 +156,8 @@ export const HomePage: React.FC<HomePageProps> = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-inter dark:from-dark-50 dark:via-dark-100 dark:to-dark-200 transition-colors duration-300">
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-neon-cyan-500/10 dark:to-neon-purple-500/10"></div>
+      <div className="relative overflow-hidden bg-[url('https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1')] bg-cover bg-center">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/50 to-purple-600/50 dark:from-neon-cyan-500/50 dark:to-neon-purple-500/50"></div>
         <div className="relative container-responsive py-12 sm:py-16 lg:py-20">
           <div className="text-center max-w-4xl mx-auto">
             {/* Logo and Brand */}
@@ -178,16 +178,25 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
 
             {/* Main Headline */}
-            <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-gray-900 dark:text-gray-100 mb-6 leading-tight">
-              Your Dream Job Starts with a
-              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-neon-cyan-400 dark:to-neon-blue-400">
+            <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+              Your Dream Job Starts with a <br />
+              <span className="block bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-transparent dark:from-neon-cyan-200 dark:to-neon-blue-200">
                 Perfect Resume
               </span>
             </h2>
 
-            <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-white mb-8 leading-relaxed max-w-3xl mx-auto">
               Choose your path to success. Whether you're building from scratch, optimizing for specific jobs, or just want to check your current resume score - we've got you covered.
             </p>
+
+            {/* Hero CTA Button */}
+            <button
+              onClick={() => navigate('/guided-builder')}
+              className="btn-primary px-8 py-4 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 mb-12"
+            >
+              Start Building My Resume
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </button>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12">
@@ -211,6 +220,26 @@ export const HomePage: React.FC<HomePageProps> = ({
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Trust Signals Section */}
+      <div className="py-12 bg-white dark:bg-dark-100">
+        <div className="container-responsive text-center">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+            Trusted by Professionals from Leading Companies
+          </h3>
+          <div className="flex flex-wrap justify-center items-center gap-8 sm:gap-12">
+            {/* Placeholder Logos - Replace with actual company logos */}
+            <img src="https://images.pexels.com/photos/1661004/pexels-photo-1661004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Company Logo 1" className="h-8 sm:h-10 opacity-70 hover:opacity-100 transition-opacity" />
+            <img src="https://images.pexels.com/photos/1661004/pexels-photo-1661004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Company Logo 2" className="h-8 sm:h-10 opacity-70 hover:opacity-100 transition-opacity" />
+            <img src="https://images.pexels.com/photos/1661004/pexels-photo-1661004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Company Logo 3" className="h-8 sm:h-10 opacity-70 hover:opacity-100 transition-opacity" />
+            <img src="https://images.pexels.com/photos/1661004/pexels-photo-1661004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Company Logo 4" className="h-8 sm:h-10 opacity-70 hover:opacity-100 transition-opacity" />
+            <img src="https://images.pexels.com/photos/1661004/pexels-photo-1661004.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Company Logo 5" className="h-8 sm:h-10 opacity-70 hover:opacity-100 transition-opacity" />
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-6">
+            Join thousands of successful job seekers who landed their dream roles.
+          </p>
         </div>
       </div>
 
@@ -250,8 +279,13 @@ export const HomePage: React.FC<HomePageProps> = ({
                 className={`card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br from-white to-primary-50 border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 <div className="flex items-center space-x-4">
-                  <div className="bg-primary-100 rounded-xl p-3 group-hover:bg-gradient-to-r group-hover:from-neon-cyan-500 group-hover:to-neon-blue-500 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0 group-hover:scale-110 dark:bg-dark-200 dark:group-hover:shadow-neon-cyan">
+                  <div className="relative bg-primary-100 rounded-xl p-3 group-hover:bg-gradient-to-r group-hover:from-neon-cyan-500 group-hover:to-neon-blue-500 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0 group-hover:scale-110 dark:bg-dark-200 dark:group-hover:shadow-neon-cyan">
                     {React.cloneElement(feature.icon, { className: "w-8 h-8" })}
+                    {feature.id === 'guided-builder' && (
+                      <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                        Recommended
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-lg font-bold text-secondary-900 dark:text-gray-100">{feature.title}</span>
@@ -344,7 +378,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="text-center mt-12">
               <button
                 onClick={onShowSubscriptionPlansDirectly} // MODIFIED: Call the new direct function
-                className="btn-secondary px-8 py-3"
+                className="btn-primary px-8 py-3" // Changed to btn-primary
               >
                 View All Plans & Add-ons
               </button>
