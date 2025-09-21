@@ -16,32 +16,36 @@ import {
 
 export const AboutUs: React.FC = () => {
   const stats = [
-    { number: '50,000+', label: 'Resumes Optimized', icon: <TrendingUp className="w-6 h-6" /> },
-    { number: '95%', label: 'Success Rate', icon: <Award className="w-6 h-6" /> },
-    { number: '24/7', label: 'AI Support', icon: <Clock className="w-6 h-6" /> },
-    { number: '100+', label: 'Countries Served', icon: <Globe className="w-6 h-6" /> }
+    { number: '50,000+', label: 'Resumes Optimized', icon: <TrendingUp className="w-6 h-6" />, microcopy: 'Trusted by 50,000+ professionals' },
+    { number: '95%', label: 'Success Rate', icon: <Award className="w-6 h-6" />, microcopy: 'Achieved by our AI-driven approach' },
+    { number: '24/7', label: 'AI Support', icon: <Clock className="w-6 h-6" />, microcopy: 'Instant assistance whenever you need it' },
+    { number: '100+', label: 'Countries Served', icon: <Globe className="w-6 h-6" />, microcopy: 'Empowering careers globally' }
   ];
 
   const features = [
     {
       icon: <Sparkles className="w-8 h-8" />,
       title: 'AI-Powered Optimization',
-      description: 'Our advanced AI analyzes your resume against job requirements and optimizes it for maximum impact.'
+      description: 'Our advanced AI analyzes your resume against job requirements and optimizes it for maximum impact.',
+      gradient: 'from-blue-50 to-purple-50'
     },
     {
       icon: <Shield className="w-8 h-8" />,
       title: 'ATS-Friendly Formatting',
-      description: 'Ensure your resume passes through Applicant Tracking Systems with our specialized formatting.'
+      description: 'Ensure your resume passes through Applicant Tracking Systems with our specialized formatting.',
+      gradient: 'from-green-50 to-emerald-50'
     },
     {
       icon: <Target className="w-8 h-8" />,
       title: 'JD-Based Projects',
-      description: 'Get targeted project suggestions based on your job description to make your resume more relevant.'
+      description: 'Get targeted project suggestions based on your job description to make your resume more relevant.',
+      gradient: 'from-orange-50 to-red-50'
     },
     {
       icon: <Zap className="w-8 h-8" />,
       title: 'Instant Results',
-      description: 'Get your optimized resume in seconds, not hours. Fast, efficient, and reliable.'
+      description: 'Get your optimized resume in seconds, not hours. Fast, efficient, and reliable.',
+      gradient: 'from-yellow-50 to-amber-50'
     }
   ];
 
@@ -78,12 +82,13 @@ export const AboutUs: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center group">
+              <div key={index} className="text-center group card-hover"> {/* Added card-hover */}
                 <div className="bg-gradient-to-br from-blue-50 to-purple-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300 text-blue-600 dark:from-neon-cyan-500/20 dark:to-neon-blue-500/20 dark:text-neon-cyan-400 dark:shadow-neon-cyan">
                   {stat.icon}
                 </div>
                 <div className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">{stat.number}</div>
                 <div className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">{stat.label}</div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.microcopy}</p> {/* Added microcopy */}
               </div>
             ))}
           </div>
@@ -166,7 +171,7 @@ export const AboutUs: React.FC = () => {
             <div className="grid md:grid-cols-2 gap-8">
               {features.map((feature, index) => (
                 <div key={index} className="group">
-                  <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-8 h-full border border-gray-100 hover:shadow-xl transition-all duration-300 hover:scale-105 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400 dark:hover:shadow-neon-cyan/20">
+                  <div className={`bg-gradient-to-br ${feature.gradient} rounded-2xl p-8 h-full border border-gray-100 hover:shadow-xl transition-all duration-300 hover:scale-105 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400 dark:hover:shadow-neon-cyan/20`}>
                     <div className="text-blue-600 dark:text-neon-cyan-400 mb-6 group-hover:scale-110 transition-transform duration-300">
                       {feature.icon}
                     </div>
@@ -229,7 +234,7 @@ export const AboutUs: React.FC = () => {
             <p className="text-xl text-blue-100 dark:text-gray-200 mb-8">
               Join thousands of professionals who have already upgraded their resumes and landed their dream jobs.
             </p>
-            <button className="bg-white text-blue-600 font-bold py-4 px-8 rounded-2xl hover:bg-gray-100 transition-colors duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 dark:bg-dark-100 dark:text-neon-cyan-400 dark:hover:bg-dark-200 dark:shadow-neon-cyan">
+            <button onClick={() => navigate('/optimizer')} className="bg-white text-blue-600 font-bold py-4 px-8 rounded-2xl hover:bg-gray-100 transition-colors duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 dark:bg-dark-100 dark:text-neon-cyan-400 dark:hover:bg-dark-200 dark:shadow-neon-cyan">
               Start Optimizing Now
             </button>
           </div>
@@ -238,3 +243,4 @@ export const AboutUs: React.FC = () => {
     </div>
   );
 };
+
