@@ -152,12 +152,14 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
       setCurrentStep(2);
 
       // Decrement usage after successful analysis
-      const usageResult = await paymentService.useScoreCheck(latestUserSubscription.userId);
-      if (usageResult.success) {
-        await refreshUserSubscription(); // Refresh App.tsx state after usage
-      } else {
-        console.error('Failed to decrement score check usage:', usageResult.error);
-        onShowAlert('Usage Update Failed', 'Failed to record score check usage. Please contact support.', 'error');
+      if (!result.cached) {
+          const usageResult = await paymentService.useScoreCheck(latestUserSubscription.userId);
+          if (usageResult.success) {
+            await refreshUserSubscription(); // Refresh App.tsx state after usage
+          } else {
+            console.error('Failed to decrement score check usage:', usageResult.error);
+            onShowAlert('Usage Update Failed', 'Failed to record score check usage. Please contact support.', 'error');
+          }
       }
     } catch (error: any) {
       console.error('_analyzeResumeInternal: Error in try block:', error);
@@ -279,7 +281,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
 
       const attemptAnalysis = async () => {
         while (retryCount < MAX_RETRIES_INTERNAL) {
-          const latestSub = await paymentService.getUserSubscription(user.id); // Re-fetch to be sure
+          const latestSub = user?.id ? await paymentService.getUserSubscription(user.id) : null;
           if (latestSub && (latestSub.scoreChecksTotal - latestSub.scoreChecksUsed) > 0) {
             _analyzeResumeInternal(); // Now call the internal analysis function
             return;
@@ -329,9 +331,9 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
 
   const getConfidenceColor = (confidence: ConfidenceLevel) => {
     switch (confidence) {
-      case 'High': return 'text-green-600 bg-green-100 dark:text-green-900/20';
-      case 'Medium': return 'text-yellow-600 bg-yellow-100 dark:text-yellow-900/20';
-      case 'Low': return 'text-red-600 bg-red-100 dark:text-red-900/20';
+      case 'High': return 'text-green-600 bg-green-100 dark:bg-green-500/20 dark:text-green-300';
+      case 'Medium': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-500/20 dark:text-yellow-300';
+      case 'Low': return 'text-red-600 bg-red-100 dark:bg-red-500/20 dark:text-red-300';
     }
   };
 
@@ -381,58 +383,58 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
             </div>
           </div>
 
-          <div className="flex-grow flex items-center justify-center py-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-dark-100 dark:via-dark-200 dark:to-dark-300"> {/* Added subtle background gradient */}
+          <div className="flex-grow flex items-center justify-center py-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-dark-100 dark:via-dark-200 dark:to-dark-300">
             {currentStep === 0 && (
               <div className="container-responsive">
-                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl">
-                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Choose Scoring Method</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <button
-                        onClick={() => handleSelectScoringMode('jd_based')}
-                        className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
-                          scoringMode === 'jd_based'
-                            ? 'border-blue-500 bg-blue-50 shadow-lg dark:border-neon-cyan-500 dark:bg-neon-cyan-500/20'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 dark:border-dark-300 dark:hover:border-neon-cyan-400 dark:hover:bg-neon-cyan-500/10'
-                        }`}
-                      >
-                        <div className="flex items-center mb-3">
-                          <Target className="w-6 h-6 text-blue-600 dark:text-neon-cyan-400 mr-3" />
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Score Against a Job</h3>
-                          <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium dark:bg-neon-cyan-500/20 dark:text-neon-cyan-300">Best</span>
-                        </div>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">Get a targeted score by comparing your resume against a specific job description and title.</p>
-                      </button>
-                      <button
-                        onClick={() => handleSelectScoringMode('general')}
-                        className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
-                          scoringMode === 'general'
-                            ? 'border-purple-500 bg-purple-50 shadow-lg dark:border-neon-purple-500 dark:bg-neon-purple-500/20'
-                            : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 dark:border-dark-300 dark:hover:border-neon-purple-400 dark:hover:bg-neon-purple-500/10'
-                        }`}
-                      >
-                        <div className="flex items-center mb-3">
-                          <BarChart3 className="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3" />
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">General Score</h3>
-                        </div>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">Get a general assessment of your resume quality against industry standards.</p>
-                        {scoringMode === 'general' && (
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-300">
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={autoScoreOnUpload}
-                                onChange={(e) => setAutoScoreOnUpload(e.target.checked)}
-                                className="form-checkbox h-4 w-4 text-purple-600 rounded focus:ring-purple-500"
-                              />
-                              <span className="text-sm text-gray-700 dark:text-gray-300">Auto-score on upload</span>
-                            </label>
+                   <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl">
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Choose Scoring Method</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                          onClick={() => handleSelectScoringMode('jd_based')}
+                          className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
+                            scoringMode === 'jd_based'
+                              ? 'border-blue-500 bg-blue-50 shadow-lg dark:border-neon-cyan-500 dark:bg-neon-cyan-500/20'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 dark:border-dark-300 dark:hover:border-neon-cyan-400 dark:hover:bg-neon-cyan-500/10'
+                          }`}
+                        >
+                          <div className="flex items-center mb-3">
+                            <Target className="w-6 h-6 text-blue-600 dark:text-neon-cyan-400 mr-3" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Score Against a Job</h3>
+                            <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium dark:bg-neon-cyan-500/20 dark:text-neon-cyan-300">Best</span>
                           </div>
-                        )}
-                      </button>
+                          <p className="text-gray-600 dark:text-gray-300 text-sm">Get a targeted score by comparing your resume against a specific job description and title.</p>
+                        </button>
+                        <button
+                          onClick={() => handleSelectScoringMode('general')}
+                          className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
+                            scoringMode === 'general'
+                              ? 'border-purple-500 bg-purple-50 shadow-lg dark:border-neon-purple-500 dark:bg-neon-purple-500/20'
+                              : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50 dark:border-dark-300 dark:hover:border-neon-purple-400 dark:hover:bg-neon-purple-500/10'
+                          }`}
+                        >
+                          <div className="flex items-center mb-3">
+                            <BarChart3 className="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">General Score</h3>
+                          </div>
+                          <p className="text-gray-600 dark:text-gray-300 text-sm">Get a general assessment of your resume quality against industry standards.</p>
+                          {scoringMode === 'general' && (
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-300">
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={autoScoreOnUpload}
+                                  onChange={(e) => setAutoScoreOnUpload(e.target.checked)}
+                                  className="form-checkbox h-4 w-4 text-purple-600 rounded focus:ring-purple-500"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">Auto-score on upload</span>
+                              </label>
+                            </div>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
               </div>
             )}
 
@@ -539,7 +541,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
               <div className="container-responsive">
                 <div className="max-w-4xl mx-auto">
                   {scoreResult.cached && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4 dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
                       <div className="flex items-center">
                         <Calendar className="w-5 h-5 text-blue-600 dark:text-neon-cyan-400 mr-2" />
                         <span className="text-blue-800 dark:text-neon-cyan-300 font-medium">
@@ -576,7 +578,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
                     </div>
                     <div className="p-8">
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
-                        <div className="text-center">
+                        <div className="text-center md:col-span-1">
                           <div className="relative w-32 h-32 mx-auto mb-4">
                             <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
                               <circle
@@ -609,7 +611,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
                             </div>
                           </div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center md:col-span-1">
                           <div className="bg-gradient-to-br from-blue-50 to-purple-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 dark:from-neon-cyan-500/20 dark:to-neon-blue-500/20 dark:shadow-neon-cyan">
                             <Award className="w-8 h-8 text-blue-600 dark:text-neon-cyan-400" />
                           </div>
@@ -618,7 +620,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">Match Quality</div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center md:col-span-1">
                           <div className="bg-gradient-to-br from-green-50 to-emerald-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 dark:from-neon-blue-500/20 dark:to-neon-purple-500/20 dark:shadow-neon-blue">
                             <TrendingUp className="w-8 h-8 text-green-600 dark:text-neon-blue-400" />
                           </div>
@@ -627,7 +629,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">Interview Chance</div>
                         </div>
-                        <div>
+                        <div className="md:col-span-1">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Overall Analysis</h3>
                           <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-sm mb-4">{scoreResult.analysis}</p>
                           <div className="space-y-2">
@@ -699,7 +701,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
                     </div>
                     <div className="p-6">
                       <ul className="space-y-3">
-                        {scoreResult.actions.length > 0 ? (
+                        {scoreResult.actions && scoreResult.actions.length > 0 ? (
                           scoreResult.actions.map((action, index) => (
                             <li key={index} className="flex items-start">
                               <ArrowRight className="w-5 h-5 text-purple-500 dark:text-neon-purple-400 mr-3 mt-0.5 flex-shrink-0" />
@@ -736,33 +738,7 @@ export const ResumeScoreChecker: React.FC<ResumeScoreCheckerProps> = ({
                     </div>
                   )}
 
-                  
-
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl mt-6">
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 border-b border-gray-200 dark:from-dark-200 dark:to-dark-300 dark:border-dark-400">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                        <Lightbulb className="w-5 h-5 mr-2 text-purple-600 dark:text-neon-purple-400" />
-                        Actionable Recommendations
-                      </h2>
-                    </div>
-                    <div className="p-6">
-                      <ul className="space-y-3">
-                        {scoreResult.recommendations.length > 0 ? (
-                          scoreResult.recommendations.map((rec, index) => (
-                            <li key={index} className="flex items-start">
-                              <ArrowRight className="w-5 h-5 text-purple-500 dark:text-neon-purple-400 mr-3 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-700 dark:text-gray-300">{rec}</span>
-                            </li>
-                          ))
-                        ) : (
-                          <p className="text-gray-600 dark:text-gray-300 italic">No specific recommendations at this time. Your resume looks great!</p>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-
                   <div className="text-center space-y-4 bg-white rounded-2xl shadow-lg border border-gray-200 p-6 dark:bg-dark-100 dark:border-dark-300 dark:shadow-dark-xl mt-6">
-                   
                     <button
                       onClick={handleCheckAnotherResume}
                       className="bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 mr-4 shadow-neon-cyan"
