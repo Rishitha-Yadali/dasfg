@@ -1020,7 +1020,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const handleAddSkillCategory = () => {
     setOptimizedResume(prev => ({
       ...prev!,
-      skills: [...(prev?.skills || []), { category: '', count: 0, list: [''] }]
+      skills: [...(prev?.skills || []), { category: '', count: 0, list: [] }]
     }));
   };
 
