@@ -7,13 +7,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { BrowserRouter } from 'react-router-dom'; // Import BrowserRouter
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter> {/* Wrap App with BrowserRouter */}
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
-  </StrictMode>
+  <ThemeProvider>
+    <AuthProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </AuthProvider>
+  </ThemeProvider>
 );
+
