@@ -904,7 +904,7 @@ const generateWordHTMLContent = (
   const contactInfo = contactParts.join(' | ');
 
   const summaryHtml =
-    data.summary && data.summary.trim() !== ''
+    String(data.summary || '').trim() !== ''
       ? `
   <div style="margin-top: 5pt;">
     <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">PROFESSIONAL SUMMARY</div>
