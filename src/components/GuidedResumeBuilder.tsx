@@ -175,7 +175,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | 'skills' | 'certifications' | 'additionalSections' | null>(null);
   // NEW: State for selected bullet option
   const [selectedBulletOptionIndex, setSelectedBulletOptionIndex] = useState<number | null>(null);
-  // --- End AI Bullet Generation States ---
+  const [lastFocusedBulletIndex, setLastFocusedBulletIndex] = useState<number | null>(null);
 
   // --- AI Objective/Summary Generation States ---
   const [showAIOptionsModal, setShowAIOptionsModal] = useState(false);
