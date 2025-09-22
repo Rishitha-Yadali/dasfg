@@ -92,36 +92,39 @@ interface PageState {
 }
 
 const isValidField = (
-  field?: string | null,
+  field?: unknown, // Change type to unknown to be more general
   fieldType: 'phone' | 'email' | 'url' | 'text' = 'text'
 ): boolean => {
-  console.log(`[isValidField] Checking field: "${field}" | type: ${fieldType}`);
+  // Convert field to string safely before trimming
+  const safeField = typeof field === 'string' ? field : String(field || '');
+
+  console.log(`[isValidField] Checking field: "${safeField}" | type: ${fieldType}`);
   let result = true;
 
-  if (!field || field.trim() === '') {
+  if (!safeField || safeField.trim() === '') { // Now safeField is guaranteed to be a string
     result = false;
   } else {
-    const lower = field.trim().toLowerCase();
+    const lower = safeField.trim().toLowerCase(); // Now safeField is guaranteed to be a string
     const invalidValues = ['n/a', 'not specified', 'none', 'null', 'undefined'];
     if (invalidValues.includes(lower)) {
       result = false;
     } else {
       switch (fieldType) {
         case 'phone': {
-          const digitCount = (field.match(/\d/g) || []).length;
+          const digitCount = (safeField.match(/\d/g) || []).length;
           result = digitCount >= 7 && digitCount <= 20; // Expanded range for international numbers
           break;
         }
         case 'email':
-          result = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.trim());
+          result = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeField);
           break;
         case 'url':
           // Accept URLs with or without protocol, and common social media patterns
-          result = /^https?:\/\//.test(field.trim()) || 
-                   /^(www\.)?linkedin\.com\/in\//.test(field.trim()) ||
-                   /^(www\.)?github\.com\//.test(field.trim()) ||
-                   /linkedin\.com\/in\//.test(field.trim()) ||
-                   /github\.com\//.test(field.trim());
+          result = /^https?:\/\//.test(safeField) || 
+                   /^(www\.)?linkedin\.com\/in\//.test(safeField) ||
+                   /^(www\.)?github\.com\//.test(safeField) ||
+                   /linkedin\.com\/in\//.test(safeField) ||
+                   /github\.com\//.test(safeField);
           break;
         case 'text':
         default:
