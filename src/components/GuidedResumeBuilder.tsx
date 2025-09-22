@@ -1754,49 +1754,67 @@ const handleGenerateProjectBullets = async (
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
-                  {(work.bullets || []).map((bullet, bulletIndex) => (
-                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                      <textarea
-                        value={bullet}
-                        onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
-                        placeholder="Describe your achievement or responsibility"
-                        className="input-base flex-grow resize-y"
-                        rows={2}
-                      />
-                      <button
-                        onClick={() => handleRemoveWorkBullet(workIndex, bulletIndex)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAddWorkBullet(workIndex)} className="btn-secondary flex items-center space-x-2">
-                      <Plus className="w-5 h-5" />
-                      <span>Add Bullet</span>
-                    </button>
-                    <button
-                      onClick={() => handleGenerateWorkExperienceBullets(workIndex)}
-                      className="btn-primary flex items-center space-x-2"
-                      disabled={isGeneratingBullets}
-                    >
-                      {isGeneratingBullets && currentBulletGenerationIndex === workIndex ? (
-                        <RotateCcw className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-5 h-5" />
-                      )}
-                      <span>{isGeneratingBullets && currentBulletGenerationIndex === workIndex ? 'Generating...' : 'Generate with AI'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            <button onClick={handleAddWorkExperience} className="btn-secondary flex items-center space-x-2">
-              <Plus className="w-5 h-5" />
-              <span>Add Work Experience</span>
-            </button>
-          </div>
+                 {(work.bullets || []).map((bullet, bulletIndex) => (
+  <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
+    <textarea
+      value={bullet}
+      onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
+      placeholder="Describe your achievement or responsibility"
+      className="input-base flex-grow resize-y"
+      rows={2}
+    />
+
+    {/* AI per-bullet button */}
+    <button
+      type="button"
+      onClick={() =>
+        handleGenerateWorkExperienceBullets(workIndex, bulletIndex, bullet)
+      }
+      className="btn-secondary flex items-center space-x-2"
+      disabled={
+        isGeneratingBullets &&
+        currentBulletGenerationSection === 'workExperience' &&
+        currentBulletGenerationIndex === workIndex &&
+        selectedBulletOptionIndex === bulletIndex
+      }
+    >
+      {isGeneratingBullets &&
+      currentBulletGenerationSection === 'workExperience' &&
+      currentBulletGenerationIndex === workIndex &&
+      selectedBulletOptionIndex === bulletIndex ? (
+        <RotateCcw className="w-5 h-5 animate-spin" />
+      ) : (
+        <Sparkles className="w-5 h-5" />
+      )}
+      <span>
+        {isGeneratingBullets &&
+        currentBulletGenerationSection === 'workExperience' &&
+        currentBulletGenerationIndex === workIndex &&
+        selectedBulletOptionIndex === bulletIndex
+          ? 'Generating...'
+          : 'AI Suggest'}
+      </span>
+    </button>
+
+    <button
+      onClick={() => handleRemoveWorkBullet(workIndex, bulletIndex)}
+      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+    >
+      <Trash2 className="w-5 h-5" />
+    </button>
+  </div>
+))}
+
+<div className="flex space-x-2">
+  <button
+    onClick={() => handleAddWorkBullet(workIndex)}
+    className="btn-secondary flex items-center space-x-2"
+  >
+    <Plus className="w-5 h-5" />
+    <span>Add Bullet</span>
+  </button>
+</div>
+
         );
       case 'projects':
         return (
