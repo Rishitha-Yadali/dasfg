@@ -2063,7 +2063,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
                   <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
                   {(section.bullets || []).map((bullet, bulletIndex) => (
                     <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                      <textarea
+                   <textarea
   value={bullet}
   onChange={(e) => handleUpdateAdditionalBullet(index, bulletIndex, e.target.value)}
   onFocus={() => {
@@ -2080,6 +2080,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   className="input-base flex-grow resize-y"
   rows={2}
 />
+
 
 
                       <button
