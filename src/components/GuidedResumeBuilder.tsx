@@ -856,62 +856,115 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // src/components/GuidedResumeBuilder.tsx
 
-// src/components/GuidedResumeBuilder.tsx
+const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
+  if (
+    !optimizedResume ||
+    currentBulletGenerationIndex === null || // section index
+    currentBulletGenerationSection === null ||
+    selectedBulletOptionIndex === null      // bullet index
+  ) {
+    console.error(
+      "Cannot select AI option: Missing resume data or generation context."
+    );
+    return;
+  }
 
-  const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
-    if (!optimizedResume || currentBulletGenerationIndex === null || currentBulletGenerationSection === null) {
-      console.error("Cannot select AI option: Missing resume data or generation context.");
-      return;
-    }
+  // Always normalize AI output into plain strings
+  const normalizeBullet = (bullet: any): string =>
+    typeof bullet === "string"
+      ? bullet
+      : bullet?.description || String(bullet || "");
 
-    setOptimizedResume(prev => {
-      const newResume = { ...prev! }; // Create a mutable copy
+  setOptimizedResume((prev) => {
+    const newResume = { ...prev! };
 
-      const updateBullets = (
-        currentBullets: string[] | undefined,
-        generatedBullets: string[]
-      ): string[] => {
-        // FIX: AI-generated bullets should always replace existing ones,
-        // rather than appending to them.
-        return generatedBullets;
-      };
+    // Replace bullet at given index, fallback to push if index doesn’t exist
+    const replaceBullet = (
+      currentBullets: (string | { description: string })[] | undefined,
+      bulletIndex: number,
+      newContent: string
+    ): string[] => {
+      const bullets = (currentBullets || []).map((b) =>
+        typeof b === "string" ? b : b?.description || ""
+      );
+      if (bulletIndex >= 0 && bulletIndex < bullets.length) {
+        bullets[bulletIndex] = newContent;
+      } else {
+        bullets.push(newContent);
+      }
+      return bullets;
+    };
 
-      switch (currentBulletGenerationSection) {
-        case 'workExperience': {
-          const newWorkExperience = [...newResume.workExperience!];
-          const currentEntry = newWorkExperience[currentBulletGenerationIndex];
-          currentEntry.bullets = updateBullets(currentEntry.bullets, selectedOption);
-          newResume.workExperience = newWorkExperience;
-          break;
-        }
-      // ... other cases remain the same
-        case 'projects': {
-          const newProjects = [...newResume.projects!];
-          const currentEntry = newProjects[currentBulletGenerationIndex];
-          currentEntry.bullets = updateBullets(currentEntry.bullets, selectedOption);
-          newResume.projects = newProjects;
-          break;
-        }
-        case 'additionalSections': {
-          const newAdditionalSections = [...newResume.additionalSections!];
-          const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
-          currentEntry.bullets = updateBullets(currentEntry.bullets, selectedOption);
-          newResume.additionalSections = newAdditionalSections;
-          break;
-        }
-      // ... other cases remain the same
-      }
+    switch (currentBulletGenerationSection) {
+      case "workExperience": {
+        const newWorkExperience = [...newResume.workExperience!];
+        const currentEntry = newWorkExperience[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
+          selectedBulletOptionIndex,   // now targets the bullet index
+          normalizeBullet(selectedOption[0])
+        );
+        newResume.workExperience = newWorkExperience;
+        break;
+      }
+      case "projects": {
+        const newProjects = [...newResume.projects!];
+        const currentEntry = newProjects[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
+          selectedBulletOptionIndex,
+          normalizeBullet(selectedOption[0])
+        );
+        newResume.projects = newProjects;
+        break;
+      }
+      case "additionalSections": {
+        const newAdditionalSections = [...newResume.additionalSections!];
+        const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
+          selectedBulletOptionIndex,
+          normalizeBullet(selectedOption[0])
+        );
+        newResume.additionalSections = newAdditionalSections;
+        break;
+      }
+      case "skills": {
+        const newSkills = [...newResume.skills!];
+        const currentEntry = newSkills[currentBulletGenerationIndex];
+        currentEntry.list = selectedOption.map(normalizeBullet);
+        currentEntry.count = currentEntry.list.length;
+        newResume.skills = newSkills;
+        break;
+      }
+      case "certifications": {
+        const newCertifications = newResume.certifications!.map((cert, idx) =>
+          idx === currentBulletGenerationIndex
+            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
+            : cert
+        );
+        newResume.certifications = newCertifications;
+        break;
+      }
+      default:
+        console.error(
+          "Unhandled section for AI bullet selection:",
+          currentBulletGenerationSection
+        );
+        return newResume;
+    }
 
-      return newResume;
-    });
+    return newResume;
+  });
 
-    // Reset state after updating
-    setShowAIBulletOptions(false);
-    setAIGeneratedBullets([]);
-    setCurrentBulletGenerationIndex(null);
-    setCurrentBulletGenerationSection(null);
-    setSelectedBulletOptionIndex(null);
-  };
+  // Reset state after update
+  setShowAIBulletOptions(false);
+  setAIGeneratedBullets([]);
+  setCurrentBulletGenerationIndex(null);    // section index
+  setCurrentBulletGenerationSection(null);
+  setSelectedBulletOptionIndex(null);       // bullet index
+};
+
 
   const handleRegenerateAIBullets = async () => {
     if (currentBulletGenerationIndex !== null && optimizedResume) {
