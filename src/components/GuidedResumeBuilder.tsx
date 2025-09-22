@@ -1814,23 +1814,62 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
                       </button>
                     </div>
                   ))}
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAddProjectBullet(projectIndex)} className="btn-secondary flex items-center space-x-2">
-                      <Plus className="w-5 h-5" />
-                      <span>Add Bullet</span>
-                    </button>
-                    <button
-                      onClick={() => handleGenerateProjectBullets(projectIndex)}
-                      className="btn-primary flex items-center space-x-2"
-                      disabled={isGeneratingBullets}
-                    >
-                      {isGeneratingBullets && currentBulletGenerationIndex === projectIndex ? (
-                        <RotateCcw className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-5 h-5" />
-                      )}
-                      <span>{isGeneratingBullets && currentBulletGenerationIndex === projectIndex ? 'Generating...' : 'Generate with AI'}</span>
-                    </button>
+                 {project.bullets?.map((bullet, bulletIndex) => (
+  <div key={bulletIndex} className="flex items-center space-x-2">
+    <input
+      type="text"
+      value={bullet}
+      onChange={(e) =>
+        handleProjectBulletChange(projectIndex, bulletIndex, e.target.value)
+      }
+      className="input-primary flex-1"
+      placeholder="Enter project bullet"
+    />
+    <button
+      type="button"
+      onClick={() => {
+        setCurrentBulletGenerationIndex(projectIndex);   // project index
+        setSelectedBulletOptionIndex(bulletIndex);       // bullet index
+        setCurrentBulletGenerationSection("projects");   // section
+        generateAIBullets(bullet);                       // send current text to AI
+      }}
+      className="btn-secondary flex items-center space-x-2"
+      disabled={isGeneratingBullets}
+    >
+      {isGeneratingBullets &&
+      currentBulletGenerationIndex === projectIndex &&
+      selectedBulletOptionIndex === bulletIndex ? (
+        <RotateCcw className="w-5 h-5 animate-spin" />
+      ) : (
+        <Sparkles className="w-5 h-5" />
+      )}
+      <span>
+        {isGeneratingBullets &&
+        currentBulletGenerationIndex === projectIndex &&
+        selectedBulletOptionIndex === bulletIndex
+          ? "Generating..."
+          : "AI Suggest"}
+      </span>
+    </button>
+    <button
+      onClick={() => handleRemoveProjectBullet(projectIndex, bulletIndex)}
+      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+    >
+      <Trash2 className="w-5 h-5" />
+    </button>
+  </div>
+))}
+
+<div className="flex space-x-2">
+  <button
+    onClick={() => handleAddProjectBullet(projectIndex)}
+    className="btn-secondary flex items-center space-x-2"
+  >
+    <Plus className="w-5 h-5" />
+    <span>Add Bullet</span>
+  </button>
+</div>
+
                   </div>
                 </div>
               </div>
