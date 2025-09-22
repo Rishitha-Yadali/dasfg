@@ -2706,51 +2706,51 @@ const replaceBullet = (
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {aiGeneratedBullets.map((option, optionIndex) => (
-                    <label
-                      key={optionIndex}
-                      className={`block border rounded-lg p-4 cursor-pointer transition-all ${
-                        selectedBulletOptionIndex === optionIndex
-                          ? 'border-blue-500 bg-blue-50 shadow-md'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="aiBulletOption"
-                        className="hidden"
-                        checked={selectedBulletOptionIndex === optionIndex}
-                        onChange={() => setSelectedBulletOptionIndex(optionIndex)}
-                      />
-                      <div className="flex items-start">
-                        <div className="flex-grow">
-                          {currentBulletGenerationSection === 'certifications' ? (
-                            // Render as plain text for certifications
-                            <p className="text-gray-700">{option[0]}</p>
-                          ) : (
-                            // Render as list for other sections (workExperience, projects, skills, additionalSections)
-                            <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                              {option.map((bullet, bulletIndex) => (
-                                <li key={bulletIndex}>{bullet}</li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                        <div className="w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 flex items-center justify-center">
-                          {selectedBulletOptionIndex === optionIndex && (
-                            <CheckCircle className="w-3 h-3 text-blue-600" />
-                          )}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                  <button
-                    onClick={() => handleSelectAIGeneratedOption(aiGeneratedBullets[selectedBulletOptionIndex!])}
-                    className="mt-4 btn-primary w-full"
-                    disabled={selectedBulletOptionIndex === null}
-                  >
-                    Select This Option
-                  </button>
+                 {aiGeneratedBullets.map((option, optionIndex) => (
+  <label
+    key={optionIndex}
+    className={`block border rounded-lg p-4 cursor-pointer transition-all ${
+      selectedAIOptionIndex === optionIndex
+        ? 'border-blue-500 bg-blue-50 shadow-md'
+        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+    }`}
+  >
+    <input
+      type="radio"
+      name="aiBulletOption"
+      className="hidden"
+      checked={selectedAIOptionIndex === optionIndex}
+      onChange={() => setSelectedAIOptionIndex(optionIndex)}
+    />
+    <div className="flex items-start">
+      <div className="flex-grow">
+        {currentBulletGenerationSection === 'certifications' ? (
+          <p className="text-gray-700">{option[0]}</p>
+        ) : (
+          <ul className="list-disc pl-5 space-y-1 text-gray-700">
+            {option.map((b, i) => <li key={i}>{b}</li>)}
+          </ul>
+        )}
+      </div>
+      <div className="w-5 h-5 rounded-full border-2 flex-shrink-0 ml-4 flex items-center justify-center">
+        {selectedAIOptionIndex === optionIndex && (
+          <CheckCircle className="w-3 h-3 text-blue-600" />
+        )}
+      </div>
+    </div>
+  </label>
+))}
+
+<button
+  onClick={() =>
+    handleSelectAIGeneratedOption(aiGeneratedBullets[selectedAIOptionIndex!])
+  }
+  className="mt-4 btn-primary w-full"
+  disabled={selectedAIOptionIndex === null}
+>
+  Select This Option
+</button>
+
                   <button onClick={handleRegenerateAIBullets} className="btn-secondary w-full flex items-center space-x-2">
                     <RotateCcw className="w-5 h-5" />
                     <span>Regenerate Options</span>
