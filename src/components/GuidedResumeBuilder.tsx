@@ -845,11 +845,17 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   // src/components/GuidedResumeBuilder.tsx
 
 const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
+  // Only these sections need a bullet index
+  const needsBulletIndex =
+    currentBulletGenerationSection === "workExperience" ||
+    currentBulletGenerationSection === "projects" ||
+    currentBulletGenerationSection === "additionalSections";
+
   if (
     !optimizedResume ||
-    currentBulletGenerationIndex === null ||   // which section (workExp/project/etc.)
+    currentBulletGenerationIndex === null ||
     currentBulletGenerationSection === null ||
-    selectedBulletOptionIndex === null        // which bullet inside that section
+    (needsBulletIndex && selectedBulletOptionIndex === null)
   ) {
     console.error("Cannot select AI option: Missing resume data or generation context.");
     return;
@@ -857,29 +863,25 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
 
   // Normalize AI response to plain string
   const normalizeBullet = (bullet: any): string =>
-    typeof bullet === "string"
-      ? bullet
-      : bullet?.description || String(bullet || "");
+    typeof bullet === "string" ? bullet : bullet?.description || String(bullet || "");
 
   setOptimizedResume((prev) => {
     const newResume = { ...prev! };
 
-    // Safely replace or append bullet
-  // replace-only (no append)
-const replaceBullet = (
-  currentBullets: (string | { description: string })[] | undefined,
-  bulletIndex: number,
-  newContent: string
-): string[] => {
-  const bullets = (currentBullets || []).map((b) =>
-    typeof b === "string" ? b : b?.description || ""
-  );
-  if (bulletIndex >= 0 && bulletIndex < bullets.length) {
-    bullets[bulletIndex] = newContent;
-  }
-  return bullets;
-};
-
+    // replace-only (no append)
+    const replaceBullet = (
+      currentBullets: (string | { description: string })[] | undefined,
+      bulletIndex: number,
+      newContent: string
+    ): string[] => {
+      const bullets = (currentBullets || []).map((b) =>
+        typeof b === "string" ? b : b?.description || ""
+      );
+      if (bulletIndex >= 0 && bulletIndex < bullets.length) {
+        bullets[bulletIndex] = newContent;
+      }
+      return bullets;
+    };
 
     switch (currentBulletGenerationSection) {
       case "workExperience": {
@@ -887,7 +889,7 @@ const replaceBullet = (
         const currentEntry = newWorkExperience[currentBulletGenerationIndex];
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
-          selectedBulletOptionIndex,
+          selectedBulletOptionIndex!, // safe due to guard
           normalizeBullet(selectedOption[0])
         );
         newResume.workExperience = newWorkExperience;
@@ -898,7 +900,7 @@ const replaceBullet = (
         const currentEntry = newProjects[currentBulletGenerationIndex];
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
-          selectedBulletOptionIndex,
+          selectedBulletOptionIndex!, // safe due to guard
           normalizeBullet(selectedOption[0])
         );
         newResume.projects = newProjects;
@@ -909,7 +911,7 @@ const replaceBullet = (
         const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
-          selectedBulletOptionIndex,
+          selectedBulletOptionIndex!, // safe due to guard
           normalizeBullet(selectedOption[0])
         );
         newResume.additionalSections = newAdditionalSections;
@@ -918,17 +920,27 @@ const replaceBullet = (
       case "skills": {
         const newSkills = [...(newResume.skills || [])];
         const currentEntry = newSkills[currentBulletGenerationIndex];
-        currentEntry.list = selectedOption.map(normalizeBullet);
-        currentEntry.count = currentEntry.list.length;
+
+        // selectedOption might be an array of strings or a single comma-separated string
+        const normalizedList = Array.isArray(selectedOption)
+          ? selectedOption.map((s) => normalizeBullet(s))
+          : String(selectedOption || "")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+
+        currentEntry.list = normalizedList;
+        currentEntry.count = normalizedList.length;
         newResume.skills = newSkills;
         break;
       }
       case "certifications": {
-        const newCertifications = (newResume.certifications || []).map((cert, idx) =>
-          idx === currentBulletGenerationIndex
-            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
-            : cert
-        );
+        const newCertifications = (newResume.certifications || []).map((cert, idx) => {
+          if (idx !== currentBulletGenerationIndex) return cert;
+          const title = normalizeBullet(selectedOption[0]);
+          // handle both string and object shapes
+          return typeof cert === "string" ? title : { ...cert, title };
+        });
         newResume.certifications = newCertifications;
         break;
       }
@@ -945,9 +957,10 @@ const replaceBullet = (
   setAIGeneratedBullets([]);
   setCurrentBulletGenerationIndex(null);
   setCurrentBulletGenerationSection(null);
-  setSelectedAIOptionIndex(null);      // <-- add this
+  setSelectedAIOptionIndex(null);     // ensure both get cleared
   setSelectedBulletOptionIndex(null);
 };
+
 
 
   const handleRegenerateAIBullets = async () => {
