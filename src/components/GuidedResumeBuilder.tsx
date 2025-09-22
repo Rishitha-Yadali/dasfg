@@ -1080,32 +1080,64 @@ const replaceBullet = (
     });
   };
 
-  const handleGenerateProjectBullets = async (projectIndex: number) => {
-    if (!optimizedResume) return;
-    setIsGeneratingBullets(true);
-    setCurrentBulletGenerationIndex(projectIndex);
-    setCurrentBulletGenerationSection('projects');
-    try {
-      const currentProject = optimizedResume.projects[projectIndex];
-      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
-        'projectBullets',
-        {
-          title: currentProject.title,
-          description: currentProject.bullets.join(' '), // Pass existing bullets as description
-          userType: userType,
-        },
-        undefined, // modelOverride
-        3 // Request 3 variations
-      );
-      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
-      setShowAIBulletOptions(true);
-    } catch (error) {
-      console.error('Error generating project bullets:', error);
-      alert('Failed to generate project bullets. Please try again.');
-    } finally {
-      setIsGeneratingBullets(false);
-    }
-  };
+const handleGenerateProjectBullets = async (
+  projectIndex: number,
+  bulletIndex?: number,
+  seedText?: string
+) => {
+  if (!optimizedResume) return;
+  setIsGeneratingBullets(true);
+
+  const bullets = optimizedResume.projects?.[projectIndex]?.bullets || [];
+
+  // choose target bullet:
+  // 1) explicit param
+  // 2) previously selected (focus)
+  // 3) first empty bullet
+  // 4) second bullet if exists, else first
+  let targetBulletIndex =
+    typeof bulletIndex === 'number'
+      ? bulletIndex
+      : (typeof selectedBulletOptionIndex === 'number'
+          ? selectedBulletOptionIndex
+          : bullets.findIndex(b => !b || !b.trim()));
+
+  if (targetBulletIndex == null || targetBulletIndex < 0) {
+    targetBulletIndex = bullets.length > 1 ? 1 : 0;
+  }
+
+  setCurrentBulletGenerationIndex(projectIndex);
+  setCurrentBulletGenerationSection('projects');
+  setSelectedBulletOptionIndex(targetBulletIndex);
+
+  try {
+    const currentProject = optimizedResume.projects[projectIndex];
+    const seed =
+      (typeof seedText === 'string' ? seedText : undefined) ??
+      (bullets[targetBulletIndex] ?? '') ??
+      '';
+
+    const generated = await generateMultipleAtsVariations(
+      'projectBullets',
+      {
+        title: currentProject.title,
+        description: seed, // use targeted seed
+        userType,
+      },
+      undefined,
+      3
+    );
+
+    setAIGeneratedBullets(generated as string[][]);
+    setShowAIBulletOptions(true);
+  } catch (error) {
+    console.error('Error generating project bullets:', error);
+    alert('Failed to generate project bullets. Please try again.');
+  } finally {
+    setIsGeneratingBullets(false);
+  }
+};
+
   // --- End Projects Section Handlers ---
 
   // --- Skills Section Handlers ---
