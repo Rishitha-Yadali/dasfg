@@ -167,8 +167,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const userGithub = user?.github || ''; // Correctly accesses github from user object
 
   // --- AI Bullet Generation States ---
-   const [editingBulletIndex, setEditingBulletIndex] = useState<number | null>(null);
-
+  
   const [showAIBulletOptions, setShowAIBulletOptions] = useState(false);
   const [aiGeneratedBullets, setAIGeneratedBullets] = useState<string[][]>([]);
   const [isGeneratingBullets, setIsGeneratingBullets] = useState(false);
@@ -785,35 +784,41 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     });
   };
 
-  const handleGenerateWorkExperienceBullets = async (workIndex: number) => {
-    if (!optimizedResume) return;
-    setIsGeneratingBullets(true);
-    setCurrentBulletGenerationIndex(workIndex);
-     setEditingBulletIndex(bulletIndex);
-    setCurrentBulletGenerationSection('workExperience');
-    try {
-      const currentWork = optimizedResume.workExperience[workIndex];
-      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
-        'workExperienceBullets',
-        {
-          role: currentWork.role,
-          company: currentWork.company,
-          year: currentWork.year,
-          description: currentWork.bullets.join(' '), // Pass existing bullets as description
-          userType: userType,
-        },
-        undefined, // modelOverride
-        3 // Request 3 variations
-      );
-      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
-      setShowAIBulletOptions(true);
-    } catch (error) {
-      console.error('Error generating bullets:', error);
-      alert('Failed to generate bullets. Please try again.');
-    } finally {
-      setIsGeneratingBullets(false);
-    }
-  };
+  const handleGenerateWorkExperienceBullets = async (
+  workIndex: number,
+  bulletIndex: number,
+  seedText?: string
+) => {
+  if (!optimizedResume) return;
+  setIsGeneratingBullets(true);
+  setCurrentBulletGenerationIndex(workIndex);
+  setSelectedBulletOptionIndex(bulletIndex);
+  setCurrentBulletGenerationSection('workExperience');
+
+  try {
+    const currentWork = optimizedResume.workExperience[workIndex];
+    const generated = await generateMultipleAtsVariations(
+      'workExperienceBullets',
+      {
+        role: currentWork.role,
+        company: currentWork.company,
+        year: currentWork.year,
+        // prefer the current bullet text if provided
+        description: (seedText ?? currentWork.bullets.join(' ')) || '',
+        userType,
+      },
+      undefined,
+      3
+    );
+    setAIGeneratedBullets(generated as string[][]);
+    setShowAIBulletOptions(true);
+  } catch (error) {
+    console.error('Error generating bullets:', error);
+    alert('Failed to generate bullets. Please try again.');
+  } finally {
+    setIsGeneratingBullets(false);
+  }
+};
 
   // src/components/GuidedResumeBuilder.tsx
 
