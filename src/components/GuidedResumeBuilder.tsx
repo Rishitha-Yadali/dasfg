@@ -859,17 +859,15 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   if (
     !optimizedResume ||
-    currentBulletGenerationIndex === null || // section index
+    currentBulletGenerationIndex === null || // section index (workExperience[0], projects[1], etc.)
     currentBulletGenerationSection === null ||
-    selectedBulletOptionIndex === null      // bullet index
+    selectedBulletOptionIndex === null      // bullet index inside that section
   ) {
-    console.error(
-      "Cannot select AI option: Missing resume data or generation context."
-    );
+    console.error("Cannot select AI option: Missing resume data or generation context.");
     return;
   }
 
-  // Always normalize AI output into plain strings
+  // normalize AI bullet to plain string
   const normalizeBullet = (bullet: any): string =>
     typeof bullet === "string"
       ? bullet
@@ -878,7 +876,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   setOptimizedResume((prev) => {
     const newResume = { ...prev! };
 
-    // Replace bullet at given index, fallback to push if index doesn’t exist
+    // Safely replace the bullet at the given index
     const replaceBullet = (
       currentBullets: (string | { description: string })[] | undefined,
       bulletIndex: number,
@@ -887,11 +885,14 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
       const bullets = (currentBullets || []).map((b) =>
         typeof b === "string" ? b : b?.description || ""
       );
+
+      // ✅ Replace if exists, otherwise add a new bullet
       if (bulletIndex >= 0 && bulletIndex < bullets.length) {
         bullets[bulletIndex] = newContent;
       } else {
         bullets.push(newContent);
       }
+
       return bullets;
     };
 
@@ -901,7 +902,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
         const currentEntry = newWorkExperience[currentBulletGenerationIndex];
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
-          selectedBulletOptionIndex,   // now targets the bullet index
+          selectedBulletOptionIndex,   // exact bullet field clicked
           normalizeBullet(selectedOption[0])
         );
         newResume.workExperience = newWorkExperience;
@@ -947,17 +948,14 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
         break;
       }
       default:
-        console.error(
-          "Unhandled section for AI bullet selection:",
-          currentBulletGenerationSection
-        );
+        console.error("Unhandled section for AI bullet selection:", currentBulletGenerationSection);
         return newResume;
     }
 
     return newResume;
   });
 
-  // Reset state after update
+  // Reset state after replacement
   setShowAIBulletOptions(false);
   setAIGeneratedBullets([]);
   setCurrentBulletGenerationIndex(null);    // section index
