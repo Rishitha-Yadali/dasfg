@@ -651,60 +651,102 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // --- NEW: Navigation Handlers ---
   const handleNextSection = () => {
-    // Basic validation for the current section before moving next
-    let isValid = true;
-    if (optimizedResume) {
-      switch (resumeSections[currentSectionIndex]) {
-        case 'experience_level':
-          isValid = !!userType; // Ensure a user type is selected
-          break;
-        case 'profile':
-          isValid = !!optimizedResume.name && !!optimizedResume.email;
-          break;
-        case 'objective_summary':
-          if (userType === 'experienced') {
-            isValid = !!optimizedResume.summary && optimizedResume.summary.trim().length > 0;
-          } else {
-            isValid = !!optimizedResume.careerObjective && optimizedResume.careerObjective.trim().length > 0;
-          }
-          break;
-        case 'education':
-          isValid = optimizedResume.education.some(edu => edu.degree.trim() && edu.school.trim() && edu.year.trim());
-          break;
-        case 'work_experience':
-          isValid = optimizedResume.workExperience.some(we => we.role.trim() && we.company.trim() && we.year.trim());
-          break;
-        case 'projects':
-          isValid = optimizedResume.projects.some(p => p.title.trim() && p.bullets.some(b => b.trim()));
-          break;
-        case 'skills':
-          isValid = optimizedResume.skills.some(s => s.category.trim() && s.list.some(item => item.trim()));
-          break;
-        case 'certifications':
-          isValid = optimizedResume.certifications.some(c => (typeof c === 'string' ? c.trim() : c.title?.trim()));
-          break;
-        case 'additional_sections':
-          isValid = true; // Additional sections are optional, so always valid to proceed
-          break;
-        case 'review':
-          isValid = true; // Review section is just a display, always valid
-          break;
-        case 'final_resume':
-          isValid = true; // Final step, always valid
-          break;
-        default:
-          isValid = true; // Assume valid for unimplemented sections
-      }
-    } else {
-      isValid = false; // No resume data, so not valid
-    }
+  let isValid = true;
 
-    if (isValid && currentSectionIndex < resumeSections.length - 1) {
-      setCurrentSectionIndex(prev => prev + 1);
-    } else if (!isValid) {
-      alert('Please fill in all required fields for the current section before proceeding.');
+  if (optimizedResume) {
+    switch (resumeSections[currentSectionIndex]) {
+      case 'experience_level':
+        isValid = !!userType;
+        break;
+
+      case 'profile':
+        isValid =
+          String(optimizedResume.name || '').trim() !== '' &&
+          String(optimizedResume.email || '').trim() !== '';
+        break;
+
+      case 'objective_summary':
+        if (userType === 'experienced') {
+          isValid = String(optimizedResume.summary || '').trim().length > 0;
+        } else {
+          isValid = String(optimizedResume.careerObjective || '').trim().length > 0;
+        }
+        break;
+
+      case 'education':
+        isValid =
+          Array.isArray(optimizedResume.education) &&
+          optimizedResume.education.some(
+            (edu) =>
+              String(edu.degree || '').trim() &&
+              String(edu.school || '').trim() &&
+              String(edu.year || '').trim()
+          );
+        break;
+
+      case 'work_experience':
+        isValid =
+          Array.isArray(optimizedResume.workExperience) &&
+          optimizedResume.workExperience.some(
+            (we) =>
+              String(we.role || '').trim() &&
+              String(we.company || '').trim() &&
+              String(we.year || '').trim()
+          );
+        break;
+
+      case 'projects':
+        isValid =
+          Array.isArray(optimizedResume.projects) &&
+          optimizedResume.projects.some(
+            (p) =>
+              String(p.title || '').trim() &&
+              Array.isArray(p.bullets) &&
+              p.bullets.some((b) => String(b || '').trim())
+          );
+        break;
+
+      case 'skills':
+        isValid =
+          Array.isArray(optimizedResume.skills) &&
+          optimizedResume.skills.some(
+            (s) =>
+              String(s.category || '').trim() &&
+              Array.isArray(s.list) &&
+              s.list.some((item) => String(item || '').trim())
+          );
+        break;
+
+      case 'certifications':
+        isValid =
+          Array.isArray(optimizedResume.certifications) &&
+          optimizedResume.certifications.some((c) =>
+            typeof c === 'string'
+              ? String(c || '').trim()
+              : String(c?.title || '').trim()
+          );
+        break;
+
+      case 'additional_sections':
+      case 'review':
+      case 'final_resume':
+        isValid = true;
+        break;
+
+      default:
+        isValid = true;
     }
-  };
+  } else {
+    isValid = false;
+  }
+
+  if (isValid && currentSectionIndex < resumeSections.length - 1) {
+    setCurrentSectionIndex((prev) => prev + 1);
+  } else if (!isValid) {
+    alert('⚠️ Please fill in all required fields for the current section before proceeding.');
+  }
+};
+
 
   const handlePreviousSection = () => {
     if (currentSectionIndex > 0) {
