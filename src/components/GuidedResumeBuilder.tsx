@@ -764,7 +764,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setOptimizedResume(prev => {
       const updatedWorkExperience = [...(prev?.workExperience || [])];
       updatedWorkExperience[workIndex].bullets.push('');
-      return { ...prev!, workExperience: updatedWorkExperience };
+     setLastFocusedBulletIndex(updatedWorkExperience[workIndex].bullets.length - 1);
     });
   };
 
@@ -1046,7 +1046,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     setOptimizedResume(prev => {
       const updatedProjects = [...(prev?.projects || [])];
       updatedProjects[projectIndex].bullets.push('');
-      return { ...prev!, projects: updatedProjects };
+      setLastFocusedBulletIndex(updatedProjects[projectIndex].bullets.length - 1); // +++ add this
     });
   };
 
