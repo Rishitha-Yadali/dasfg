@@ -860,13 +860,18 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       const newResume = { ...prev! }; // Create a mutable copy
 
       const updateBullets = (
-        currentBullets: string[] | undefined,
-        generatedBullets: string[]
-      ): string[] => {
-        // FIX: AI-generated bullets should always replace existing ones,
-        // rather than appending to them.
-        return generatedBullets;
-      };
+        currentBullets: string[] | undefined,
+        generatedBullets: string[]
+      ): string[] => {
+        const existingContent = (currentBullets || []).filter(b => b.trim() !== '');
+        
+        // If there's no real content, replace. Otherwise, append.
+        if (existingContent.length === 0) {
+          return generatedBullets; // Replace
+        } else {
+          return [...existingContent, ...generatedBullets]; // Append
+        }
+      };
 
       switch (currentBulletGenerationSection) {
         case 'workExperience': {
