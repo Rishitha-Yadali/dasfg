@@ -348,6 +348,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                       <li key={bulletIndex} style={listItemStyle}>
                         <span style={{ marginRight: '4px' }}>•</span>
                         <span>{typeof bullet === 'string' ? bullet : (bullet as any).description || JSON.stringify(bullet)}</span>
+
                       </li>
                     ))}
                   </ul>
