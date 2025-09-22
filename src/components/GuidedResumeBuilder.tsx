@@ -89,6 +89,12 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     'final_resume',
   ];
   // --- END NEW ---
+const asText = (v: any): string => {
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v.filter(Boolean).join(' ');
+  if (v && typeof v === 'object' && 'text' in v) return String(v.text ?? '');
+  return v == null ? '' : String(v);
+};
 
   const [extractionResult, setExtractionResult] = useState<ExtractionResult>({ text: '', extraction_mode: 'TEXT', trimmed: false });
   const [jobDescription, setJobDescription] = useState('');
