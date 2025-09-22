@@ -650,112 +650,61 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }
 
   // --- NEW: Navigation Handlers ---
-  const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
-  if (
-    !optimizedResume ||
-    currentBulletGenerationIndex === null ||   // which section (workExp/project/etc.)
-    currentBulletGenerationSection === null ||
-    selectedBulletOptionIndex === null        // which bullet inside that section
-  ) {
-    console.error("Cannot select AI option: Missing resume data or generation context.");
-    return;
-  }
-
-  // Normalize AI response to plain string
-  const normalizeBullet = (bullet: any): string =>
-    typeof bullet === "string"
-      ? bullet
-      : bullet?.description || String(bullet || "");
-
-  setOptimizedResume((prev) => {
-    const newResume = { ...prev! };
-
-    // Safely replace or append bullet
-    const replaceBullet = (
-      currentBullets: (string | { description: string })[] | undefined,
-      bulletIndex: number,
-      newContent: string
-    ): string[] => {
-      const bullets = (currentBullets || []).map((b) =>
-        typeof b === "string" ? b : b?.description || ""
-      );
-
-      if (bulletIndex >= 0 && bulletIndex < bullets.length) {
-        bullets[bulletIndex] = newContent; // replace correct bullet
-      } else {
-        bullets.push(newContent); // fallback: append if index missing
+  const handleNextSection = () => {
+    // Basic validation for the current section before moving next
+    let isValid = true;
+    if (optimizedResume) {
+      switch (resumeSections[currentSectionIndex]) {
+        case 'experience_level':
+          isValid = !!userType; // Ensure a user type is selected
+          break;
+        case 'profile':
+          isValid = !!optimizedResume.name && !!optimizedResume.email;
+          break;
+        case 'objective_summary':
+          if (userType === 'experienced') {
+            isValid = !!optimizedResume.summary && optimizedResume.summary.trim().length > 0;
+          } else {
+            isValid = !!optimizedResume.careerObjective && optimizedResume.careerObjective.trim().length > 0;
+          }
+          break;
+        case 'education':
+          isValid = optimizedResume.education.some(edu => edu.degree.trim() && edu.school.trim() && edu.year.trim());
+          break;
+        case 'work_experience':
+          isValid = optimizedResume.workExperience.some(we => we.role.trim() && we.company.trim() && we.year.trim());
+          break;
+        case 'projects':
+          isValid = optimizedResume.projects.some(p => p.title.trim() && p.bullets.some(b => b.trim()));
+          break;
+        case 'skills':
+          isValid = optimizedResume.skills.some(s => s.category.trim() && s.list.some(item => item.trim()));
+          break;
+        case 'certifications':
+          isValid = optimizedResume.certifications.some(c => (typeof c === 'string' ? c.trim() : c.title?.trim()));
+          break;
+        case 'additional_sections':
+          isValid = true; // Additional sections are optional, so always valid to proceed
+          break;
+        case 'review':
+          isValid = true; // Review section is just a display, always valid
+          break;
+        case 'final_resume':
+          isValid = true; // Final step, always valid
+          break;
+        default:
+          isValid = true; // Assume valid for unimplemented sections
       }
-
-      return bullets;
-    };
-
-    switch (currentBulletGenerationSection) {
-      case "workExperience": {
-        const newWorkExperience = [...(newResume.workExperience || [])];
-        const currentEntry = newWorkExperience[currentBulletGenerationIndex];
-        currentEntry.bullets = replaceBullet(
-          currentEntry.bullets,
-          selectedBulletOptionIndex,
-          normalizeBullet(selectedOption[0])
-        );
-        newResume.workExperience = newWorkExperience;
-        break;
-      }
-      case "projects": {
-        const newProjects = [...(newResume.projects || [])];
-        const currentEntry = newProjects[currentBulletGenerationIndex];
-        currentEntry.bullets = replaceBullet(
-          currentEntry.bullets,
-          selectedBulletOptionIndex,
-          normalizeBullet(selectedOption[0])
-        );
-        newResume.projects = newProjects;
-        break;
-      }
-      case "additionalSections": {
-        const newAdditionalSections = [...(newResume.additionalSections || [])];
-        const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
-        currentEntry.bullets = replaceBullet(
-          currentEntry.bullets,
-          selectedBulletOptionIndex,
-          normalizeBullet(selectedOption[0])
-        );
-        newResume.additionalSections = newAdditionalSections;
-        break;
-      }
-      case "skills": {
-        const newSkills = [...(newResume.skills || [])];
-        const currentEntry = newSkills[currentBulletGenerationIndex];
-        currentEntry.list = selectedOption.map(normalizeBullet);
-        currentEntry.count = currentEntry.list.length;
-        newResume.skills = newSkills;
-        break;
-      }
-      case "certifications": {
-        const newCertifications = (newResume.certifications || []).map((cert, idx) =>
-          idx === currentBulletGenerationIndex
-            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
-            : cert
-        );
-        newResume.certifications = newCertifications;
-        break;
-      }
-      default:
-        console.error("Unhandled section for AI bullet selection:", currentBulletGenerationSection);
-        return newResume;
+    } else {
+      isValid = false; // No resume data, so not valid
     }
 
-    return newResume;
-  });
-
-  // Reset AI state after applying
-  setShowAIBulletOptions(false);
-  setAIGeneratedBullets([]);
-  setCurrentBulletGenerationIndex(null);
-  setCurrentBulletGenerationSection(null);
-  setSelectedBulletOptionIndex(null);
-};
-
+    if (isValid && currentSectionIndex < resumeSections.length - 1) {
+      setCurrentSectionIndex(prev => prev + 1);
+    } else if (!isValid) {
+      alert('Please fill in all required fields for the current section before proceeding.');
+    }
+  };
 
   const handlePreviousSection = () => {
     if (currentSectionIndex > 0) {
