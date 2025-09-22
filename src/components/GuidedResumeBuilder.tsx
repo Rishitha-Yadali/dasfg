@@ -945,6 +945,7 @@ const replaceBullet = (
   setAIGeneratedBullets([]);
   setCurrentBulletGenerationIndex(null);
   setCurrentBulletGenerationSection(null);
+  setSelectedAIOptionIndex(null);      // <-- add this
   setSelectedBulletOptionIndex(null);
 };
 
