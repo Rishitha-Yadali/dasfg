@@ -175,7 +175,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const [currentBulletGenerationSection, setCurrentBulletGenerationSection] = useState<'workExperience' | 'projects' | 'skills' | 'certifications' | 'additionalSections' | null>(null);
   // NEW: State for selected bullet option
   const [selectedBulletOptionIndex, setSelectedBulletOptionIndex] = useState<number | null>(null);
-  const [lastFocusedBulletIndex, setLastFocusedBulletIndex] = useState<number | null>(null);
+  // --- End AI Bullet Generation States ---
 
   // --- AI Objective/Summary Generation States ---
   const [showAIOptionsModal, setShowAIOptionsModal] = useState(false);
@@ -764,7 +764,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setOptimizedResume(prev => {
       const updatedWorkExperience = [...(prev?.workExperience || [])];
       updatedWorkExperience[workIndex].bullets.push('');
-     setLastFocusedBulletIndex(updatedWorkExperience[workIndex].bullets.length - 1);
+      return { ...prev!, workExperience: updatedWorkExperience };
     });
   };
 
@@ -784,48 +784,34 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     });
   };
 
- const handleGenerateWorkExperienceBullets = async (
-  workIndex: number,
-  bulletIndex?: number,
-  seedText?: string
-) => {
-  if (!optimizedResume) return;
-  setIsGeneratingBullets(true);
-  setCurrentBulletGenerationIndex(workIndex);
-  setCurrentBulletGenerationSection('workExperience');
-
-  // NEW: choose the bullet index: explicit arg → last focused → first empty → 0
-  const bullets = optimizedResume.workExperience[workIndex]?.bullets || [];
-  const firstEmpty = bullets.findIndex(b => String(b ?? '').trim() === '');
-  const chosen = (typeof bulletIndex === 'number')
-    ? bulletIndex
-    : (lastFocusedBulletIndex ?? (firstEmpty >= 0 ? firstEmpty : 0));
-  setSelectedBulletOptionIndex(chosen);
-
-  try {
-    const currentWork = optimizedResume.workExperience[workIndex];
-    const seed = (typeof seedText === 'string' ? seedText : bullets[chosen]) || bullets.join(' ') || '';
-    const generated = await generateMultipleAtsVariations(
-      'workExperienceBullets',
-      {
-        role: currentWork.role,
-        company: currentWork.company,
-        year: currentWork.year,
-        description: seed,
-        userType,
-      },
-      undefined,
-      3
-    );
-    setAIGeneratedBullets(generated as string[][]);
-    setShowAIBulletOptions(true);
-  } catch (error) {
-    console.error('Error generating bullets:', error);
-    alert('Failed to generate bullets. Please try again.');
-  } finally {
-    setIsGeneratingBullets(false);
-  }
-};
+  const handleGenerateWorkExperienceBullets = async (workIndex: number) => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true);
+    setCurrentBulletGenerationIndex(workIndex);
+    setCurrentBulletGenerationSection('workExperience');
+    try {
+      const currentWork = optimizedResume.workExperience[workIndex];
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
+        'workExperienceBullets',
+        {
+          role: currentWork.role,
+          company: currentWork.company,
+          year: currentWork.year,
+          description: currentWork.bullets.join(' '), // Pass existing bullets as description
+          userType: userType,
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
+      );
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating bullets:', error);
+      alert('Failed to generate bullets. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
 
   // src/components/GuidedResumeBuilder.tsx
 
@@ -1046,7 +1032,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     setOptimizedResume(prev => {
       const updatedProjects = [...(prev?.projects || [])];
       updatedProjects[projectIndex].bullets.push('');
-      setLastFocusedBulletIndex(updatedProjects[projectIndex].bullets.length - 1); // +++ add this
+      return { ...prev!, projects: updatedProjects };
     });
   };
 
@@ -1066,47 +1052,32 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     });
   };
 
-const handleGenerateProjectBullets = async (
-  projectIndex: number,
-  bulletIndex?: number,
-  seedText?: string
-) => {
-  if (!optimizedResume) return;
-  setIsGeneratingBullets(true);
-  setCurrentBulletGenerationIndex(projectIndex);
-  setCurrentBulletGenerationSection('projects');
-
-  // NEW: choose the bullet index: explicit arg → last focused → first empty → 0
-  const bullets = optimizedResume.projects[projectIndex]?.bullets || [];
-  const firstEmpty = bullets.findIndex(b => String(b ?? '').trim() === '');
-  const chosen = (typeof bulletIndex === 'number')
-    ? bulletIndex
-    : (lastFocusedBulletIndex ?? (firstEmpty >= 0 ? firstEmpty : 0));
-  setSelectedBulletOptionIndex(chosen);
-
-  try {
-    const currentProject = optimizedResume.projects[projectIndex];
-    const seed = (typeof seedText === 'string' ? seedText : bullets[chosen]) || bullets.join(' ') || '';
-    const generated = await generateMultipleAtsVariations(
-      'projectBullets',
-      {
-        title: currentProject.title,
-        description: seed,
-        userType,
-      },
-      undefined,
-      3
-    );
-    setAIGeneratedBullets(generated as string[][]);
-    setShowAIBulletOptions(true);
-  } catch (error) {
-    console.error('Error generating project bullets:', error);
-    alert('Failed to generate project bullets. Please try again.');
-  } finally {
-    setIsGeneratingBullets(false);
-  }
-};
-
+  const handleGenerateProjectBullets = async (projectIndex: number) => {
+    if (!optimizedResume) return;
+    setIsGeneratingBullets(true);
+    setCurrentBulletGenerationIndex(projectIndex);
+    setCurrentBulletGenerationSection('projects');
+    try {
+      const currentProject = optimizedResume.projects[projectIndex];
+      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
+        'projectBullets',
+        {
+          title: currentProject.title,
+          description: currentProject.bullets.join(' '), // Pass existing bullets as description
+          userType: userType,
+        },
+        undefined, // modelOverride
+        3 // Request 3 variations
+      );
+      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
+      setShowAIBulletOptions(true);
+    } catch (error) {
+      console.error('Error generating project bullets:', error);
+      alert('Failed to generate project bullets. Please try again.');
+    } finally {
+      setIsGeneratingBullets(false);
+    }
+  };
   // --- End Projects Section Handlers ---
 
   // --- Skills Section Handlers ---
@@ -1773,11 +1744,11 @@ const handleGenerateProjectBullets = async (
                      <textarea
   value={bullet}
   onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
-  onFocus={() => setLastFocusedBulletIndex(bulletIndex)}   // +++ add this
   placeholder="Describe your achievement or responsibility"
   className="input-base flex-grow resize-y"
   rows={2}
 />
+
                       <button
                         onClick={() => handleRemoveWorkBullet(workIndex, bulletIndex)}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -1849,15 +1820,13 @@ const handleGenerateProjectBullets = async (
                   <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
                   {(project.bullets || []).map((bullet, bulletIndex) => (
                     <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                    <textarea
-  value={bullet}
-  onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
-  onFocus={() => setLastFocusedBulletIndex(bulletIndex)}   // +++ add this
-  placeholder="Describe your project's features or impact"
-  className="input-base flex-grow resize-y"
-  rows={2}
-/>
-
+                      <textarea
+                        value={bullet}
+                        onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
+                        placeholder="Describe your project's features or impact"
+                        className="input-base flex-grow resize-y"
+                        rows={2}
+                      />
                       <button
                         onClick={() => handleRemoveProjectBullet(projectIndex, bulletIndex)}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
