@@ -1059,32 +1059,40 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     });
   };
 
-  const handleGenerateProjectBullets = async (projectIndex: number) => {
-    if (!optimizedResume) return;
-    setIsGeneratingBullets(true);
-    setCurrentBulletGenerationIndex(projectIndex);
-    setCurrentBulletGenerationSection('projects');
-    try {
-      const currentProject = optimizedResume.projects[projectIndex];
-      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
-        'projectBullets',
-        {
-          title: currentProject.title,
-          description: currentProject.bullets.join(' '), // Pass existing bullets as description
-          userType: userType,
-        },
-        undefined, // modelOverride
-        3 // Request 3 variations
-      );
-      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
-      setShowAIBulletOptions(true);
-    } catch (error) {
-      console.error('Error generating project bullets:', error);
-      alert('Failed to generate project bullets. Please try again.');
-    } finally {
-      setIsGeneratingBullets(false);
-    }
-  };
+const handleGenerateProjectBullets = async (
+  projectIndex: number,
+  bulletIndex: number,
+  seedText?: string
+) => {
+  if (!optimizedResume) return;
+  setIsGeneratingBullets(true);
+  setCurrentBulletGenerationIndex(projectIndex);
+  setSelectedBulletOptionIndex(bulletIndex);
+  setCurrentBulletGenerationSection('projects');
+
+  try {
+    const currentProject = optimizedResume.projects[projectIndex];
+    const generated = await generateMultipleAtsVariations(
+      'projectBullets',
+      {
+        title: currentProject.title,
+        // prefer the current bullet text if provided
+        description: (seedText ?? currentProject.bullets.join(' ')) || '',
+        userType,
+      },
+      undefined,
+      3
+    );
+    setAIGeneratedBullets(generated as string[][]);
+    setShowAIBulletOptions(true);
+  } catch (error) {
+    console.error('Error generating project bullets:', error);
+    alert('Failed to generate project bullets. Please try again.');
+  } finally {
+    setIsGeneratingBullets(false);
+  }
+};
+
   // --- End Projects Section Handlers ---
 
   // --- Skills Section Handlers ---
