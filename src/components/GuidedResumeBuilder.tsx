@@ -1804,17 +1804,17 @@ const handleGenerateProjectBullets = async (
     </button>
   </div>
 ))}
-
-<div className="flex space-x-2">
-  <button
-    onClick={() => handleAddWorkBullet(workIndex)}
-    className="btn-secondary flex items-center space-x-2"
-  >
-    <Plus className="w-5 h-5" />
-    <span>Add Bullet</span>
-  </button>
-</div>
-
+                      <span>{isGeneratingBullets && currentBulletGenerationIndex === workIndex ? 'Generating...' : 'Generate with AI'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAddWorkExperience} className="btn-secondary flex items-center space-x-2">
+              <Plus className="w-5 h-5" />
+              <span>Add Work Experience</span>
+            </button>
+          </div>
         );
       case 'projects':
         return (
