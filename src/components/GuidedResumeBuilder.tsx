@@ -1761,11 +1761,11 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
                   {(work.bullets || []).map((bullet, bulletIndex) => (
                     <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
                      <textarea
-  alue={bullet}
-  onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
+   value={bullet}
+  onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
   onFocus={() => {
-    setCurrentBulletGenerationSection('projects');
-    setCurrentBulletGenerationIndex(projectIndex);
+    setCurrentBulletGenerationSection('workExperience');
+    setCurrentBulletGenerationIndex(workIndex);
     setSelectedBulletOptionIndex(bulletIndex);
   }}
   onClick={() => {
