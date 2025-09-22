@@ -865,7 +865,8 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     const newResume = { ...prev! };
 
     // Safely replace or append bullet
-   const replaceBullet = (
+  // replace-only (no append)
+const replaceBullet = (
   currentBullets: (string | { description: string })[] | undefined,
   bulletIndex: number,
   newContent: string
@@ -878,6 +879,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   }
   return bullets;
 };
+
 
     switch (currentBulletGenerationSection) {
       case "workExperience": {
