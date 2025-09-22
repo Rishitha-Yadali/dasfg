@@ -650,101 +650,110 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }
 
   // --- NEW: Navigation Handlers ---
-  const handleNextSection = () => {
-  let isValid = true;
+  const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
+  if (
+    !optimizedResume ||
+    currentBulletGenerationIndex === null ||   // which section (workExp/project/etc.)
+    currentBulletGenerationSection === null ||
+    selectedBulletOptionIndex === null        // which bullet inside that section
+  ) {
+    console.error("Cannot select AI option: Missing resume data or generation context.");
+    return;
+  }
 
-  if (optimizedResume) {
-    switch (resumeSections[currentSectionIndex]) {
-      case 'experience_level':
-        isValid = !!userType;
+  // Normalize AI response to plain string
+  const normalizeBullet = (bullet: any): string =>
+    typeof bullet === "string"
+      ? bullet
+      : bullet?.description || String(bullet || "");
+
+  setOptimizedResume((prev) => {
+    const newResume = { ...prev! };
+
+    // Safely replace or append bullet
+    const replaceBullet = (
+      currentBullets: (string | { description: string })[] | undefined,
+      bulletIndex: number,
+      newContent: string
+    ): string[] => {
+      const bullets = (currentBullets || []).map((b) =>
+        typeof b === "string" ? b : b?.description || ""
+      );
+
+      if (bulletIndex >= 0 && bulletIndex < bullets.length) {
+        bullets[bulletIndex] = newContent; // replace correct bullet
+      } else {
+        bullets.push(newContent); // fallback: append if index missing
+      }
+
+      return bullets;
+    };
+
+    switch (currentBulletGenerationSection) {
+      case "workExperience": {
+        const newWorkExperience = [...(newResume.workExperience || [])];
+        const currentEntry = newWorkExperience[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
+          selectedBulletOptionIndex,
+          normalizeBullet(selectedOption[0])
+        );
+        newResume.workExperience = newWorkExperience;
         break;
-
-      case 'profile':
-        isValid =
-          String(optimizedResume.name || '').trim() !== '' &&
-          String(optimizedResume.email || '').trim() !== '';
+      }
+      case "projects": {
+        const newProjects = [...(newResume.projects || [])];
+        const currentEntry = newProjects[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
+          selectedBulletOptionIndex,
+          normalizeBullet(selectedOption[0])
+        );
+        newResume.projects = newProjects;
         break;
-
-      case 'objective_summary':
-        if (userType === 'experienced') {
-          isValid = String(optimizedResume.summary || '').trim().length > 0;
-        } else {
-          isValid = String(optimizedResume.careerObjective || '').trim().length > 0;
-        }
+      }
+      case "additionalSections": {
+        const newAdditionalSections = [...(newResume.additionalSections || [])];
+        const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
+          selectedBulletOptionIndex,
+          normalizeBullet(selectedOption[0])
+        );
+        newResume.additionalSections = newAdditionalSections;
         break;
-
-      case 'education':
-        isValid =
-          Array.isArray(optimizedResume.education) &&
-          optimizedResume.education.some(
-            (edu) =>
-              String(edu.degree || '').trim() &&
-              String(edu.school || '').trim() &&
-              String(edu.year || '').trim()
-          );
+      }
+      case "skills": {
+        const newSkills = [...(newResume.skills || [])];
+        const currentEntry = newSkills[currentBulletGenerationIndex];
+        currentEntry.list = selectedOption.map(normalizeBullet);
+        currentEntry.count = currentEntry.list.length;
+        newResume.skills = newSkills;
         break;
-
-      case 'work_experience':
-        isValid =
-          Array.isArray(optimizedResume.workExperience) &&
-          optimizedResume.workExperience.some(
-            (we) =>
-              String(we.role || '').trim() &&
-              String(we.company || '').trim() &&
-              String(we.year || '').trim()
-          );
+      }
+      case "certifications": {
+        const newCertifications = (newResume.certifications || []).map((cert, idx) =>
+          idx === currentBulletGenerationIndex
+            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
+            : cert
+        );
+        newResume.certifications = newCertifications;
         break;
-
-      case 'projects':
-        isValid =
-          Array.isArray(optimizedResume.projects) &&
-          optimizedResume.projects.some(
-            (p) =>
-              String(p.title || '').trim() &&
-              Array.isArray(p.bullets) &&
-              p.bullets.some((b) => String(b || '').trim())
-          );
-        break;
-
-      case 'skills':
-        isValid =
-          Array.isArray(optimizedResume.skills) &&
-          optimizedResume.skills.some(
-            (s) =>
-              String(s.category || '').trim() &&
-              Array.isArray(s.list) &&
-              s.list.some((item) => String(item || '').trim())
-          );
-        break;
-
-      case 'certifications':
-        isValid =
-          Array.isArray(optimizedResume.certifications) &&
-          optimizedResume.certifications.some((c) =>
-            typeof c === 'string'
-              ? String(c || '').trim()
-              : String(c?.title || '').trim()
-          );
-        break;
-
-      case 'additional_sections':
-      case 'review':
-      case 'final_resume':
-        isValid = true;
-        break;
-
+      }
       default:
-        isValid = true;
+        console.error("Unhandled section for AI bullet selection:", currentBulletGenerationSection);
+        return newResume;
     }
-  } else {
-    isValid = false;
-  }
 
-  if (isValid && currentSectionIndex < resumeSections.length - 1) {
-    setCurrentSectionIndex((prev) => prev + 1);
-  } else if (!isValid) {
-    alert('⚠️ Please fill in all required fields for the current section before proceeding.');
-  }
+    return newResume;
+  });
+
+  // Reset AI state after applying
+  setShowAIBulletOptions(false);
+  setAIGeneratedBullets([]);
+  setCurrentBulletGenerationIndex(null);
+  setCurrentBulletGenerationSection(null);
+  setSelectedBulletOptionIndex(null);
 };
 
 
@@ -856,113 +865,86 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // src/components/GuidedResumeBuilder.tsx
 
-const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
-  if (
-    !optimizedResume ||
-    currentBulletGenerationIndex === null || // section index (workExperience[0], projects[1], etc.)
-    currentBulletGenerationSection === null ||
-    selectedBulletOptionIndex === null      // bullet index inside that section
-  ) {
-    console.error("Cannot select AI option: Missing resume data or generation context.");
-    return;
-  }
-
-  // normalize AI bullet to plain string
-  const normalizeBullet = (bullet: any): string =>
-    typeof bullet === "string"
-      ? bullet
-      : bullet?.description || String(bullet || "");
-
-  setOptimizedResume((prev) => {
-    const newResume = { ...prev! };
-
-    // Safely replace the bullet at the given index
-    const replaceBullet = (
-      currentBullets: (string | { description: string })[] | undefined,
-      bulletIndex: number,
-      newContent: string
-    ): string[] => {
-      const bullets = (currentBullets || []).map((b) =>
-        typeof b === "string" ? b : b?.description || ""
-      );
-
-      // ✅ Replace if exists, otherwise add a new bullet
-      if (bulletIndex >= 0 && bulletIndex < bullets.length) {
-        bullets[bulletIndex] = newContent;
-      } else {
-        bullets.push(newContent);
-      }
-
-      return bullets;
-    };
-
-    switch (currentBulletGenerationSection) {
-      case "workExperience": {
-        const newWorkExperience = [...newResume.workExperience!];
-        const currentEntry = newWorkExperience[currentBulletGenerationIndex];
-        currentEntry.bullets = replaceBullet(
-          currentEntry.bullets,
-          selectedBulletOptionIndex,   // exact bullet field clicked
-          normalizeBullet(selectedOption[0])
-        );
-        newResume.workExperience = newWorkExperience;
-        break;
-      }
-      case "projects": {
-        const newProjects = [...newResume.projects!];
-        const currentEntry = newProjects[currentBulletGenerationIndex];
-        currentEntry.bullets = replaceBullet(
-          currentEntry.bullets,
-          selectedBulletOptionIndex,
-          normalizeBullet(selectedOption[0])
-        );
-        newResume.projects = newProjects;
-        break;
-      }
-      case "additionalSections": {
-        const newAdditionalSections = [...newResume.additionalSections!];
-        const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
-        currentEntry.bullets = replaceBullet(
-          currentEntry.bullets,
-          selectedBulletOptionIndex,
-          normalizeBullet(selectedOption[0])
-        );
-        newResume.additionalSections = newAdditionalSections;
-        break;
-      }
-      case "skills": {
-        const newSkills = [...newResume.skills!];
-        const currentEntry = newSkills[currentBulletGenerationIndex];
-        currentEntry.list = selectedOption.map(normalizeBullet);
-        currentEntry.count = currentEntry.list.length;
-        newResume.skills = newSkills;
-        break;
-      }
-      case "certifications": {
-        const newCertifications = newResume.certifications!.map((cert, idx) =>
-          idx === currentBulletGenerationIndex
-            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
-            : cert
-        );
-        newResume.certifications = newCertifications;
-        break;
-      }
-      default:
-        console.error("Unhandled section for AI bullet selection:", currentBulletGenerationSection);
-        return newResume;
+  const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
+    if (!optimizedResume || currentBulletGenerationIndex === null || currentBulletGenerationSection === null) {
+      console.error("Cannot select AI option: Missing resume data or generation context.");
+      return;
     }
 
-    return newResume;
-  });
+    setOptimizedResume(prev => {
+      const newResume = { ...prev! }; // Create a mutable copy
 
-  // Reset state after replacement
-  setShowAIBulletOptions(false);
-  setAIGeneratedBullets([]);
-  setCurrentBulletGenerationIndex(null);    // section index
-  setCurrentBulletGenerationSection(null);
-  setSelectedBulletOptionIndex(null);       // bullet index
-};
+      const updateBullets = (
+        currentBullets: string[] | undefined,
+        generatedBullets: string[]
+      ): string[] => {
+        const existingContent = (currentBullets || []).filter(b => b.trim() !== '');
+        
+        // If there's no real content, replace. Otherwise, append.
+        if (existingContent.length === 0) {
+          return generatedBullets; // Replace
+        } else {
+          return [...existingContent, ...generatedBullets]; // Append
+        }
+      };
 
+      switch (currentBulletGenerationSection) {
+        case 'workExperience': {
+          const newWorkExperience = [...newResume.workExperience!];
+          const currentEntry = newWorkExperience[currentBulletGenerationIndex];
+          currentEntry.bullets = updateBullets(currentEntry.bullets, selectedOption);
+          newResume.workExperience = newWorkExperience;
+          break;
+        }
+        case 'projects': {
+          const newProjects = [...newResume.projects!];
+          const currentEntry = newProjects[currentBulletGenerationIndex];
+          currentEntry.bullets = updateBullets(currentEntry.bullets, selectedOption);
+          newResume.projects = newProjects;
+          break;
+        }
+        case 'additionalSections': {
+          const newAdditionalSections = [...newResume.additionalSections!];
+          const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
+          currentEntry.bullets = updateBullets(currentEntry.bullets, selectedOption);
+          newResume.additionalSections = newAdditionalSections;
+          break;
+        }
+        case 'skills': {
+          // Skills are a full replacement, not append/replace bullets
+          const newSkills = [...newResume.skills!];
+          const currentEntry = newSkills[currentBulletGenerationIndex];
+          currentEntry.list = selectedOption;
+          currentEntry.count = selectedOption.length;
+          newResume.skills = newSkills;
+          break;
+        }
+        case 'certifications': {
+          // Certifications update a title, not a bullet list
+          const newCertifications = newResume.certifications!.map((cert, idx) => {
+            if (idx === currentBulletGenerationIndex) {
+              return { ...cert, title: selectedOption[0] };
+            }
+            return cert;
+          });
+          newResume.certifications = newCertifications;
+          break;
+        }
+        default:
+          console.error("Unhandled section for AI bullet selection:", currentBulletGenerationSection);
+          return newResume;
+      }
+
+      return newResume;
+    });
+
+    // Reset state after updating
+    setShowAIBulletOptions(false);
+    setAIGeneratedBullets([]);
+    setCurrentBulletGenerationIndex(null);
+    setCurrentBulletGenerationSection(null);
+    setSelectedBulletOptionIndex(null);
+  };
 
   const handleRegenerateAIBullets = async () => {
     if (currentBulletGenerationIndex !== null && optimizedResume) {
