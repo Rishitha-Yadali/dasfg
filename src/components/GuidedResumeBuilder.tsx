@@ -859,8 +859,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     const newResume = { ...prev! };
 
     // Safely replace or append bullet
-    const replaceBullet = (
-    const replaceBullet = (
+   const replaceBullet = (
   currentBullets: (string | { description: string })[] | undefined,
   bulletIndex: number,
   newContent: string
@@ -871,9 +870,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
 
   if (bulletIndex >= 0 && bulletIndex < bullets.length) {
     bullets[bulletIndex] = newContent; // replace exact textarea
-  } else {
-        bullets.push(newContent); // fallback: append if index missing
-      }
+  }
 
       return bullets;
     };
