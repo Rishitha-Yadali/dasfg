@@ -792,14 +792,22 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   if (!optimizedResume) return;
   setIsGeneratingBullets(true);
 
-  // use the provided index or fall back to the last focused one
-  const targetBulletIndex =
-    typeof bulletIndex === 'number' ? bulletIndex : selectedBulletOptionIndex;
+  const bullets = optimizedResume.workExperience?.[workIndex]?.bullets || [];
 
-  if (targetBulletIndex == null) {
-    setIsGeneratingBullets(false);
-    alert('Click into the bullet you want to improve, then try Generate with AI.');
-    return;
+  // choose target bullet:
+  // 1) explicit param
+  // 2) previously selected (focus)
+  // 3) first empty bullet
+  // 4) second bullet if exists, else first
+  let targetBulletIndex =
+    typeof bulletIndex === 'number'
+      ? bulletIndex
+      : (typeof selectedBulletOptionIndex === 'number'
+          ? selectedBulletOptionIndex
+          : bullets.findIndex(b => !b || !b.trim()));
+
+  if (targetBulletIndex == null || targetBulletIndex < 0) {
+    targetBulletIndex = bullets.length > 1 ? 1 : 0;
   }
 
   setCurrentBulletGenerationIndex(workIndex);
@@ -809,9 +817,9 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   try {
     const currentWork = optimizedResume.workExperience[workIndex];
     const seed =
-      seedText ??
-      currentWork.bullets?.[targetBulletIndex] ??
-      currentWork.bullets.join(' ');
+      (typeof seedText === 'string' ? seedText : undefined) ??
+      (bullets[targetBulletIndex] ?? '') ??
+      '';
 
     const generated = await generateMultipleAtsVariations(
       'workExperienceBullets',
@@ -819,7 +827,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         role: currentWork.role,
         company: currentWork.company,
         year: currentWork.year,
-        description: seed || '',
+        description: seed,
         userType,
       },
       undefined,
@@ -829,12 +837,10 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     setShowAIBulletOptions(true);
   } catch (e) {
     console.error(e);
-    alert('Failed to generate bullets. Please try again.');
   } finally {
     setIsGeneratingBullets(false);
   }
 };
-
 
   // src/components/GuidedResumeBuilder.tsx
 
