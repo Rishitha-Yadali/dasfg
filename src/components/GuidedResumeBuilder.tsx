@@ -167,6 +167,8 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   const userGithub = user?.github || ''; // Correctly accesses github from user object
 
   // --- AI Bullet Generation States ---
+   const [editingBulletIndex, setEditingBulletIndex] = useState<number | null>(null);
+
   const [showAIBulletOptions, setShowAIBulletOptions] = useState(false);
   const [aiGeneratedBullets, setAIGeneratedBullets] = useState<string[][]>([]);
   const [isGeneratingBullets, setIsGeneratingBullets] = useState(false);
@@ -787,6 +789,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     if (!optimizedResume) return;
     setIsGeneratingBullets(true);
     setCurrentBulletGenerationIndex(workIndex);
+     setEditingBulletIndex(bulletIndex);
     setCurrentBulletGenerationSection('workExperience');
     try {
       const currentWork = optimizedResume.workExperience[workIndex];
