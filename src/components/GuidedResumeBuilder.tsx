@@ -1849,13 +1849,15 @@ const handleGenerateProjectBullets = async (
                   <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
                   {(project.bullets || []).map((bullet, bulletIndex) => (
                     <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                      <textarea
-                        value={bullet}
-                        onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
-                        placeholder="Describe your project's features or impact"
-                        className="input-base flex-grow resize-y"
-                        rows={2}
-                      />
+                    <textarea
+  value={bullet}
+  onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
+  onFocus={() => setLastFocusedBulletIndex(bulletIndex)}   // +++ add this
+  placeholder="Describe your project's features or impact"
+  className="input-base flex-grow resize-y"
+  rows={2}
+/>
+
                       <button
                         onClick={() => handleRemoveProjectBullet(projectIndex, bulletIndex)}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
