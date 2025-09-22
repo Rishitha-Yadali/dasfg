@@ -784,27 +784,34 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
     });
   };
 
-  const handleGenerateWorkExperienceBullets = async (
+ const handleGenerateWorkExperienceBullets = async (
   workIndex: number,
-  bulletIndex: number,
+  bulletIndex?: number,
   seedText?: string
 ) => {
   if (!optimizedResume) return;
   setIsGeneratingBullets(true);
   setCurrentBulletGenerationIndex(workIndex);
-  setSelectedBulletOptionIndex(bulletIndex);
   setCurrentBulletGenerationSection('workExperience');
+
+  // NEW: choose the bullet index: explicit arg → last focused → first empty → 0
+  const bullets = optimizedResume.workExperience[workIndex]?.bullets || [];
+  const firstEmpty = bullets.findIndex(b => String(b ?? '').trim() === '');
+  const chosen = (typeof bulletIndex === 'number')
+    ? bulletIndex
+    : (lastFocusedBulletIndex ?? (firstEmpty >= 0 ? firstEmpty : 0));
+  setSelectedBulletOptionIndex(chosen);
 
   try {
     const currentWork = optimizedResume.workExperience[workIndex];
+    const seed = (typeof seedText === 'string' ? seedText : bullets[chosen]) || bullets.join(' ') || '';
     const generated = await generateMultipleAtsVariations(
       'workExperienceBullets',
       {
         role: currentWork.role,
         company: currentWork.company,
         year: currentWork.year,
-        // prefer the current bullet text if provided
-        description: (seedText ?? currentWork.bullets.join(' ')) || '',
+        description: seed,
         userType,
       },
       undefined,
