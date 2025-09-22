@@ -1385,31 +1385,53 @@ const handleGenerateProjectBullets = async (
   };
 
   const handleGenerateAdditionalBullets = async (sectionIndex: number) => {
-    if (!optimizedResume) return;
-    setIsGeneratingBullets(true);
-    setCurrentBulletGenerationIndex(sectionIndex);
-    setCurrentBulletGenerationSection('additionalSections');
-    try {
-      const currentSection = optimizedResume.additionalSections![sectionIndex];
-      const generated = await generateMultipleAtsVariations( // Changed to generateMultipleAtsVariations
-        'additionalSectionBullets',
-        {
-          title: currentSection.title,
-          details: currentSection.bullets.join(' '), // Pass existing bullets as details
-          userType: userType,
-        },
-        undefined, // modelOverride
-        3 // Request 3 variations
-      );
-      setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
-      setShowAIBulletOptions(true);
-    } catch (error) {
-      console.error('Error generating additional section bullets:', error);
-      alert('Failed to generate additional section bullets. Please try again.');
-    } finally {
-      setIsGeneratingBullets(false);
-    }
-  };
+  if (!optimizedResume) return;
+  setIsGeneratingBullets(true);
+
+  const bullets = optimizedResume.additionalSections?.[sectionIndex]?.bullets || [];
+
+  // choose target bullet:
+  // 1) previously selected (focus)
+  // 2) first empty bullet
+  // 3) second bullet if exists, else first
+  let targetBulletIndex =
+    typeof selectedBulletOptionIndex === 'number'
+      ? selectedBulletOptionIndex
+      : bullets.findIndex(b => !b || !b.trim());
+
+  if (targetBulletIndex == null || targetBulletIndex < 0) {
+    targetBulletIndex = bullets.length > 1 ? 1 : 0;
+  }
+
+  setCurrentBulletGenerationIndex(sectionIndex);
+  setCurrentBulletGenerationSection('additionalSections');
+  setSelectedBulletOptionIndex(targetBulletIndex);
+
+  try {
+    const currentSection = optimizedResume.additionalSections![sectionIndex];
+    const seed = (bullets[targetBulletIndex] ?? '') ?? '';
+
+    const generated = await generateMultipleAtsVariations(
+      'additionalSectionBullets',
+      {
+        title: currentSection.title,
+        details: seed, // seed with the targeted bullet
+        userType,
+      },
+      undefined,
+      3
+    );
+
+    setAIGeneratedBullets(generated as string[][]);
+    setShowAIBulletOptions(true);
+  } catch (error) {
+    console.error('Error generating additional section bullets:', error);
+    alert('Failed to generate additional section bullets. Please try again.');
+  } finally {
+    setIsGeneratingBullets(false);
+  }
+};
+
   // --- End Additional Sections Handlers ---
 
   // --- Objective/Summary AI Generation Handlers ---
