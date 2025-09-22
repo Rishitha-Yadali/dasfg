@@ -650,7 +650,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   }
 
   // --- NEW: Navigation Handlers ---
-  handleNextSectionconst handleNextSection = () => {
+  const handleNextSection = () => {
   let isValid = true;
 
   if (optimizedResume) {
