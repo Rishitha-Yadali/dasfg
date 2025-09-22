@@ -1061,23 +1061,30 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
 
 const handleGenerateProjectBullets = async (
   projectIndex: number,
-  bulletIndex: number,
+  bulletIndex?: number,
   seedText?: string
 ) => {
   if (!optimizedResume) return;
   setIsGeneratingBullets(true);
   setCurrentBulletGenerationIndex(projectIndex);
-  setSelectedBulletOptionIndex(bulletIndex);
   setCurrentBulletGenerationSection('projects');
+
+  // NEW: choose the bullet index: explicit arg → last focused → first empty → 0
+  const bullets = optimizedResume.projects[projectIndex]?.bullets || [];
+  const firstEmpty = bullets.findIndex(b => String(b ?? '').trim() === '');
+  const chosen = (typeof bulletIndex === 'number')
+    ? bulletIndex
+    : (lastFocusedBulletIndex ?? (firstEmpty >= 0 ? firstEmpty : 0));
+  setSelectedBulletOptionIndex(chosen);
 
   try {
     const currentProject = optimizedResume.projects[projectIndex];
+    const seed = (typeof seedText === 'string' ? seedText : bullets[chosen]) || bullets.join(' ') || '';
     const generated = await generateMultipleAtsVariations(
       'projectBullets',
       {
         title: currentProject.title,
-        // prefer the current bullet text if provided
-        description: (seedText ?? currentProject.bullets.join(' ')) || '',
+        description: seed,
         userType,
       },
       undefined,
