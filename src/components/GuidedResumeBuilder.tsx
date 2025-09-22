@@ -917,23 +917,23 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
         newResume.additionalSections = newAdditionalSections;
         break;
       }
-      case "skills": {
-        const newSkills = [...(newResume.skills || [])];
-        const currentEntry = newSkills[currentBulletGenerationIndex];
+     case "skills": {
+  const newSkills = [...(newResume.skills || [])];
+  const currentEntry = newSkills[currentBulletGenerationIndex];
 
-        // selectedOption might be an array of strings or a single comma-separated string
-        const normalizedList = Array.isArray(selectedOption)
-          ? selectedOption.map((s) => normalizeBullet(s))
-          : String(selectedOption || "")
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
+  // selectedOption may be an array of skills OR a single comma-separated string
+  const normalizedList = Array.isArray(selectedOption)
+    ? selectedOption.map((s) => normalizeBullet(s))
+    : String(selectedOption || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-        currentEntry.list = normalizedList;
-        currentEntry.count = normalizedList.length;
-        newResume.skills = newSkills;
-        break;
-      }
+  currentEntry.list = normalizedList;
+  currentEntry.count = normalizedList.length;
+  newResume.skills = newSkills;
+  break;
+}
       case "certifications": {
         const newCertifications = (newResume.certifications || []).map((cert, idx) => {
           if (idx !== currentBulletGenerationIndex) return cert;
