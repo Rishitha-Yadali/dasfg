@@ -34,8 +34,8 @@ const toSafeText = (v?: unknown): string => (typeof v === 'string' ? v : '');
 // ---------- Config ----------
 const createPDFConfig = (options: ExportOptions) => {
   const layoutConfig = options.layoutType === 'compact' ? 
-    { margins: { top: 10, bottom: 10, left: 15, right: 15 } } : // Adjusted compact margins
-    { margins: { top: 15, bottom: 15, left: 20, right: 20 } }; // Adjusted standard margins
+    { margins: { top: 20, bottom: 20, left: 18, right: 18 } } : // Professional compact margins
+    { margins: { top: 25, bottom: 25, left: 20, right: 20 } }; // Professional standard margins
   
   const paperConfig = options.paperSize === 'letter' ?
     { pageWidth: 216, pageHeight: 279 } :
@@ -102,26 +102,26 @@ const isValidField = (
     result = false;
   } else {
     const lower = field.trim().toLowerCase();
-    const invalidValues = ['n/a', 'not specified', 'none'];
+    const invalidValues = ['n/a', 'not specified', 'none', 'null', 'undefined'];
     if (invalidValues.includes(lower)) {
       result = false;
     } else {
       switch (fieldType) {
         case 'phone': {
           const digitCount = (field.match(/\d/g) || []).length;
-          result = digitCount >= 7 && digitCount <= 15; // More reasonable phone number length
+          result = digitCount >= 7 && digitCount <= 20; // Expanded range for international numbers
           break;
         }
         case 'email':
-          result = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field);
+          result = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.trim());
           break;
         case 'url':
           // Accept URLs with or without protocol, and common social media patterns
-          result = /^https?:\/\//.test(field) || 
-                   /^(www\.)?linkedin\.com\/in\//.test(field) ||
-                   /^(www\.)?github\.com\//.test(field) ||
-                   /linkedin\.com\/in\//.test(field) ||
-                   /github\.com\//.test(field);
+          result = /^https?:\/\//.test(field.trim()) || 
+                   /^(www\.)?linkedin\.com\/in\//.test(field.trim()) ||
+                   /^(www\.)?github\.com\//.test(field.trim()) ||
+                   /linkedin\.com\/in\//.test(field.trim()) ||
+                   /github\.com\//.test(field.trim());
           break;
         case 'text':
         default:
@@ -131,7 +131,7 @@ const isValidField = (
     }
   }
   
-  console.log(`[isValidField] Result for "${field}": ${result}`);
+  console.log(`[isValidField] VALIDATION RESULT for "${field}" (${fieldType}): ${result}`);
   return result;
 };
 
@@ -735,6 +735,16 @@ export const exportToPDF = async (
 ): Promise<void> => {
   const PDF_CONFIG = createPDFConfig(options);
   try {
+    console.log('[PDF_EXPORT] Starting PDF generation process...');
+    console.log('[PDF_EXPORT] Resume data received:', {
+      name: resumeData.name,
+      hasEducation: resumeData.education?.length > 0,
+      hasWorkExperience: resumeData.workExperience?.length > 0,
+      hasProjects: resumeData.projects?.length > 0,
+      hasSkills: resumeData.skills?.length > 0,
+      hasCertifications: resumeData.certifications?.length > 0
+    });
+    
     if (isMobileDevice()) {
       console.log('Starting PDF generation for mobile device...');
     }
@@ -742,6 +752,8 @@ export const exportToPDF = async (
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
     const state: PageState = { currentPage: 1, currentY: PDF_CONFIG.margins.top, doc };
 
+    console.log('[PDF_EXPORT] PDF document initialized successfully');
+    
     // Safe properties
     doc.setProperties({
       title: `${toSafeText(resumeData.name)} - Resume`,
@@ -819,16 +831,39 @@ export const exportToPDF = async (
     } else {
       doc.save(fileName);
     }
+    
+    console.log('[PDF_EXPORT] PDF generation completed successfully');
   } catch (error: any) {
-    console.error('Error exporting to PDF (raw):', error);
+    console.error('[PDF_EXPORT] CRITICAL ERROR during PDF generation:', error);
+    console.error('[PDF_EXPORT] Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      toString: error?.toString()
+    });
+    console.error('[PDF_EXPORT] Resume data that caused error:', resumeData);
+    
     if (error?.message?.includes('jsPDF')) {
       throw new Error(
-        `PDF generation failed inside jsPDF: ${error.message}. Try a different font or reduce content.`
+        `PDF generation failed in jsPDF library: ${error.message}. This might be due to invalid font settings, content overflow, or data formatting issues. Please check your resume content and try again.`
       );
     }
+    
+    // Enhanced error message based on common PDF generation issues
+    if (error?.message?.includes('Cannot read property') || error?.message?.includes('Cannot read properties')) {
+      throw new Error(
+        `PDF generation failed due to data structure issue: ${error.message}. Some resume data may be missing or improperly formatted.`
+      );
+    }
+    
+    if (error?.message?.includes('setFont') || error?.message?.includes('font')) {
+      throw new Error(
+        `PDF generation failed due to font issue: ${error.message}. The selected font may not be available or properly configured.`
+      );
+    }
+    
     throw new Error(
-      `An error occurred while creating the PDF. ${error?.message ? `Details: ${error.message}` : ''
-      }`
+      `PDF generation failed: ${error?.message || 'Unknown error occurred'}. Please check your resume content and try again. If the issue persists, try using Word export instead.`
     );
   }
 };
