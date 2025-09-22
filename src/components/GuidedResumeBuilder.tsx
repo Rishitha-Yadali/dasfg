@@ -2062,12 +2062,23 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
                   {(section.bullets || []).map((bullet, bulletIndex) => (
                     <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
                       <textarea
-                        value={bullet}
-                        onChange={(e) => handleUpdateAdditionalBullet(index, bulletIndex, e.target.value)}
-                        placeholder="Describe your achievement or experience"
-                        className="input-base flex-grow resize-y"
-                        rows={2}
-                      />
+  value={bullet}
+  onChange={(e) => handleUpdateAdditionalBullet(index, bulletIndex, e.target.value)}
+  onFocus={() => {
+    setCurrentBulletGenerationSection('additionalSections');
+    setCurrentBulletGenerationIndex(index);
+    setSelectedBulletOptionIndex(bulletIndex);
+  }}
+  onClick={() => {
+    setCurrentBulletGenerationSection('additionalSections');
+    setCurrentBulletGenerationIndex(index);
+    setSelectedBulletOptionIndex(bulletIndex);
+  }}
+  placeholder="Describe your achievement or experience"
+  className="input-base flex-grow resize-y"
+  rows={2}
+/>
+
                       <button
                         onClick={() => handleRemoveAdditionalBullet(index, bulletIndex)}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
