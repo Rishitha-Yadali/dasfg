@@ -860,17 +860,18 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
 
     // Safely replace or append bullet
     const replaceBullet = (
-      currentBullets: (string | { description: string })[] | undefined,
-      bulletIndex: number,
-      newContent: string
-    ): string[] => {
-      const bullets = (currentBullets || []).map((b) =>
-        typeof b === "string" ? b : b?.description || ""
-      );
+    const replaceBullet = (
+  currentBullets: (string | { description: string })[] | undefined,
+  bulletIndex: number,
+  newContent: string
+): string[] => {
+  const bullets = (currentBullets || []).map((b) =>
+    typeof b === "string" ? b : b?.description || ""
+  );
 
-      if (bulletIndex >= 0 && bulletIndex < bullets.length) {
-        bullets[bulletIndex] = newContent; // replace correct bullet
-      } else {
+  if (bulletIndex >= 0 && bulletIndex < bullets.length) {
+    bullets[bulletIndex] = newContent; // replace exact textarea
+  } else {
         bullets.push(newContent); // fallback: append if index missing
       }
 
