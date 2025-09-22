@@ -856,18 +856,24 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 
   // src/components/GuidedResumeBuilder.tsx
 
- const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
+const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   if (
     !optimizedResume ||
     currentBulletGenerationIndex === null ||
     currentBulletGenerationSection === null ||
-    selectedBulletOptionIndex === null // <-- add bullet-level index
+    selectedBulletOptionIndex === null
   ) {
     console.error(
       "Cannot select AI option: Missing resume data or generation context."
     );
     return;
   }
+
+  // normalize to always store strings
+  const normalizeBullet = (bullet: any): string =>
+    typeof bullet === "string"
+      ? bullet
+      : bullet?.description || String(bullet || "");
 
   setOptimizedResume((prev) => {
     const newResume = { ...prev! };
@@ -878,7 +884,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       newContent: string
     ): string[] => {
       const bullets = [...(currentBullets || [])];
-      bullets[bulletIndex] = newContent; // replace the bullet directly
+      bullets[bulletIndex] = newContent;
       return bullets;
     };
 
@@ -889,7 +895,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
           selectedBulletOptionIndex,
-          selectedOption[0] // AI returns one replacement line
+          normalizeBullet(selectedOption[0])
         );
         newResume.workExperience = newWorkExperience;
         break;
@@ -900,7 +906,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
           selectedBulletOptionIndex,
-          selectedOption[0]
+          normalizeBullet(selectedOption[0])
         );
         newResume.projects = newProjects;
         break;
@@ -911,7 +917,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
         currentEntry.bullets = replaceBullet(
           currentEntry.bullets,
           selectedBulletOptionIndex,
-          selectedOption[0]
+          normalizeBullet(selectedOption[0])
         );
         newResume.additionalSections = newAdditionalSections;
         break;
@@ -919,15 +925,15 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
       case "skills": {
         const newSkills = [...newResume.skills!];
         const currentEntry = newSkills[currentBulletGenerationIndex];
-        currentEntry.list = selectedOption; // full replacement
-        currentEntry.count = selectedOption.length;
+        currentEntry.list = selectedOption.map(normalizeBullet);
+        currentEntry.count = currentEntry.list.length;
         newResume.skills = newSkills;
         break;
       }
       case "certifications": {
         const newCertifications = newResume.certifications!.map((cert, idx) =>
           idx === currentBulletGenerationIndex
-            ? { ...cert, title: selectedOption[0] }
+            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
             : cert
         );
         newResume.certifications = newCertifications;
@@ -951,6 +957,7 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
   setCurrentBulletGenerationSection(null);
   setSelectedBulletOptionIndex(null);
 };
+
 
   const handleRegenerateAIBullets = async () => {
     if (currentBulletGenerationIndex !== null && optimizedResume) {
