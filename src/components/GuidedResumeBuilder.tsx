@@ -817,14 +817,15 @@ const GuidedResumeBuilder: React.FC<ResumeOptimizerProps> = ({
 const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   if (
     !optimizedResume ||
-    currentBulletGenerationIndex === null ||   // section index (e.g., workExperience[0])
+    currentBulletGenerationIndex === null ||   // which section (workExp/project/etc.)
     currentBulletGenerationSection === null ||
-    selectedBulletOptionIndex === null        // bullet index (e.g., bullets[1])
+    selectedBulletOptionIndex === null        // which bullet inside that section
   ) {
     console.error("Cannot select AI option: Missing resume data or generation context.");
     return;
   }
 
+  // Normalize AI response to plain string
   const normalizeBullet = (bullet: any): string =>
     typeof bullet === "string"
       ? bullet
@@ -833,6 +834,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   setOptimizedResume((prev) => {
     const newResume = { ...prev! };
 
+    // Safely replace or append bullet
     const replaceBullet = (
       currentBullets: (string | { description: string })[] | undefined,
       bulletIndex: number,
@@ -845,7 +847,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
       if (bulletIndex >= 0 && bulletIndex < bullets.length) {
         bullets[bulletIndex] = newContent; // replace correct bullet
       } else {
-        bullets.push(newContent); // if bullet doesn’t exist, append
+        bullets.push(newContent); // fallback: append if index missing
       }
 
       return bullets;
@@ -854,76 +856,69 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
     switch (currentBulletGenerationSection) {
       case "workExperience": {
         const newWorkExperience = [...(newResume.workExperience || [])];
-        const entry = newWorkExperience[currentBulletGenerationIndex];
-        entry.bullets = replaceBullet(
-          entry.bullets,
+        const currentEntry = newWorkExperience[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
           selectedBulletOptionIndex,
           normalizeBullet(selectedOption[0])
         );
         newResume.workExperience = newWorkExperience;
         break;
       }
-
       case "projects": {
         const newProjects = [...(newResume.projects || [])];
-        const entry = newProjects[currentBulletGenerationIndex];
-        entry.bullets = replaceBullet(
-          entry.bullets,
+        const currentEntry = newProjects[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
           selectedBulletOptionIndex,
           normalizeBullet(selectedOption[0])
         );
         newResume.projects = newProjects;
         break;
       }
-
       case "additionalSections": {
         const newAdditionalSections = [...(newResume.additionalSections || [])];
-        const entry = newAdditionalSections[currentBulletGenerationIndex];
-        entry.bullets = replaceBullet(
-          entry.bullets,
+        const currentEntry = newAdditionalSections[currentBulletGenerationIndex];
+        currentEntry.bullets = replaceBullet(
+          currentEntry.bullets,
           selectedBulletOptionIndex,
           normalizeBullet(selectedOption[0])
         );
         newResume.additionalSections = newAdditionalSections;
         break;
       }
-
       case "skills": {
         const newSkills = [...(newResume.skills || [])];
-        const entry = newSkills[currentBulletGenerationIndex];
-        entry.list = selectedOption.map(normalizeBullet);
-        entry.count = entry.list.length;
+        const currentEntry = newSkills[currentBulletGenerationIndex];
+        currentEntry.list = selectedOption.map(normalizeBullet);
+        currentEntry.count = currentEntry.list.length;
         newResume.skills = newSkills;
         break;
       }
-
       case "certifications": {
-        const newCertifications = (newResume.certifications || []).map(
-          (cert, idx) =>
-            idx === currentBulletGenerationIndex
-              ? { ...cert, title: normalizeBullet(selectedOption[0]) }
-              : cert
+        const newCertifications = (newResume.certifications || []).map((cert, idx) =>
+          idx === currentBulletGenerationIndex
+            ? { ...cert, title: normalizeBullet(selectedOption[0]) }
+            : cert
         );
         newResume.certifications = newCertifications;
         break;
       }
-
       default:
-        console.error("Unhandled section:", currentBulletGenerationSection);
+        console.error("Unhandled section for AI bullet selection:", currentBulletGenerationSection);
         return newResume;
     }
 
     return newResume;
   });
 
-  // Reset after applying
+  // Reset AI state after applying
   setShowAIBulletOptions(false);
   setAIGeneratedBullets([]);
   setCurrentBulletGenerationIndex(null);
   setCurrentBulletGenerationSection(null);
   setSelectedBulletOptionIndex(null);
 };
-
 
 
   const handleRegenerateAIBullets = async () => {
