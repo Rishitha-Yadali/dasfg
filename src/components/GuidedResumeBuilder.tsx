@@ -867,13 +867,11 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
   const bullets = (currentBullets || []).map((b) =>
     typeof b === "string" ? b : b?.description || ""
   );
-
   if (bulletIndex >= 0 && bulletIndex < bullets.length) {
-    bullets[bulletIndex] = newContent; // replace exact textarea
+    bullets[bulletIndex] = newContent;
   }
-
-      return bullets;
-    };
+  return bullets;
+};
 
     switch (currentBulletGenerationSection) {
       case "workExperience": {
