@@ -100,8 +100,6 @@ class PaymentService {
       features: [
         '✅ 100 Resume Optimizations',
         '✅ 100 Score Checks',
-        '❌ LinkedIn Messages',
-        '❌ Guided Builds',
         '✅ Priority Support',
       ],
       popular: true,
@@ -125,8 +123,6 @@ class PaymentService {
       features: [
         '✅ 50 Resume Optimizations',
         '✅ 50 Score Checks',
-        '❌ LinkedIn Messages',
-        '❌ Guided Builds',
         '✅ Standard Support',
       ],
       popular: false,
@@ -150,8 +146,6 @@ class PaymentService {
       features: [
         '✅ 25 Resume Optimizations',
         '✅ 25 Score Checks',
-        '❌ LinkedIn Messages',
-        '❌ Guided Builds',
         '✅ Email Support',
       ],
       popular: false,
@@ -175,8 +169,6 @@ class PaymentService {
       features: [
         '✅ 10 Resume Optimizations',
         '✅ 10 Score Checks',
-        '❌ LinkedIn Messages',
-        '❌ Guided Builds',
         '✅ Basic Support',
       ],
       popular: false,
@@ -200,8 +192,6 @@ class PaymentService {
       features: [
         '✅ 5 Resume Optimizations',
         '✅ 5 Score Checks',
-        '❌ LinkedIn Messages',
-        '❌ Guided Builds',
         '❌ Priority Support',
       ],
       popular: false,
@@ -227,7 +217,7 @@ class PaymentService {
     return this.plans.find((p) => p.id === id);
   }
   getAddOnById(id: string): any | undefined {
-    return this.addOns.find((a) => a.id === id);
+    return this.addOns.find((a) => a.id === a.id);
   }
 
   // ---------- Core subscription fetch (combined with add-ons) ----------
