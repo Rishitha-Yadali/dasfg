@@ -436,7 +436,10 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                         ))}
                       </ul>
                       <button
-                        onClick={() => setSelectedPlan(plan.id)} // This button is now part of the plan card, not the sticky footer
+                        onClick={() => {
+                          setSelectedPlan(plan.id);
+                          setCurrentStep(1); // Move to next step on Buy Now click
+                        }}
                         className={`w-full py-2 lg:py-3 px-2 lg:px-4 rounded-lg lg:rounded-xl font-semibold transition-all duration-300 text-sm lg:text-base min-h-[44px] mt-2 ${
                           selectedPlan === plan.id
                             ? `bg-gradient-to-r ${plan.gradient || ''} text-white shadow-lg transform scale-105`
@@ -455,17 +458,6 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                     </div>
                   </motion.div>
                 ))}
-              </div>
-
-              {/* Next Step Button */}
-              <div className="text-center mt-8">
-                <button
-                  onClick={() => setCurrentStep(1)}
-                  disabled={!selectedPlanData}
-                  className="btn-primary py-3 px-8 text-lg"
-                >
-                  Buy Plan <ArrowRight className="w-5 h-5 ml-2" />
-                </button>
               </div>
             </>
           )}
