@@ -5,13 +5,13 @@ import { supabase } from '../lib/supabaseClient';
 export interface SubscriptionPlan {
   id: string;
   name: string;
-  price: number;                    // Offer price (in INR)
-  mrp: number;                      // MRP (in INR)
-  discountPercentage: number;       // Derived display value
-  duration: string;                 // Display label
+  price: number; // This will be the offer price
+  mrp: number; // New: Manufacturer's Recommended Price
+  discountPercentage: number; // New: Calculated discount percentage
+  duration: string;
   optimizations: number;
   scoreChecks: number;
-  linkedinMessages: number;
+  linkedinMessages: number; // Changed from typeof Infinity to number
   guidedBuilds: number;
   tag: string;
   tagColor: string;
@@ -19,7 +19,40 @@ export interface SubscriptionPlan {
   icon: string;
   features: string[];
   popular?: boolean;
-  durationInHours: number;          // Actual duration used to compute end_date
+  durationInHours: number; // Added this property
+}
+
+
+export interface PaymentData {
+  planId: string;
+  amount: number;
+  currency: string;
+}
+
+export interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpayResponse) => void;
+  prefill: {
+    name: string;
+    email: string;
+  };
+  theme: {
+    color: string;
+  };
+  modal: {
+    ondismiss: () => void;
+  };
+}
+
+export interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
 }
 
 export interface Subscription {
@@ -41,6 +74,7 @@ export interface Subscription {
   guidedBuildsTotal: number;
 }
 
+
 // Credit types map 1:1 with addon_types.type_key and with our internal useCredit API
 type CreditType = 'optimization' | 'score_check' | 'linkedin_messages' | 'guided_build';
 
@@ -49,91 +83,91 @@ class PaymentService {
   // ----- Plans (static catalog) -----
   private plans: SubscriptionPlan[] = [
     {
-      id: 'career_pro_max',
-      name: 'Career Pro Max',
-      price: 2299,
-      mrp: 10000,
-      discountPercentage: 77.01,
+      id: 'leader_plan',
+      name: 'Leader Plan',
+      price: 6400,
+      mrp: 12800,
+      discountPercentage: 50,
       duration: 'One-time Purchase',
-      optimizations: 50,
-      scoreChecks: 50,
-      linkedinMessages: 500,
-      guidedBuilds: 5,
-      tag: 'Ultimate Value',
+      optimizations: 100,
+      scoreChecks: 100,
+      linkedinMessages: 0,
+      guidedBuilds: 0,
+      tag: 'Top Tier',
       tagColor: 'text-purple-800 bg-purple-100',
       gradient: 'from-purple-500 to-indigo-500',
       icon: 'crown',
       features: [
-        '✅ 50 Resume Optimizations',
-        '✅ 50 Score Checks',
-        '✅ 500 LinkedIn Messages',
-        '✅ 5 Guided Resume Builds',
+        '✅ 100 Resume Optimizations',
+        '✅ 100 Score Checks',
+        '❌ LinkedIn Messages',
+        '❌ Guided Builds',
         '✅ Priority Support',
       ],
-      popular: false,
-      durationInHours: 8760, // 365 days
+      popular: true,
+      durationInHours: 8760, // 1 year
     },
     {
-      id: 'career_boost_plus',
-      name: 'Career Boost+',
-      price: 1699,
-      mrp: 7500,
-      discountPercentage: 77.34,
+      id: 'achiever_plan',
+      name: 'Achiever Plan',
+      price: 3200,
+      mrp: 6400,
+      discountPercentage: 50,
       duration: 'One-time Purchase',
-      optimizations: 30,
-      scoreChecks: 30,
-      linkedinMessages: 300,
-      guidedBuilds: 3,
-      tag: 'Best Seller',
+      optimizations: 50,
+      scoreChecks: 50,
+      linkedinMessages: 0,
+      guidedBuilds: 0,
+      tag: 'Best Value',
       tagColor: 'text-blue-800 bg-blue-100',
       gradient: 'from-blue-500 to-cyan-500',
       icon: 'zap',
       features: [
-        '✅ 30 Resume Optimizations',
-        '✅ 30 Score Checks',
-        '✅ 300 LinkedIn Messages',
-        '✅ 3 Guided Resume Builds',
+        '✅ 50 Resume Optimizations',
+        '✅ 50 Score Checks',
+        '❌ LinkedIn Messages',
+        '❌ Guided Builds',
         '✅ Standard Support',
       ],
-      popular: true,
+      popular: false,
       durationInHours: 8760,
     },
     {
-      id: 'pro_resume_kit',
-      name: 'Pro Resume Kit',
-      price: 1199,
-      mrp: 5000,
-      discountPercentage: 76.02,
+      id: 'accelerator_plan',
+      name: 'Accelerator Plan',
+      price: 1600,
+      mrp: 3200,
+      discountPercentage: 50,
       duration: 'One-time Purchase',
-      optimizations: 20,
-      scoreChecks: 20,
-      linkedinMessages: 100,
-      guidedBuilds: 2,
+      optimizations: 25,
+      scoreChecks: 25,
+      linkedinMessages: 0,
+      guidedBuilds: 0,
       tag: 'Great Start',
       tagColor: 'text-green-800 bg-green-100',
       gradient: 'from-green-500 to-emerald-500',
       icon: 'rocket',
       features: [
-        '✅ 20 Resume Optimizations',
-        '✅ 20 Score Checks',
-        '✅ 100 LinkedIn Messages',
-        '✅ 2 Guided Resume Builds',
+        '✅ 25 Resume Optimizations',
+        '✅ 25 Score Checks',
+        '❌ LinkedIn Messages',
+        '❌ Guided Builds',
         '✅ Email Support',
       ],
       popular: false,
       durationInHours: 8760,
     },
     {
-      id: 'smart_apply_pack',
-      name: 'Smart Apply Pack',
-      price: 599,
-      mrp: 2500,
-      discountPercentage: 76.04,
+      id: 'starter_plan',
+      name: 'Starter Plan',
+      price: 640,
+      mrp: 1280,
+      discountPercentage: 50,
       duration: 'One-time Purchase',
       optimizations: 10,
       scoreChecks: 10,
-      linkedinMessages: 50,
-      guidedBuilds: 1,
+      linkedinMessages: 0,
+      guidedBuilds: 0,
       tag: 'Quick Boost',
       tagColor: 'text-yellow-800 bg-yellow-100',
       gradient: 'from-yellow-500 to-orange-500',
@@ -141,22 +175,22 @@ class PaymentService {
       features: [
         '✅ 10 Resume Optimizations',
         '✅ 10 Score Checks',
-        '✅ 50 LinkedIn Messages',
-        '✅ 1 Guided Resume Build',
+        '❌ LinkedIn Messages',
+        '❌ Guided Builds',
         '✅ Basic Support',
       ],
       popular: false,
       durationInHours: 8760,
     },
     {
-      id: 'resume_fix_pack',
-      name: 'Resume Fix Pack',
-      price: 249,
-      mrp: 999,
-      discountPercentage: 75.07,
+      id: 'kickstart_plan',
+      name: 'Kickstart Plan',
+      price: 320,
+      mrp: 640,
+      discountPercentage: 50,
       duration: 'One-time Purchase',
       optimizations: 5,
-      scoreChecks: 2,
+      scoreChecks: 5,
       linkedinMessages: 0,
       guidedBuilds: 0,
       tag: 'Essential',
@@ -165,7 +199,7 @@ class PaymentService {
       icon: 'wrench',
       features: [
         '✅ 5 Resume Optimizations',
-        '✅ 2 Score Checks',
+        '✅ 5 Score Checks',
         '❌ LinkedIn Messages',
         '❌ Guided Builds',
         '❌ Priority Support',
@@ -173,47 +207,13 @@ class PaymentService {
       popular: false,
       durationInHours: 8760,
     },
-    {
-      id: 'lite_check',
-      name: 'Lite Check',
-      price: 129,
-      mrp: 499,
-      discountPercentage: 74.15,
-      duration: 'One-time Purchase',
-      optimizations: 2,
-      scoreChecks: 2,
-      linkedinMessages: 10,
-      guidedBuilds: 0,
-      tag: 'Trial',
-      tagColor: 'text-gray-800 bg-gray-100',
-      gradient: 'from-gray-500 to-gray-700',
-      icon: 'check_circle',
-      features: [
-        '✅ 2 Resume Optimizations',
-        '✅ 2 Score Checks',
-        '✅ 10 LinkedIn Messages',
-        '❌ Guided Builds',
-        '❌ Priority Support',
-      ],
-      popular: false,
-      durationInHours: 168, // 7 days
-    },
   ];
 
   // ----- Add-ons (static catalog) -----
   private addOns = [
-    { id: 'jd_optimization_single',            name: 'JD-Based Optimization (1x)',        price: 49,  type: 'optimization',      quantity: 1 },
-    { id: 'guided_resume_build_single',        name: 'Guided Resume Build (1x)',          price: 99,  type: 'guided_build',      quantity: 1 },
-    { id: 'resume_score_check_single',         name: 'Resume Score Check (1x)',           price: 19,  type: 'score_check',       quantity: 1 },
-    { id: 'linkedin_messages_50',              name: 'LinkedIn Messages (50x)',           price: 29,  type: 'linkedin_messages', quantity: 50 },
-    { id: 'linkedin_optimization_single',      name: 'LinkedIn Optimization (1x Review)', price: 199, type: 'linkedin_optimization', quantity: 1 },
-    { id: 'resume_guidance_session',           name: 'Resume Guidance Session (Live)',    price: 299, type: 'guidance_session',  quantity: 1 },
-
     // Purchasable singles
     { id: 'jd_optimization_single_purchase',   name: 'JD-Based Optimization (1 Use)',     price: 19,  type: 'optimization',      quantity: 1 },
-    { id: 'guided_resume_build_single_purchase', name: 'Guided Resume Build (1 Use)',     price: 99,  type: 'guided_build',      quantity: 1 },
     { id: 'resume_score_check_single_purchase',  name: 'Resume Score Check (1 Use)',      price: 9,   type: 'score_check',       quantity: 1 },
-    { id: 'linkedin_messages_50_purchase',     name: 'LinkedIn Messages (50 Uses)',       price: 29,  type: 'linkedin_messages', quantity: 50 },
   ];
 
   // ---------- Catalog helpers ----------
