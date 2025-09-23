@@ -381,7 +381,10 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                     } ${plan.popular ? 'ring-2 ring-green-500 ring-offset-4' : ''}`}
                     whileHover={{ scale: 1.03 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    onClick={() => setSelectedPlan(plan.id)} // Make the whole card clickable
+                    onClick={() => {
+                      setSelectedPlan(plan.id);
+                      setCurrentStep(1); // Automatically move to next step
+                    }}
                   >
                     {plan.popular && (
                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -426,8 +429,8 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                                   <Check className="w-4 h-4 lg:w-5 h-5 text-white" />
                                 </div>
                               ) : (
-                                <div className="bg-red-500 p-0.5 rounded-full">
-                                  <X className="w-4 h-4 lg:w-5 h-5 text-white" />
+                                <div className="bg-gray-400 p-0.5 rounded-full"> {/* Changed to gray for excluded checkmark */}
+                                  <Check className="w-4 h-4 lg:w-5 h-5 text-white" /> {/* Still a checkmark */}
                                 </div>
                               )}
                             </div>
