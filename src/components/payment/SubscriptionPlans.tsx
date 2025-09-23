@@ -430,15 +430,18 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                           <ul className="space-y-1 sm:space-y-3 mb-3 sm:mb-6 max-h-32 sm:max-h-none overflow-y-auto sm:overflow-visible">
                             {(plan.features || []).map((feature: string, fi: number) => (
                               <li key={fi} className="flex items-start">
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.5 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  transition={{ type: "spring", stiffness: 500, damping: 20, delay: fi * 0.1 }}
-                                  className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full mr-2 sm:mr-3 mt-0.5 flex-shrink-0"
-                                >
-                                  <Check className="w-4 h-4 sm:w-5 h-5 text-white" />
-                                </motion.div>
-                                <span className="text-gray-700 text-sm sm:text-base break-words dark:text-gray-300">{feature}</span>
+                                <div className="w-5 h-5 sm:w-6 h-6 flex-shrink-0 mr-2 sm:mr-3 mt-0.5">
+                                  {feature.startsWith('✅') ? (
+                                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full">
+                                      <Check className="w-4 h-4 sm:w-5 h-5 text-white" />
+                                    </div>
+                                  ) : (
+                                    <div className="bg-red-500 p-0.5 rounded-full">
+                                      <X className="w-4 h-4 sm:w-5 h-5 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-gray-700 text-sm sm:text-base break-words dark:text-gray-300">{feature.substring(feature.indexOf(' ') + 1)}</span>
                               </li>
                             ))}
                           </ul>
@@ -497,7 +500,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
             {allPlansWithAddOnOption.map((plan) => (
               <motion.div
                 key={plan.id}
-                className={`relative rounded-xl lg:rounded-3xl border-2 transition-all duration-300 cursor-pointer ${
+                className={`relative rounded-xl lg:rounded-3xl border-2 transition-all duration-300 cursor-pointer transform hover:scale-105 ${
                   selectedPlan === plan.id
                     ? 'border-neon-cyan-500 shadow-2xl shadow-neon-cyan/20 ring-4 ring-neon-cyan-100 dark:border-neon-cyan-400 dark:ring-neon-cyan-400/30'
                     : 'border-gray-200 hover:border-neon-cyan-300 hover:shadow-xl dark:border-dark-300 dark:hover:border-neon-cyan-400'
@@ -543,15 +546,18 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   <ul className="space-y-1 lg:space-y-3 mb-3 lg:mb-6 max-h-32 lg:max-h-none overflow-y-auto lg:overflow-visible">
                     {(plan.features || []).map((feature: string, fi: number) => (
                       <li key={fi} className="flex items-start">
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 20, delay: fi * 0.1 }}
-                          className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full mr-2 lg:mr-3 mt-0.5 flex-shrink-0"
-                        >
-                          <Check className="w-4 h-4 lg:w-5 h-5 text-white" />
-                        </motion.div>
-                        <span className="text-sm lg:text-base text-gray-700 break-words dark:text-gray-300">{feature}</span>
+                        <div className="w-5 h-5 lg:w-6 h-6 flex-shrink-0 mr-2 lg:mr-3 mt-0.5">
+                          {feature.startsWith('✅') ? (
+                            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full">
+                              <Check className="w-4 h-4 lg:w-5 h-5 text-white" />
+                            </div>
+                          ) : (
+                            <div className="bg-red-500 p-0.5 rounded-full">
+                              <X className="w-4 h-4 lg:w-5 h-5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm lg:text-base text-gray-700 break-words dark:text-gray-300">{feature.substring(feature.indexOf(' ') + 1)}</span>
                       </li>
                     ))}
                   </ul>
