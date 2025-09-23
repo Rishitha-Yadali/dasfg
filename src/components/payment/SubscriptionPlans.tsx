@@ -420,15 +420,18 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                       <ul className="space-y-1 lg:space-y-3 mb-3 lg:mb-6 max-h-32 lg:max-h-none overflow-y-auto lg:overflow-visible">
                         {(plan.features || []).map((feature: string, fi: number) => (
                           <li key={fi} className="flex items-start">
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.5 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ type: "spring", stiffness: 500, damping: 20, delay: fi * 0.1 }}
-                              className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full mr-2 lg:mr-3 mt-0.5 flex-shrink-0"
-                            >
-                              <Check className="w-4 h-4 lg:w-5 h-5 text-white" />
-                            </motion.div>
-                            <span className="text-sm lg:text-base text-gray-700 break-words dark:text-gray-300">{feature}</span>
+                            <div className="w-5 h-5 lg:w-6 h-6 flex-shrink-0 mr-2 lg:mr-3 mt-0.5">
+                              {feature.startsWith('✅') ? (
+                                <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full">
+                                  <Check className="w-4 h-4 lg:w-5 h-5 text-white" />
+                                </div>
+                              ) : (
+                                <div className="bg-red-500 p-0.5 rounded-full">
+                                  <X className="w-4 h-4 lg:w-5 h-5 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-sm lg:text-base text-gray-700 break-words dark:text-gray-300">{feature.substring(feature.indexOf(' ') + 1)}</span>
                           </li>
                         ))}
                       </ul>
@@ -446,7 +449,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                             Selected
                           </span>
                         ) : (
-                          'Select Plan'
+                          'Buy Now'
                         )}
                       </button>
                     </div>
@@ -616,7 +619,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                     <div className="flex justify-between">
                       <span>Add-ons:</span>
                       <span>₹{(addOnsTotal / 100).toFixed(2)}</span>
-                    </div>
+                  </div>
                   )}
                   {appliedCoupon && (
                     <div className="flex justify-between text-green-600 dark:text-green-400">
