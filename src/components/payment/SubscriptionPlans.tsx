@@ -62,11 +62,11 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
 }) => {
   const { user } = useAuth();
   // MODIFIED: Change initial state to 'career_boost_plus'
-  const [selectedPlan, setSelectedPlan] = useState<string>('career_boost_plus');
+  const [selectedPlan, setSelectedPlan] = useState<string>('leader_plan');
   const [isProcessing, setIsProcessing] = useState(false);
   // Initial slide set to index 2 to correspond to 'career_boost_plus' if it's the 3rd plan in the array (0-indexed).
   // This might need adjustment if the order of plans changes.
-  const [currentSlide, setCurrentSlide] = useState(2);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = useState('');
@@ -111,7 +111,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
       }
       // Filter for completed transactions and sum the amounts
       const completed = (transactions || []).filter((t: any) => t.status === 'completed');
-      // Wallet balance is stored in Rupees in DB, convert to paise for internal use
+      // Wallet balance is stored in Rupees, convert to paise for internal use
       const balance = completed.reduce((sum: number, tr: any) => sum + parseFloat(tr.amount), 0) * 100;
       setWalletBalance(Math.max(0, balance)); // Ensure balance is not negative
     } catch (err) {
@@ -349,7 +349,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
           </button>
 
           <div className="text-center max-w-4xl mx-auto px-8">
-            <div className="bg-gradient-to-r from-neon-cyan-500 to-neon-purple-500 w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center mx-auto mb-3 sm:mb-6 shadow-lg dark:shadow-neon-cyan">
+            <div className="bg-gradient-to-br from-neon-cyan-500 to-neon-purple-500 w-12 h-12 sm:w-20 sm:h-20 rounded-xl sm:rounded-3xl flex items-center justify-center mx-auto mb-3 sm:mb-6 shadow-lg dark:shadow-neon-cyan">
               <Sparkles className="w-6 h-6 sm:w-10 h-10 text-white" />
             </div>
             <h1 className="text-lg sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2 sm:mb-3">
@@ -425,7 +425,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                           </div>
                           {/* MODIFIED LINE BELOW */}
                           <ul className="space-y-1 sm:space-y-3 mb-3 sm:mb-6 max-h-32 sm:max-h-none overflow-y-auto sm:overflow-visible">
-                            {(plan.features || []).slice(0, 4).map((feature: string, fi: number) => (
+                            {(plan.features || []).map((feature: string, fi: number) => (
                               <li key={fi} className="flex items-start">
                                 <Check className="w-4 h-4 sm:w-5 h-5 text-emerald-500 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" /> {/* Increased icon size slightly for better alignment with larger text */}
                                 <span className="text-gray-700 text-sm sm:text-base break-words dark:text-gray-300">{feature}</span> {/* Changed text-xs to text-sm, and sm:text-sm to sm:text-base */}
@@ -529,7 +529,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   </div>
                   {/* MODIFIED LINE BELOW */}
                   <ul className="space-y-1 lg:space-y-3 mb-3 lg:mb-6 max-h-32 lg:max-h-none overflow-y-auto lg:overflow-visible">
-                    {(plan.features || []).slice(0, 4).map((feature: string, fi: number) => (
+                    {(plan.features || []).map((feature: string, fi: number) => (
                       <li key={fi} className="flex items-start">
                         <Check className="w-4 h-4 lg:w-5 h-5 text-emerald-500 mr-2 lg:mr-3 mt-0.5 flex-shrink-0" />
                         <span className="text-sm lg:text-base text-gray-700 break-words dark:text-gray-300">{feature}</span>
