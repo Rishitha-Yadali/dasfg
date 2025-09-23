@@ -63,7 +63,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
 }) => {
   const { user } = useAuth();
   // MODIFIED: Change initial state to 'career_boost_plus'
-  const [selectedPlan, setSelectedPlan] = useState<string>('leader_plan');
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null); // Changed initial state to null
   const [isProcessing, setIsProcessing] = useState(false);
   // Initial slide set to index 2 to correspond to 'career_boost_plus' if it's the 3rd plan in the array (0-indexed).
   // This might need adjustment if the order of plans changes.
