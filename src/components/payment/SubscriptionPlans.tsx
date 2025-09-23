@@ -1,5 +1,6 @@
 // src/components/payment/SubscriptionPlans.tsx
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion'; // Import motion
 import {
   Check,
   Star,
@@ -374,13 +375,15 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                 >
                   {allPlansWithAddOnOption.map((plan, index) => (
                     <div key={plan.id} className="w-full flex-shrink-0 px-4 sm:px-6"> {/* Changed px-2 to px-4 for mobile */}
-                      <div
+                      <motion.div
                         className={`relative rounded-xl sm:rounded-3xl border-2 transition-all duration-300 ${
                           selectedPlan === plan.id
                             ? 'border-indigo-500 shadow-2xl shadow-indigo-500/20 ring-4 ring-indigo-100'
                             : 'border-gray-200'
                         } ${plan.popular ? 'ring-2 ring-green-500 ring-offset-4' : ''}`}
-                        // Removed onClick from here to prevent entire card from being clickable
+                        whileHover={{ scale: 1.03 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                        onClick={() => setSelectedPlan(plan.id)} // Make the whole card clickable
                       >
                         {plan.popular && (
                           <div className="absolute -top-4 sm:-top-2 left-1/2 transform -translate-x-1/2">
@@ -427,8 +430,15 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                           <ul className="space-y-1 sm:space-y-3 mb-3 sm:mb-6 max-h-32 sm:max-h-none overflow-y-auto sm:overflow-visible">
                             {(plan.features || []).map((feature: string, fi: number) => (
                               <li key={fi} className="flex items-start">
-                                <Check className="w-4 h-4 sm:w-5 h-5 text-emerald-500 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" /> {/* Increased icon size slightly for better alignment with larger text */}
-                                <span className="text-gray-700 text-sm sm:text-base break-words dark:text-gray-300">{feature}</span> {/* Changed text-xs to text-sm, and sm:text-sm to sm:text-base */}
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.5 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 500, damping: 20, delay: fi * 0.1 }}
+                                  className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full mr-2 sm:mr-3 mt-0.5 flex-shrink-0"
+                                >
+                                  <Check className="w-4 h-4 sm:w-5 h-5 text-white" />
+                                </motion.div>
+                                <span className="text-gray-700 text-sm sm:text-base break-words dark:text-gray-300">{feature}</span>
                               </li>
                             ))}
                           </ul>
@@ -451,7 +461,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                             )}
                           </button>
                         </div>
-                      </div>
+                      </motion.div>
                     </div>
                   ))}
                 </div>
@@ -485,14 +495,16 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
           {/* Desktop Grid */}
           <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6 mb-4 lg:mb-8">
             {allPlansWithAddOnOption.map((plan) => (
-              <div
+              <motion.div
                 key={plan.id}
-                className={`relative rounded-xl lg:rounded-3xl border-2 transition-all duration-300 cursor-pointer transform hover:scale-105 ${
+                className={`relative rounded-xl lg:rounded-3xl border-2 transition-all duration-300 cursor-pointer ${
                   selectedPlan === plan.id
                     ? 'border-neon-cyan-500 shadow-2xl shadow-neon-cyan/20 ring-4 ring-neon-cyan-100 dark:border-neon-cyan-400 dark:ring-neon-cyan-400/30'
                     : 'border-gray-200 hover:border-neon-cyan-300 hover:shadow-xl dark:border-dark-300 dark:hover:border-neon-cyan-400'
                 } ${plan.popular ? 'ring-2 ring-green-500 ring-offset-4' : ''}`}
-                // Removed onClick from here to prevent entire card from being clickable
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                onClick={() => setSelectedPlan(plan.id)} // Make the whole card clickable
               >
                 {plan.popular && (
                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -531,7 +543,14 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                   <ul className="space-y-1 lg:space-y-3 mb-3 lg:mb-6 max-h-32 lg:max-h-none overflow-y-auto lg:overflow-visible">
                     {(plan.features || []).map((feature: string, fi: number) => (
                       <li key={fi} className="flex items-start">
-                        <Check className="w-4 h-4 lg:w-5 h-5 text-emerald-500 mr-2 lg:mr-3 mt-0.5 flex-shrink-0" />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 20, delay: fi * 0.1 }}
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 p-0.5 rounded-full mr-2 lg:mr-3 mt-0.5 flex-shrink-0"
+                        >
+                          <Check className="w-4 h-4 lg:w-5 h-5 text-white" />
+                        </motion.div>
                         <span className="text-sm lg:text-base text-gray-700 break-words dark:text-gray-300">{feature}</span>
                       </li>
                     ))}
@@ -554,7 +573,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
                     )}
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
