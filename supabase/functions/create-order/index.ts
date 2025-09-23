@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,103 +21,109 @@ interface PlanConfig {
   name: string;
   price: number; // In Rupees
   mrp: number; // New: Manufacturer's Recommended Price
-  discountPercentage: number; // New: Calculated discount percentage
+  discountPercentage: number; // Calculated discount percentage
   duration: string;
   optimizations: number;
   scoreChecks: number;
   linkedinMessages: number; // Corrected to number
   guidedBuilds: number;
   durationInHours: number;
+  tag: string;
+  tagColor: string;
+  gradient: string;
+  icon: string;
+  features: string[];
+  popular?: boolean;
 }
 
 // UPDATED PLANS ARRAY - MUST MATCH src/services/paymentService.ts
 const plans: PlanConfig[] = [
   {
-    id: 'career_pro_max',
-    name: 'Career Pro Max',
-    price: 2299, // Offer Price
-    mrp: 10000, // MRP
-    discountPercentage: 77.01, // (10000 - 2299) / 10000 * 100
+    id: 'leader_plan',
+    name: 'Leader Plan',
+    price: 6400,
+    mrp: 12800,
+    discountPercentage: 50,
     duration: 'One-time Purchase',
-    optimizations: 50,
-    scoreChecks: 50,
-    linkedinMessages: 500, // Fixed count
-    guidedBuilds: 5,
-    tag: 'Ultimate Value',
+    optimizations: 100,
+    scoreChecks: 100,
+    linkedinMessages: 0,
+    guidedBuilds: 0,
+    tag: 'Top Tier',
     tagColor: 'text-purple-800 bg-purple-100',
     gradient: 'from-purple-500 to-indigo-500',
     icon: 'crown',
     features: [
-      '✅ 50 Resume Optimizations',
-      '✅ 50 Score Checks',
-      '✅ 500 LinkedIn Messages',
-      '✅ 5 Guided Resume Builds',
+      '✅ 100 Resume Optimizations',
+      '✅ 100 Score Checks',
+      '❌ LinkedIn Messages',
+      '❌ Guided Builds',
       '✅ Priority Support',
     ],
-    popular: false, // Will be "Best Value"
-    durationInHours: 8760, // 365 days
+    popular: true,
+    durationInHours: 8760, // 1 year
   },
   {
-    id: 'career_boost_plus',
-    name: 'Career Boost+',
-    price: 1699, // Offer Price
-    mrp: 7500, // MRP
-    discountPercentage: 77.34, // (7500 - 1699) / 7500 * 100
+    id: 'achiever_plan',
+    name: 'Achiever Plan',
+    price: 3200,
+    mrp: 6400,
+    discountPercentage: 50,
     duration: 'One-time Purchase',
-    optimizations: 30,
-    scoreChecks: 30,
-    linkedinMessages: 300, // Fixed count
-    guidedBuilds: 3,
-    tag: 'Best Seller',
+    optimizations: 50,
+    scoreChecks: 50,
+    linkedinMessages: 0,
+    guidedBuilds: 0,
+    tag: 'Best Value',
     tagColor: 'text-blue-800 bg-blue-100',
     gradient: 'from-blue-500 to-cyan-500',
     icon: 'zap',
     features: [
-      '✅ 30 Resume Optimizations',
-      '✅ 30 Score Checks',
-      '✅ 300 LinkedIn Messages',
-      '✅ 3 Guided Resume Builds',
+      '✅ 50 Resume Optimizations',
+      '✅ 50 Score Checks',
+      '❌ LinkedIn Messages',
+      '❌ Guided Builds',
       '✅ Standard Support',
     ],
-    popular: true, // Will be "Most Popular"
-    durationInHours: 8760, // 365 days
+    popular: false,
+    durationInHours: 8760,
   },
   {
-    id: 'pro_resume_kit',
-    name: 'Pro Resume Kit',
-    price: 1199, // Offer Price
-    mrp: 5000, // MRP
-    discountPercentage: 76.02, // (5000 - 1199) / 5000 * 100
+    id: 'accelerator_plan',
+    name: 'Accelerator Plan',
+    price: 1600,
+    mrp: 3200,
+    discountPercentage: 50,
     duration: 'One-time Purchase',
-    optimizations: 20,
-    scoreChecks: 20,
-    linkedinMessages: 100, // Fixed count
-    guidedBuilds: 2,
+    optimizations: 25,
+    scoreChecks: 25,
+    linkedinMessages: 0,
+    guidedBuilds: 0,
     tag: 'Great Start',
     tagColor: 'text-green-800 bg-green-100',
     gradient: 'from-green-500 to-emerald-500',
     icon: 'rocket',
     features: [
-      '✅ 20 Resume Optimizations',
-      '✅ 20 Score Checks',
-      '✅ 100 LinkedIn Messages',
-      '✅ 2 Guided Resume Builds',
+      '✅ 25 Resume Optimizations',
+      '✅ 25 Score Checks',
+      '❌ LinkedIn Messages',
+      '❌ Guided Builds',
       '✅ Email Support',
     ],
     popular: false,
-    durationInHours: 8760, // 365 days
+    durationInHours: 8760,
   },
   {
-    id: 'smart_apply_pack',
-    name: 'Smart Apply Pack',
-    price: 599, // Offer Price
-    mrp: 2500, // MRP
-    discountPercentage: 76.04, // (2500 - 599) / 2500 * 100
+    id: 'starter_plan',
+    name: 'Starter Plan',
+    price: 640,
+    mrp: 1280,
+    discountPercentage: 50,
     duration: 'One-time Purchase',
     optimizations: 10,
     scoreChecks: 10,
-    linkedinMessages: 50, // Fixed count
-    guidedBuilds: 1,
+    linkedinMessages: 0,
+    guidedBuilds: 0,
     tag: 'Quick Boost',
     tagColor: 'text-yellow-800 bg-yellow-100',
     gradient: 'from-yellow-500 to-orange-500',
@@ -125,22 +131,22 @@ const plans: PlanConfig[] = [
     features: [
       '✅ 10 Resume Optimizations',
       '✅ 10 Score Checks',
-      '✅ 50 LinkedIn Messages',
-      '✅ 1 Guided Resume Build',
+      '❌ LinkedIn Messages',
+      '❌ Guided Builds',
       '✅ Basic Support',
     ],
     popular: false,
-    durationInHours: 8760, // 365 days
+    durationInHours: 8760,
   },
   {
-    id: 'resume_fix_pack',
-    name: 'Resume Fix Pack',
-    price: 249, // Offer Price
-    mrp: 999, // MRP
-    discountPercentage: 75.07, // (999 - 249) / 999 * 100
+    id: 'kickstart_plan',
+    name: 'Kickstart Plan',
+    price: 320,
+    mrp: 640,
+    discountPercentage: 50,
     duration: 'One-time Purchase',
     optimizations: 5,
-    scoreChecks: 2,
+    scoreChecks: 5,
     linkedinMessages: 0,
     guidedBuilds: 0,
     tag: 'Essential',
@@ -149,38 +155,34 @@ const plans: PlanConfig[] = [
     icon: 'wrench',
     features: [
       '✅ 5 Resume Optimizations',
-      '✅ 2 Score Checks',
+      '✅ 5 Score Checks',
       '❌ LinkedIn Messages',
       '❌ Guided Builds',
       '❌ Priority Support',
     ],
     popular: false,
-    durationInHours: 8760, // 365 days
+    durationInHours: 8760,
   },
+];
+
+// Defined add-ons with their types and quantities
+// This list MUST match the addOns array in src/services/paymentService.ts
+const addOns = [
+  // NEW ADD-ON: Single JD-Based Optimization Purchase
   {
-    id: 'lite_check',
-    name: 'Lite Check',
-    price: 129, // Offer Price
-    mrp: 499, // MRP
-    discountPercentage: 74.15, // (499 - 129) / 499 * 100
-    duration: 'One-time Purchase',
-    optimizations: 2,
-    scoreChecks: 2,
-    linkedinMessages: 10,
-    guidedBuilds: 0,
-    tag: 'Trial',
-    tagColor: 'text-gray-800 bg-gray-100',
-    gradient: 'from-gray-500 to-gray-700',
-    icon: 'check_circle',
-    features: [
-      '✅ 2 Resume Optimizations',
-      '✅ 2 Score Checks',
-      '✅ 10 LinkedIn Messages',
-      '❌ Guided Builds',
-      '❌ Priority Support',
-    ],
-    popular: false,
-    durationInHours: 168, // 7 days (7 * 24 hours)
+    id: 'jd_optimization_single_purchase',
+    name: 'JD-Based Optimization (1 Use)',
+    price: 49, // Example price in Rupees
+    type: 'optimization',
+    quantity: 1,
+  },
+  // NEW ADD-ON: Single Resume Score Check Purchase
+  {
+    id: 'resume_score_check_single_purchase',
+    name: 'Resume Score Check (1 Use)',
+    price: 19,
+    type: 'score_check',
+    quantity: 1,
   },
 ];
 
@@ -234,6 +236,11 @@ serve(async (req) => {
         linkedinMessages: 0,
         guidedBuilds: 0,
         durationInHours: 0, // No specific duration for add-on only
+        tag: '',
+        tagColor: '',
+        gradient: '',
+        icon: '',
+        features: [],
       };
     } else {
       const foundPlan = plans.find((p) => p.id === planId);
@@ -471,3 +478,4 @@ serve(async (req) => {
     );
   }
 });
+
