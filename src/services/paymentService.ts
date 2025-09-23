@@ -98,9 +98,9 @@ class PaymentService {
       gradient: 'from-purple-500 to-indigo-500',
       icon: 'crown',
       features: [
-        '✅ 100 Resume Optimizations',
-        '✅ 100 Score Checks',
-        '✅ Priority Support',
+        '100 Resume Optimizations',
+        '100 Score Checks',
+        'Priority Support',
       ],
       popular: true,
       durationInHours: 8760, // 1 year
@@ -121,9 +121,9 @@ class PaymentService {
       gradient: 'from-blue-500 to-cyan-500',
       icon: 'zap',
       features: [
-        '✅ 50 Resume Optimizations',
-        '✅ 50 Score Checks',
-        '✅ Standard Support',
+        '50 Resume Optimizations',
+        '50 Score Checks',
+        'Standard Support',
       ],
       popular: false,
       durationInHours: 8760,
@@ -144,9 +144,9 @@ class PaymentService {
       gradient: 'from-green-500 to-emerald-500',
       icon: 'rocket',
       features: [
-        '✅ 25 Resume Optimizations',
-        '✅ 25 Score Checks',
-        '✅ Email Support',
+        '25 Resume Optimizations',
+        '25 Score Checks',
+        'Email Support',
       ],
       popular: false,
       durationInHours: 8760,
@@ -167,9 +167,9 @@ class PaymentService {
       gradient: 'from-yellow-500 to-orange-500',
       icon: 'target',
       features: [
-        '✅ 10 Resume Optimizations',
-        '✅ 10 Score Checks',
-        '✅ Basic Support',
+        '10 Resume Optimizations',
+        '10 Score Checks',
+        'Basic Support',
       ],
       popular: false,
       durationInHours: 8760,
@@ -190,9 +190,9 @@ class PaymentService {
       gradient: 'from-red-500 to-pink-500',
       icon: 'wrench',
       features: [
-        '✅ 5 Resume Optimizations',
-        '✅ 5 Score Checks',
-        '❌ Priority Support',
+        '5 Resume Optimizations',
+        '5 Score Checks',
+        'Priority Support',
       ],
       popular: false,
       durationInHours: 8760,
@@ -998,7 +998,7 @@ class PaymentService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('PaymentService: Error in processFreeSubscription:', error.message);
+      console.error('PaymentService: Unexpected error in processFreeSubscription:', error.message);
       throw error;
     }
   }
