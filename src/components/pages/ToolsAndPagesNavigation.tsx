@@ -71,10 +71,9 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
 
   const getUsageText = () => {
     if (!isAuthenticated) return null;
-    if (id === 'guided-builder' || id === 'linkedin-generator') {
-  return null;
-}
-
+     if (id === 'guided-builder' || id === 'linkedin-generator') {
+      return null;
+    }
     if (!userSubscription) return <span className="text-xs font-medium text-red-600 dark:text-red-400">No active plan</span>;
 
     let used: number | undefined;
