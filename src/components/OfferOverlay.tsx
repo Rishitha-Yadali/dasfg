@@ -35,23 +35,24 @@ export const OfferOverlay: React.FC<OfferOverlayProps> = ({
 
         {/* Thumbnail Image */}
         <div className="mb-6">
+          {/* MODIFIED LINE 30: Updated img src */}
           <img
-            src="https://res.cloudinary.com/dvue2zenh/image/upload/v1756304933/teachers_day_banner.png"
-            alt="Teacher’s Day Offer"
+            src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=600"
+            alt="Welcome Offer"
             className="w-full h-40 object-cover rounded-2xl shadow-md mx-auto"
           />
         </div>
 
         {/* Title */}
+        {/* MODIFIED LINE 34: Changed h2 title */}
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-          🍎 Happy Teacher’s Day! 🍎
+          Build ATS Resume Free of Cost!
         </h2>
 
         {/* Description */}
+        {/* MODIFIED LINES 38-41: Changed p description */}
         <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-          Honor knowledge and growth! Get a flat 40% OFF on our Career Boost+ (₹7,500) plan
-          using code{' '}
-          <strong className="text-green-600 dark:text-green-400">TEACH40</strong>. Today only!
+          Get a free ATS-friendly resume build and unlock powerful features like our all-in-one Outreach Message Generator for LinkedIn and cold emails. Start your job search strong!
         </p>
 
         {/* Call to Action */}
@@ -60,15 +61,14 @@ export const OfferOverlay: React.FC<OfferOverlayProps> = ({
           className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           <Sparkles className="w-5 h-5" />
-          <span>Claim Your Offer Now!</span>
+          {/* MODIFIED LINE 45: Updated button text */}
+          <span>Start Your Free ATS Resume</span>
           <ArrowRight className="w-5 h-5" />
         </button>
 
-        {/* Small print */}
-        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          Offer valid only on September 5, 2025. Terms and conditions apply.
-        </div>
+        {/* REMOVED LINES 54-57: Removed small print div */}
       </div>
     </div>
   );
 };
+
