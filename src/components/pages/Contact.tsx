@@ -139,7 +139,7 @@ export const Contact: React.FC = () => {
                     <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold dark:from-neon-purple-500 dark:to-neon-blue-500 dark:shadow-neon-purple">
                       WO
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">WorthyOne</h3>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Karthik</h3>
                     <p className="text-purple-600 dark:text-neon-purple-400 font-medium">Developer</p>
                   </div>
                 </div>
