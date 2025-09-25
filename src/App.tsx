@@ -57,7 +57,8 @@ function App() {
   const [planSelectionFeatureId, setPlanSelectionFeatureId] = useState<string | undefined>(undefined);
   const [initialExpandAddons, setInitialExpandAddons] = useState(true);
 
-  const [showVinayakaOffer, setShowVinayakaOffer] = useState(false);
+  // MODIFIED LINE 70: Renamed showVinayakaOffer to showWelcomeOffer
+  const [showWelcomeOffer, setShowWelcomeOffer] = useState(false);
 
   // NEW STATE: Callback to execute after successful authentication
   const [postAuthCallback, setPostAuthCallback] = useState<(() => void) | null>(null);
@@ -348,26 +349,18 @@ function App() {
     }
   }, [isAuthenticated, user, user?.hasSeenProfilePrompt, isLoading, isAuthModalOpenedByHash, postAuthCallback]);
 
-  // NEW useEffect to monitor showProfileManagement
+  // NEW useEffect: Monitor showProfileManagement
   useEffect(() => {
     console.log('App.tsx: showProfileManagement state changed to:', showProfileManagement);
   }, [showProfileManagement]);
 
+  // MODIFIED LINES 200-210: Updated useEffect for the new welcome offer
   useEffect(() => {
-    const offerSeenKey = 'vinayakaChavithiOfferSeen';
-    const offerExpiryDate = new Date('2025-09-10T23:59:59');
+    const timer = setTimeout(() => {
+      setShowWelcomeOffer(true);
+    }, 2000); // Show after 2 seconds
 
-    const hasSeenOffer = localStorage.getItem(offerSeenKey);
-    const now = new Date();
-
-    if (!hasSeenOffer && now < offerExpiryDate) {
-      const timer = setTimeout(() => {
-        setShowVinayakaOffer(true);
-        localStorage.setItem(offerSeenKey, 'true');
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
+    return () => clearTimeout(timer);
   }, []);
 
   const commonPageProps = {
@@ -546,8 +539,7 @@ function App() {
           onSubscriptionSuccess={handleSubscriptionSuccess}
           onShowAlert={handleShowAlert}
           initialExpandAddons={initialExpandAddons}
-          initialPlanId={showVinayakaOffer ? 'career_pro_max' : undefined}
-          initialCouponCode={showVinayakaOffer ? 'VNKR50%' : undefined}
+          // REMOVED LINES 290-291: Removed initialPlanId and initialCouponCode
         />
       )}
 
@@ -561,13 +553,15 @@ function App() {
         onAction={alertActionCallback}
       />
 
-      {showVinayakaOffer && (
+      {/* MODIFIED LINE 300: Updated OfferOverlay prop */}
+      {showWelcomeOffer && (
         <OfferOverlay
-          isOpen={showVinayakaOffer}
-          onClose={() => setShowVinayakaOffer(false)}
+          isOpen={showWelcomeOffer}
+          onClose={() => setShowWelcomeOffer(false)}
+          // MODIFIED LINES 302-305: Updated onAction to navigate to /optimizer
           onAction={() => {
-            navigate('/pricing');
-            setShowVinayakaOffer(false);
+            navigate('/optimizer');
+            setShowWelcomeOffer(false);
           }}
         />
       )}
@@ -663,3 +657,4 @@ const AuthButtons: React.FC<{
 };
 
 export default App;
+
