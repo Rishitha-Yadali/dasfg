@@ -13,8 +13,11 @@ import {
   Heart,
   Globe
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 export const AboutUs: React.FC = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const stats = [
     { number: '50,000+', label: 'Resumes Optimized', icon: <TrendingUp className="w-6 h-6" />, microcopy: 'Trusted by 50,000+ professionals' },
     { number: '95%', label: 'Success Rate', icon: <Award className="w-6 h-6" />, microcopy: 'Achieved by our AI-driven approach' },
