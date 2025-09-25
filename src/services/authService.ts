@@ -54,8 +54,6 @@ private isValidGmail(email: string): boolean {
       console.log('AuthService: Attempting device registration and session creation...');
       const deviceId = await deviceTrackingService.registerDevice(data.user.id);
       if (deviceId && data.session) {
-        await deviceTrackingService.createSession(data.user.id, deviceId, data.session.access_token);
-        // Log activity immediately after login
         await deviceTrackingService.logActivity(data.user.id, 'login', {
           loginMethod: 'email_password',
           success: true
@@ -138,14 +136,15 @@ private isValidGmail(email: string): boolean {
     wellfound_profile?: string,
     username?: string,
     referral_code?: string,
-    has_seen_profile_prompt?: boolean
+    has_seen_profile_prompt?: boolean,
+    resumes_created_count?: number // ADDED: New field
   } | null> {
     console.log('AuthService: Fetching user profile for user ID:', userId);
     try {
       const { data, error }
         = await supabase
         .from('user_profiles')
-        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt')
+        .select('full_name, email_address, phone, linkedin_profile, wellfound_profile, username, referral_code, has_seen_profile_prompt, resumes_created_count') // MODIFIED: Select new column
         .eq('id', userId)
         .maybeSingle();
       if (error) {
@@ -233,6 +232,7 @@ private isValidGmail(email: string): boolean {
         createdAt: session.user.created_at || new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         hasSeenProfilePrompt: profile?.has_seen_profile_prompt || false,
+        resumesCreatedCount: profile?.resumes_created_count || 0, // ADDED: Map new field
       };
       console.log('AuthService: getCurrentUser completed. Returning user data.');
       return userResult;
@@ -431,6 +431,23 @@ private isValidGmail(email: string): boolean {
     console.log('AuthService: Ending all other sessions for user ID:', userId);
     return deviceTrackingService.endAllOtherSessions(userId, currentSessionToken);
   }
+
+  // ADDED: New method to increment resumes_created_count
+  async incrementResumesCreatedCount(userId: string): Promise<void> {
+    console.log('AuthService: Incrementing resumes_created_count for user ID:', userId);
+    try {
+      const { error } = await supabase.rpc('increment_resumes_created_count', { user_id_param: userId });
+      if (error) {
+        console.error('AuthService: Error incrementing resumes_created_count:', error);
+        throw new Error('Failed to increment resume count.');
+      }
+      console.log('AuthService: resumes_created_count incremented successfully.');
+    } catch (error) {
+      console.error('AuthService: Error in incrementResumesCreatedCount catch block:', error);
+      throw error;
+    }
+  }
 }
 
 export const authService = new AuthService();
+
