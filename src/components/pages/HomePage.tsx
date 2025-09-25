@@ -47,6 +47,7 @@ interface HomePageProps {
 }
 
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useAuth } from '../../contexts/AuthContext'; // ADDED: Import useAuth
 
 export const HomePage: React.FC<HomePageProps> = ({
   // REMOVED: onPageChange,
@@ -59,6 +60,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   const [showOptimizationDropdown, setShowOptimizationDropdown] = React.useState(false);
   const [showPlanDetails, setShowPlanDetails] = React.useState(false); // New state for the dropdown
   const navigate = useNavigate(); // Initialize useNavigate
+  const { user } = useAuth(); // ADDED: Access user from AuthContext
 
   // Helper function to get plan icon based on icon string
   const getPlanIcon = (iconType: string) => {
@@ -149,7 +151,8 @@ export const HomePage: React.FC<HomePageProps> = ({
   ];
 
   const stats = [
-    { number: '50,000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" /> },
+    // MODIFIED: Dynamically display resumesCreatedCount
+    { number: isAuthenticated && user?.resumesCreatedCount !== undefined ? `${user.resumesCreatedCount}+` : '50,000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" /> },
     { number: '95%', label: 'Success Rate', icon: <TrendingUp className="w-5 h-5" /> },
     { number: '4.9/5', label: 'User Rating', icon: <Star className="w-5 h-5" /> },
     { number: '24/7', label: 'AI Support', icon: <Sparkles className="w-5 h-5" /> }
