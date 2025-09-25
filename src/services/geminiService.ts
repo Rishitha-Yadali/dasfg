@@ -615,7 +615,7 @@ Each variation should include 3-4 quantified achievements:
 Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement1", "achievement2"], ["achievement3", "achievement4"], ["achievement5", "achievement6"]]`;
 
       case 'skillsList': // NEW/MODIFIED PROMPT FOR POLISHING
-        return `You are an expert resume writer specializing in ATS optimization.
+        let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
 
 Given the following skill category and existing skills:
 - Category: ${sectionData.category}
@@ -623,13 +623,20 @@ Given the following skill category and existing skills:
 - User Type: ${sectionData.userType}
 - Job Description: ${sectionData.jobDescription || 'None'}
 
-Your task is to POLISH and EXPAND upon the DRAFT skills provided, generating ${count} distinctly different lists of skills for the given category.
-Each list should contain 5-8 specific and relevant skills.
-Prioritize skills mentioned in the job description or commonly associated with the user type and category.
-Ensure skills are ATS-friendly.
+CRITICAL REQUIREMENTS:
+1. Provide 5-8 specific and relevant skills for the given category.
+2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
+3. Ensure skills are ATS-friendly.
 
-Return ONLY a JSON array of arrays, where each inner array is a list of skills:
-[["skill1", "skill2", "skill3", "skill4", "skill5"], ["skill6", "skill7", ...], ...]`;
+`;
+        if (sectionData.category === 'Databases') {
+          skillsPrompt += `
+IMPORTANT: For the 'Databases' category, the suggestions MUST be database languages (e.g., SQL, T-SQL, PL/SQL, MySQL, PostgreSQL, MongoDB, Oracle, Cassandra, Redis, DynamoDB, Firebase, Supabase), not theoretical topics like normalization, indexing, or database design principles. Focus on specific technologies and query languages.
+`;
+        }
+        skillsPrompt += `
+Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
+        return skillsPrompt;
 
       default:
         return `Generate ${count} ATS-optimized variations for ${type}.`;
@@ -883,7 +890,7 @@ CRITICAL REQUIREMENTS:
 Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievement2", "achievement3", "achievement4"]`;
 
       case 'skillsList':
-        return `You are an expert resume writer specializing in ATS optimization.
+        let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
 
 Generate a list of skills for a given category based on the user's profile and job description.
 - Category: ${sectionData.category}
@@ -896,7 +903,15 @@ CRITICAL REQUIREMENTS:
 2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
 3. Ensure skills are ATS-friendly.
 
+`;
+        if (sectionData.category === 'Databases') {
+          skillsPrompt += `
+IMPORTANT: For the 'Databases' category, the suggestions MUST be database languages (e.g., SQL, T-SQL, PL/SQL, MySQL, PostgreSQL, MongoDB, Oracle, Cassandra, Redis, DynamoDB, Firebase, Supabase), not theoretical topics like normalization, indexing, or database design principles. Focus on specific technologies and query languages.
+`;
+        }
+        skillsPrompt += `
 Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
+        return skillsPrompt;
 
       default:
         return `Generate ATS-optimized content for ${type}.`;
