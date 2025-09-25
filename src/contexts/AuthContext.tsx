@@ -149,6 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   referralCode: fullProfile?.referral_code || undefined,
                   // Ensure hasSeenProfilePrompt defaults to false if null/undefined
                   hasSeenProfilePrompt: fullProfile?.has_seen_profile_prompt ?? false,
+                  resumesCreatedCount: fullProfile?.resumes_created_count ?? 0, // ADDED: Update with new field
                 } : null,
                 isAuthenticated: true,
                 isLoading: false,
@@ -292,3 +293,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
