@@ -35,6 +35,7 @@ interface Feature {
   description: string;
   icon: JSX.Element;
   requiresAuth: boolean;
+  highlight?: boolean; // Added highlight property
 }
 
 interface HomePageProps {
@@ -136,7 +137,8 @@ export const HomePage: React.FC<HomePageProps> = ({
       title: 'Guided Resume Builder',
       description: 'Create a professional resume from scratch with our step-by-step AI-powered builder.',
       icon: <PlusCircle className="w-6 h-6" />,
-      requiresAuth: false
+      requiresAuth: false,
+      highlight: true, // Highlight this feature
     },
     
     {
@@ -152,7 +154,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   const stats = [
     // MODIFIED: Dynamically display resumesCreatedCount
-    { number: isAuthenticated && user?.resumesCreatedCount !== undefined ? `${user.resumesCreatedCount}+` : '50,000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" /> },
+    { number: isAuthenticated && user?.resumesCreatedCount !== undefined ? `${user.resumesCreatedCount}+` : '1000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" /> },
     { number: '95%', label: 'Success Rate', icon: <TrendingUp className="w-5 h-5" /> },
     { number: '4.9/5', label: 'User Rating', icon: <Star className="w-5 h-5" /> },
     { number: '24/7', label: 'AI Support', icon: <Sparkles className="w-5 h-5" /> }
@@ -162,7 +164,13 @@ export const HomePage: React.FC<HomePageProps> = ({
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-inter dark:from-dark-50 dark:via-dark-100 dark:to-dark-200 transition-colors duration-300">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
+        {/* Background Visuals */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 dark:from-neon-cyan-500/10 dark:to-neon-purple-500/10"></div>
+        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob dark:bg-neon-purple-500"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000 dark:bg-neon-blue-500"></div>
+        <div className="absolute top-1/2 left-1/2 w-56 h-56 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000 dark:bg-neon-cyan-500"></div>
+
+
         <div className="relative container-responsive py-12 sm:py-16 lg:py-20">
           <div className="text-center max-w-4xl mx-auto">
             {/* Logo and Brand */}
@@ -190,9 +198,20 @@ export const HomePage: React.FC<HomePageProps> = ({
               </span>
             </h2>
 
+            {/* Subheadline Readability */}
             <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed max-w-3xl mx-auto">
-              Choose your path to success. Whether you're building from scratch, optimizing for specific jobs, or just want to check your current resume score - we've got you covered.
+              Choose your path to success. Whether you're building from scratch, <br /> optimizing for specific jobs, or just want to check your current resume score - we've got you covered.
             </p>
+
+            {/* Hero CTA Button */}
+            <button
+              onClick={() => navigate('/guided-builder')}
+              className="btn-primary px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 mb-12"
+            >
+              <Sparkles className="w-6 h-6 mr-2" />
+              Start Building My Resume
+              <ArrowRight className="w-6 h-6 ml-2" />
+            </button>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12">
@@ -252,8 +271,15 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 key={feature.id}
                 onClick={() => handleFeatureClick(feature)} // Pass the full feature object
-                className={`card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br from-white to-primary-50 border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`relative card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br from-white to-primary-50 border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''} ${feature.highlight ? 'ring-2 ring-green-500 ring-offset-4' : ''}`}
               >
+                {feature.highlight && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="inline-flex items-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                      <Check className="w-3 h-3 mr-1" /> Recommended
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-4">
                   <div className="bg-primary-100 rounded-xl p-3 group-hover:bg-gradient-to-r group-hover:from-neon-cyan-500 group-hover:to-neon-blue-500 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0 group-hover:scale-110 dark:bg-dark-200 dark:group-hover:shadow-neon-cyan">
                     {React.cloneElement(feature.icon, { className: "w-8 h-8" })}
