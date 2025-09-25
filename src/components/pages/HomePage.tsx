@@ -123,7 +123,8 @@ export const HomePage: React.FC<HomePageProps> = ({
       title: 'JD-Based Optimizer',
       description: 'Upload your resume and a job description to get a perfectly tailored resume.',
       icon: <Target className="w-6 h-6" />,
-      requiresAuth: false
+      requiresAuth: false,
+      highlight: true, // Highlight this feature
     },
     {
       id: 'score-checker',
@@ -138,7 +139,6 @@ export const HomePage: React.FC<HomePageProps> = ({
       description: 'Create a professional resume from scratch with our step-by-step AI-powered builder.',
       icon: <PlusCircle className="w-6 h-6" />,
       requiresAuth: false,
-      highlight: true, // Highlight this feature
     },
     
     {
@@ -205,7 +205,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
             {/* Hero CTA Button */}
             <button
-              onClick={() => navigate('/guided-builder')}
+              onClick={() => navigate('/optimizer')}
               className="btn-primary px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 mb-12"
             >
               <Sparkles className="w-6 h-6 mr-2" />
@@ -271,7 +271,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 key={feature.id}
                 onClick={() => handleFeatureClick(feature)} // Pass the full feature object
-                className={`relative card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br from-white to-primary-50 border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''} ${feature.highlight ? 'ring-2 ring-green-500 ring-offset-4' : ''}`}
+                className={`relative card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br from-white to-primary-50 border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''} ${feature.highlight ? 'ring-2 ring-green-500 ring-offset-4 overflow-visible' : ''}`}
               >
                 {feature.highlight && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
