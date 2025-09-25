@@ -139,8 +139,10 @@ export const HomePage: React.FC<HomePageProps> = ({
     
     {
       id: 'linkedin-generator',
-      title: 'LinkedIn Message Generator',
-      description: 'Generate personalized messages for connection requests and cold outreach.',
+      // MODIFIED LINE 100: Changed title
+      title: 'Outreach Message Generator',
+      // MODIFIED LINE 101: Changed description
+      description: 'Generate personalized messages for networking, referrals, and cold outreach.',
       icon: <MessageCircle className="w-6 h-6" />,
       requiresAuth: true
     }
