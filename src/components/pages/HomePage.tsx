@@ -36,6 +36,7 @@ interface Feature {
   icon: JSX.Element;
   requiresAuth: boolean;
   highlight?: boolean; // Added highlight property
+  gradient: string; // Added gradient property
 }
 
 interface HomePageProps {
@@ -125,13 +126,15 @@ export const HomePage: React.FC<HomePageProps> = ({
       icon: <Target className="w-6 h-6" />,
       requiresAuth: false,
       highlight: true, // Highlight this feature
+      gradient: 'from-blue-50 to-purple-50', // Added gradient
     },
     {
       id: 'score-checker',
       title: 'Resume Score Check',
       description: 'Get an instant ATS score with detailed analysis and improvement suggestions.',
       icon: <TrendingUp className="w-6 h-6" />,
-      requiresAuth: false
+      requiresAuth: false,
+      gradient: 'from-green-50 to-emerald-50', // Added gradient
     },
     {
       id: 'guided-builder',
@@ -139,6 +142,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       description: 'Create a professional resume from scratch with our step-by-step AI-powered builder.',
       icon: <PlusCircle className="w-6 h-6" />,
       requiresAuth: false,
+      gradient: 'from-orange-50 to-red-50', // Added gradient
     },
     
     {
@@ -148,16 +152,17 @@ export const HomePage: React.FC<HomePageProps> = ({
       // MODIFIED LINE 101: Changed description
       description: 'Generate personalized messages for networking, referrals, and cold outreach.',
       icon: <MessageCircle className="w-6 h-6" />,
-      requiresAuth: true
+      requiresAuth: true,
+      gradient: 'from-yellow-50 to-amber-50', // Added gradient
     }
   ];
 
   const stats = [
     // MODIFIED: Dynamically display resumesCreatedCount
-    { number: isAuthenticated && user?.resumesCreatedCount !== undefined ? `${user.resumesCreatedCount}+` : '1000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" /> },
-    { number: '95%', label: 'Success Rate', icon: <TrendingUp className="w-5 h-5" /> },
-    { number: '4.9/5', label: 'User Rating', icon: <Star className="w-5 h-5" /> },
-    { number: '24/7', label: 'AI Support', icon: <Sparkles className="w-5 h-5" /> }
+    { number: isAuthenticated && user?.resumesCreatedCount !== undefined ? `${user.resumesCreatedCount}+` : '1000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" />, microcopy: 'Trusted by thousands of job seekers' },
+    { number: '95%', label: 'Success Rate', icon: <TrendingUp className="w-5 h-5" />, microcopy: 'Achieved by our AI-driven approach' },
+    { number: '4.9/5', label: 'User Rating', icon: <Star className="w-5 h-5" />, microcopy: 'From satisfied professionals worldwide' },
+    { number: '24/7', label: 'AI Support', icon: <Sparkles className="w-5 h-5" />, microcopy: 'Instant assistance whenever you need it' }
   ];
 
   return (
@@ -218,7 +223,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               {stats.map((stat, index) => (
                 <div
                   key={index}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/50 dark:bg-dark-100/80 dark:border-dark-300/50 dark:hover:shadow-neon-cyan/20"
+                  className="card-hover bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg transition-all duration-300 border border-white/50 dark:bg-dark-100/80 dark:border-dark-300/50 dark:hover:shadow-neon-cyan/20"
                 >
                   <div className="flex items-center justify-center mb-3">
                     <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-2 sm:p-3 rounded-full dark:from-neon-cyan-500 dark:to-neon-blue-500 dark:shadow-neon-cyan">
@@ -231,6 +236,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
                     {stat.label}
                   </div>
+                  {stat.microcopy && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.microcopy}</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -271,7 +279,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 key={feature.id}
                 onClick={() => handleFeatureClick(feature)} // Pass the full feature object
-                className={`relative card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br from-white to-primary-50 border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''} ${feature.highlight ? 'ring-2 ring-green-500 ring-offset-4 overflow-visible' : ''}`}
+                className={`relative card-hover p-6 flex flex-col items-start sm:flex-row sm:items-center justify-between transition-all duration-300 bg-gradient-to-br ${feature.gradient} border border-secondary-100 shadow-lg hover:shadow-xl group rounded-2xl dark:from-dark-100 dark:to-dark-200 dark:border-dark-300 dark:hover:shadow-neon-cyan/20 ${feature.requiresAuth && !isAuthenticated ? 'opacity-70 cursor-not-allowed' : ''} ${feature.highlight ? 'ring-2 ring-green-500 ring-offset-4 overflow-visible' : ''}`}
               >
                 {feature.highlight && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -430,4 +438,3 @@ export const HomePage: React.FC<HomePageProps> = ({
     </div>
   );
 };
-
