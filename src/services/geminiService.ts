@@ -856,7 +856,23 @@ CRITICAL ATS OPTIMIZATION RULES:
 Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
 
       case 'certifications':
-        return `You are an expert resume writer specializing in ATS optimization.
+        // MODIFIED: Conditional prompt based on currentCertTitle
+        if (sectionData.currentCertTitle && sectionData.currentCertTitle.trim() !== '') {
+          return `You are an expert resume writer specializing in ATS optimization.
+
+Given the following certification title:
+- Certification Title: "${sectionData.currentCertTitle}"
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Current Skills: ${JSON.stringify(sectionData.skills || [])}
+- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
+
+Your task is to generate a single, concise, ATS-friendly description for this certification.
+The description MUST be a maximum of 15 words.
+It should highlight the most relevant aspect of the certification for a resume and align with the target role and skills.
+
+Return ONLY the description text as a single string, no additional formatting or explanations.`;
+        } else {
+          return `You are an expert resume writer specializing in ATS optimization.
 
 Given the following certification details and context:
 - Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
@@ -870,6 +886,7 @@ Each title should be concise, professional, and highlight the most relevant aspe
 If the provided title/description is generic, make the generated titles more impactful and specific.
 
 Return ONLY a JSON array with exactly 3 polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
+        }
 
       case 'achievements':
         return `You are an expert resume writer specializing in ATS optimization.
@@ -892,7 +909,7 @@ Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievem
       case 'skillsList':
         let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
 
-Generate a list of skills for a given category based on the user's profile and job description.
+Given the following skill category and existing skills:
 - Category: ${sectionData.category}
 - Existing Skills: ${sectionData.existingSkills || 'None'}
 - User Type: ${sectionData.userType}
@@ -974,7 +991,6 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
         sectionType === 'workExperienceBullets' ||
         sectionType === 'projectBullets' ||
         sectionType === 'additionalSectionBullets' ||
-        sectionType === 'certifications' || // Added for JSON parsing
         sectionType === 'achievements' ||   // Added for JSON parsing
         sectionType === 'skillsList'        // Added for JSON parsing
       ) {
@@ -991,6 +1007,21 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
             .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
             .filter(line => line.length > 0)
             .slice(0, 5); // Limit to 5 for fallback, adjust as needed
+        }
+      } else if (sectionType === 'certifications') {
+        // If the prompt was to generate a description (single string), return it directly
+        if (sectionData.currentCertTitle && sectionData.currentCertTitle.trim() !== '') {
+          return result; // Return as a single string
+        } else {
+          // Otherwise, it's generating titles (array of strings)
+          try {
+            const parsed = JSON.parse(result);
+            return parsed;
+          } catch (parseError) {
+            console.error(`JSON parsing error for ${sectionType} titles:`, parseError);
+            console.error('Raw response that failed to parse:', result);
+            return result.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+          }
         }
       }
 
