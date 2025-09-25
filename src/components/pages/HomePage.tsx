@@ -256,11 +256,13 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <div>
                     <span className="text-lg font-bold text-secondary-900 dark:text-gray-100">{feature.title}</span>
                     <p className="text-sm text-secondary-700 dark:text-gray-300">{feature.description}</p>
-                    {isAuthenticated && userSubscription && remainingCount !== null && remainingCount > 0 && (
-                      <p className="text-xs font-medium text-green-600 dark:text-neon-cyan-400 mt-1">
-                        {remainingCount} remaining
-                      </p>
-                    )}
+                  {isAuthenticated && userSubscription && remainingCount !== null && remainingCount > 0 &&
+ feature.id !== 'guided-builder' && feature.id !== 'linkedin-generator' && (
+  <p className="text-xs font-medium text-green-600 dark:text-neon-cyan-400 mt-1">
+    {remainingCount} remaining
+  </p>
+)}
+
                   </div>
                 </div>
                 <ArrowRight className={`w-6 h-6 text-secondary-400 group-hover:text-neon-cyan-400 group-hover:translate-x-1 transition-transform duration-300 flex-shrink-0 dark:text-gray-500 dark:group-hover:text-neon-cyan-400 ${feature.requiresAuth && !isAuthenticated ? 'opacity-50' : ''}`} />
