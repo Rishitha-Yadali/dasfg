@@ -389,7 +389,7 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
         if (userEmail) {
           parsedResult.email = userEmail;
         } else if (parsedResult.email) {
-          const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/;
+          const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/;
           const match = String(parsedResult.email).match(emailRegex);
           parsedResult.email = match && match[0] ? match[0] : '';
         } else {
@@ -515,7 +515,7 @@ CONTEXT:
 - User Type: ${sectionData.userType}
 
 CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 20 words or less
+1. Each bullet point MUST be 2 lines and between 15-20 words.
 2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
 3. NO weak verbs (helped, assisted, worked on, responsible for)
 4. Include quantifiable achievements and metrics
@@ -541,7 +541,7 @@ CONTEXT:
 - User Type: ${sectionData.userType}
 
 CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 20 words or less
+1. Each bullet point MUST be 2 lines and between 15-20 words.
 2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
 3. Include specific technologies mentioned in tech stack
 4. Focus on technical achievements and impact
@@ -556,6 +556,7 @@ Return ONLY a JSON array of strings, where each string is a single polished bull
 
       case 'additionalSectionBullets': // NEW/MODIFIED PROMPT FOR POLISHING
         return `You are an expert resume writer specializing in ATS optimization.
+
 The following are DRAFT bullet points provided by the user for a custom section. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided section title and user type context.
 
 DRAFT BULLET POINTS TO POLISH:
@@ -566,7 +567,7 @@ CONTEXT:
 - User Type: ${sectionData.userType}
 
 CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 20 words or less
+1. Each bullet point MUST be 2 lines and between 15-20 words.
 2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
 3. Focus on achievements, contributions, or relevant details for the section type
 4. Use industry-standard keywords where applicable
@@ -605,6 +606,7 @@ Generate ${count} different achievement variations based on:
 
 ${baseInstructions}
 
+Each achievement MUST be 2 lines and between 15-20 words.
 Each variation should include 3-4 quantified achievements:
 - Variation 1: Performance and results-focused
 - Variation 2: Leadership and team impact-focused
@@ -795,8 +797,8 @@ Generate exactly 3 concise bullet points for work experience based on:
 - User Type: ${sectionData.userType}
 
 CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 20 words or less
-2. Start with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
 3. NO weak verbs (helped, assisted, worked on, responsible for)
 4. Include quantifiable achievements and metrics
 5. Use industry-standard keywords
@@ -816,7 +818,7 @@ Generate exactly 3 concise bullet points for a project based on:
 - User Type: ${sectionData.userType}
 
 CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 20 words or less
+1. Each bullet point MUST be 2 lines and between 15-20 words.
 2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
 3. Include specific technologies mentioned in tech stack
 4. Focus on technical achievements and impact
@@ -836,7 +838,7 @@ Generate exactly 3 concise bullet points for a custom resume section based on:
 - User Type: ${sectionData.userType}
 
 CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 20 words or less
+1. Each bullet point MUST be 2 lines and between 15-20 words.
 2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
 3. Focus on achievements, contributions, or relevant details for the section type
 4. Use industry-standard keywords where applicable
@@ -872,12 +874,11 @@ Generate exactly 4 quantified achievements based on:
 - Context: ${sectionData.context || 'General professional achievements'}
 
 CRITICAL REQUIREMENTS:
-1. Each achievement MUST be quantified with specific metrics
+1. Each achievement MUST be 2 lines and between 15-20 words.
 2. Start with strong action verbs (Achieved, Increased, Led, Improved, etc.)
 3. Focus on results and impact, not just activities
 4. Make achievements relevant to the target role
 5. Include different types of achievements (performance, leadership, innovation, efficiency)
-6. Keep each achievement to 20 words or less
 
 Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievement2", "achievement3", "achievement4"]`;
 
@@ -991,3 +992,4 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
 
   throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
 };
+
