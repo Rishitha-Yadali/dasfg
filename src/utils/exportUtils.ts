@@ -300,7 +300,7 @@ function drawContactInfo(state: PageState, resumeData: ResumeData, PDF_CONFIG: a
     fieldType: 'phone' | 'email' | 'url' | 'text' = 'text'
   ) => {
     console.log(`[drawContactInfo] Adding field: "${fieldValue}" | type: ${fieldType}`);
-    const safeFieldValue = toSafeText(fieldValue);
+    const safeFieldValue = typeof fieldValue === 'string' ? fieldValue : String(fieldValue || '');
     if (!safeFieldValue) return;
 
     let processedValue = safeFieldValue;
@@ -730,6 +730,45 @@ function drawAchievementsAndExtras(
   return totalHeight;
 }
 
+// NEW: Function to draw additional sections
+function drawAdditionalSections(
+  state: PageState,
+  additionalSections: any[] = [],
+  PDF_CONFIG: any
+): number {
+  if (!additionalSections || additionalSections.length === 0) return 0;
+  let totalHeight = 0;
+
+  additionalSections.forEach((section) => {
+    if (!isValidField(section?.title)) return;
+
+    totalHeight += drawSectionTitle(state, section.title, PDF_CONFIG);
+
+    const validBullets =
+      Array.isArray(section?.bullets) ? section.bullets.filter((b: string) => isValidField(b)) : [];
+    if (validBullets.length > 0) {
+      state.currentY += PDF_CONFIG.spacing.bulletListSpacing;
+      validBullets.forEach((bullet: string) => {
+        const bulletText = `• ${bullet}`;
+        const bulletHeight = drawText(
+          state,
+          bulletText,
+          PDF_CONFIG.margins.left + PDF_CONFIG.spacing.bulletIndent,
+          PDF_CONFIG,
+          {
+            fontSize: PDF_CONFIG.fonts.body.size,
+            maxWidth: PDF_CONFIG.contentWidth - PDF_CONFIG.spacing.bulletIndent,
+          }
+        );
+        totalHeight += bulletHeight;
+      });
+      state.currentY += PDF_CONFIG.spacing.bulletListSpacing;
+    }
+  });
+
+  return totalHeight;
+}
+
 // ---------- Main: PDF ----------
 export const exportToPDF = async (
   resumeData: ResumeData,
@@ -745,7 +784,8 @@ export const exportToPDF = async (
       hasWorkExperience: resumeData.workExperience?.length > 0,
       hasProjects: resumeData.projects?.length > 0,
       hasSkills: resumeData.skills?.length > 0,
-      hasCertifications: resumeData.certifications?.length > 0
+      hasCertifications: resumeData.certifications?.length > 0,
+      hasAdditionalSections: resumeData.additionalSections?.length > 0 // NEW
     });
     
     if (isMobileDevice()) {
@@ -792,6 +832,7 @@ export const exportToPDF = async (
       drawSkills(state, resumeData.skills, PDF_CONFIG);
       drawCertifications(state, resumeData.certifications as any[], PDF_CONFIG);
       drawEducation(state, resumeData.education, PDF_CONFIG);
+      drawAdditionalSections(state, resumeData.additionalSections, PDF_CONFIG); // NEW
     } else if (userType === 'student') {
       drawEducation(state, resumeData.education, PDF_CONFIG);
       drawSkills(state, resumeData.skills, PDF_CONFIG);
@@ -799,6 +840,7 @@ export const exportToPDF = async (
       drawWorkExperience(state, resumeData.workExperience, userType, PDF_CONFIG);
       drawCertifications(state, resumeData.certifications as any[], PDF_CONFIG);
       drawAchievementsAndExtras(state, resumeData, PDF_CONFIG);
+      drawAdditionalSections(state, resumeData.additionalSections, PDF_CONFIG); // NEW
     } else {
       // Fresher
       drawEducation(state, resumeData.education, PDF_CONFIG);
@@ -807,6 +849,7 @@ export const exportToPDF = async (
       drawSkills(state, resumeData.skills, PDF_CONFIG);
       drawCertifications(state, resumeData.certifications as any[], PDF_CONFIG);
       drawAchievementsAndExtras(state, resumeData, PDF_CONFIG);
+      drawAdditionalSections(state, resumeData.additionalSections, PDF_CONFIG); // NEW
     }
 
     // Footer (Page X of Y)
@@ -918,7 +961,7 @@ const generateWordHTMLContent = (
     fieldType: 'phone' | 'email' | 'url' | 'text' = 'text',
     linkType?: 'tel' | 'mailto' | 'http'
   ) => {
-    const safeFieldValue = toSafeText(fieldValue);
+    const safeFieldValue = typeof fieldValue === 'string' ? fieldValue : String(fieldValue || '');
     if (!safeFieldValue) return;
 
     let processedValue = safeFieldValue;
@@ -1136,6 +1179,37 @@ const generateWordHTMLContent = (
   </div>`
       : '';
 
+  // NEW: Additional Sections HTML
+  const additionalSectionsHtml =
+    data.additionalSections && data.additionalSections.length > 0
+      ? `
+    ${data.additionalSections
+        .map(
+          (section) => `
+        <div style="margin-top: 5pt;">
+          <div class="section-title" style="font-size: 10pt; font-weight: bold; margin-bottom: 4pt; text-transform: uppercase; letter-spacing: 0.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${
+            section.title || ''
+          }</div>
+          <div class="section-underline" style="border-bottom: 0.5pt solid #808080; margin-bottom: 4pt; height: 1px;"></div>
+          ${
+            section.bullets && section.bullets.length > 0
+              ? `
+            <ul class="bullets" style="margin-left: 5mm; margin-bottom: 6pt; margin-top: 2pt; list-style-type: disc;">
+              ${section.bullets
+                .map(
+                  (bullet) =>
+                    `<li class="bullet" style="font-size: 9.5pt; line-height: 1.4; margin: 0 0 2pt 0; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${bullet}</li>`
+                )
+                .join('')}
+            </ul>`
+              : ''
+          }
+        </div>`
+        )
+        .join('')}
+    `
+      : '';
+
   let objectiveOrSummaryHtml = '';
   if ((userType === 'fresher' || userType === 'student') && String(data.careerObjective || '').trim() !== '') {
     objectiveOrSummaryHtml = careerObjectiveHtml;
@@ -1153,6 +1227,7 @@ const generateWordHTMLContent = (
       ${workExperienceHtml}
       ${certificationsHtml}
       ${achievementsHtml}
+      ${additionalSectionsHtml} <!-- NEW -->
     `;
   } else if (userType === 'experienced') {
     sectionOrderHtml = `
@@ -1162,6 +1237,7 @@ const generateWordHTMLContent = (
       ${skillsHtml}
       ${certificationsHtml}
       ${educationHtml}
+      ${additionalSectionsHtml} <!-- NEW -->
     `;
   } else {
     // Fresher
@@ -1173,6 +1249,7 @@ const generateWordHTMLContent = (
       ${skillsHtml}
       ${certificationsHtml}
       ${achievementsHtml}
+      ${additionalSectionsHtml} <!-- NEW -->
     `;
   }
 
