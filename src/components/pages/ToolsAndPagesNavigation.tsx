@@ -179,8 +179,9 @@ export const ToolsAndPagesNavigation: React.FC<ToolsAndPagesNavigationProps> = (
     },
     {
       id: 'linkedin-generator',
-      title: 'LinkedIn Message Generator',
-      description: 'Generate personalized messages for connection requests and cold outreach.',
+      // MODIFIED LINES 50-55: Updated title and description for linkedin-generator
+      title: 'Outreach Message Generator',
+      description: 'Generate personalized messages for networking, referrals, and cold outreach.',
       icon: <MessageCircle />,
       colorClass: 'from-orange-500 to-red-500',
       requiresAuth: true,
