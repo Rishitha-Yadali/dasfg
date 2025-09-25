@@ -315,11 +315,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                               <span>Score Checks:</span>
                               <span className="font-medium">{userSubscription.scoreChecksTotal - userSubscription.scoreChecksUsed} / {userSubscription.scoreChecksTotal}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span>Guided Builds:</span>
-                              <span className="font-medium">{userSubscription.guidedBuildsTotal - userSubscription.guidedBuildsUsed} / {userSubscription.guidedBuildsTotal}</span>
-                            </div>
-                          </div>
+                            <
                         </>
                       ) : (
                         <div className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
