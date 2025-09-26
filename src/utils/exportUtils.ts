@@ -361,7 +361,7 @@ export const exportToPDF = async (
           break;
 
         case 'additionalSections':
-          // FIX: Add Array.isArray check here
+          // FIXED: Ensure additionalSections is an array before iterating
           if (resumeData.additionalSections && Array.isArray(resumeData.additionalSections) && resumeData.additionalSections.length > 0) {
             resumeData.additionalSections.forEach((section: AdditionalSection) => {
               if (section.title && section.bullets && section.bullets.length > 0) {
@@ -370,6 +370,9 @@ export const exportToPDF = async (
                 cursorY += PDF_CONFIG.spacing.sectionSpacingAfter;
               }
             });
+          } else {
+            // Skip additionalSections if not an array or empty
+            console.log('Skipping additionalSections: not an array or empty');
           }
           break;
 
@@ -489,7 +492,7 @@ export const exportToWord = async (resumeData: ResumeData, userType: UserType) =
           break;
 
         case 'additionalSections':
-          // FIX: Add Array.isArray check here
+          // FIXED: Ensure additionalSections is an array before iterating in Word export
           if (resumeData.additionalSections && Array.isArray(resumeData.additionalSections) && resumeData.additionalSections.length > 0) {
             resumeData.additionalSections.forEach((section: AdditionalSection) => {
               if (section.title && section.bullets && section.bullets.length > 0) {
@@ -498,6 +501,9 @@ export const exportToWord = async (resumeData: ResumeData, userType: UserType) =
                 content += `</ul>`;
               }
             });
+          } else {
+            // Skip additionalSections if not an array or empty
+            console.log('Skipping additionalSections in Word export: not an array or empty');
           }
           break;
 

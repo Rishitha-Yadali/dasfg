@@ -416,19 +416,25 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
       // --- DYNAMIC ADDITIONAL SECTIONS LOGIC ---
       case 'additionalSections':
-        // MODIFIED: Add a check to ensure additionalSections is an array
-        if (!resumeData.additionalSections || !Array.isArray(resumeData.additionalSections) || resumeData.additionalSections.length === 0) return null;
+        // FIXED: Comprehensive check to ensure additionalSections is a valid array
+        if (!resumeData.additionalSections || !Array.isArray(resumeData.additionalSections) || resumeData.additionalSections.length === 0) {
+          console.log('ResumePreview: Skipping additionalSections - not a valid array');
+          return null;
+        }
         return (
           <>
             {resumeData.additionalSections.map((section, index) => {
-              if (!section || !section.title) return null;
+              if (!section || !section.title || !section.bullets || !Array.isArray(section.bullets)) {
+                console.log(`ResumePreview: Skipping section ${index} - invalid structure`);
+                return null;
+              }
               return (
                 <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
                   <h2 style={sectionTitleStyle}>
                     {section.title.toUpperCase()}
                   </h2>
                   <div style={sectionUnderlineStyle}></div>
-                  {section.bullets && section.bullets.length > 0 && (
+                  {section.bullets.length > 0 && (
                     <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none', marginTop: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
                       {section.bullets.map((bullet, bulletIndex) => (
                         <li key={bulletIndex} style={listItemStyle}>
