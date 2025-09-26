@@ -351,7 +351,7 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
       "X-Title": "PrimoBoost AI", // Replace with your actual app name
     },
     body: JSON.stringify({
-      model: "google/gemini-flash-1.5", // Ensure this model is correct and available
+      model: "google/gemini-flash-1.5", // Set to google/gemini-flash-1.5
       messages: [{ role: "user", content: promptContent }],
     }),
   });
@@ -710,7 +710,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
       "X-Title": "PrimoBoost AI",
     },
     body: JSON.stringify({
-      model: modelOverride || 'google/gemini-flash-1.5',
+      model: modelOverride || 'deepseek/deepseek-chat-v3.1:free', // Set to deepseek/deepseek-chat-v3.1:free
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -980,7 +980,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
       "X-Title": "PrimoBoost AI",
     },
     body: JSON.stringify({
-      model: modelOverride || 'google/gemini-flash-1.5',
+      model: modelOverride || 'deepseek/deepseek-chat-v3.1:free', // Set to deepseek/deepseek-chat-v3.1:free
       messages: [{ role: "user", content: prompt }],
     }),
   });
