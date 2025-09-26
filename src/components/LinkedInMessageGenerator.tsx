@@ -475,6 +475,9 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
           </div>
 
          
+            )}
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tone</label>
               <div className="flex flex-wrap justify-center gap-2 rounded-xl bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300">
   {(['professional', 'casual', 'friendly'] as MessageTone[]).map((tone) => (
