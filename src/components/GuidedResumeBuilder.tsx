@@ -97,7 +97,7 @@ const asText = (v: any): string => {
 };
 
   const [extractionResult, setExtractionResult] = useState<ExtractionResult>({ text: '', extraction_mode: 'TEXT', trimmed: false });
-  const [jobDescription, setJobDescription] = useState('');
+
   const [targetRole, setTargetRole] = useState('');
   const [userType, setUserType] = useState<UserType>('fresher'); // Default to fresher
   const [scoringMode, setScoringMode] = useState<ScoringMode>('general');
