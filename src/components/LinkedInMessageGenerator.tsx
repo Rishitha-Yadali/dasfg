@@ -540,7 +540,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
               <ArrowLeft className="w-5 h-5" />
               <span className="hidden sm:block">Back to Home</span>
             </button>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">LinkedIn Message Generator</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Outreach Message Generator</h1>
             <div className="w-16" />
           </div>
         </div>
