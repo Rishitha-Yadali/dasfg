@@ -406,5 +406,3 @@ export const InputWizard: React.FC<InputWizardProps> = ({
     </div>
   );
 };
-```
-```
