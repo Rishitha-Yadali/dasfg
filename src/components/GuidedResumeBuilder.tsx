@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, CreditCard as Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -96,13 +96,6 @@ const asText = (v: any): string => {
   return v == null ? '' : String(v);
 };
 
-  const [extractionResult, setExtractionResult] = useState<ExtractionResult>({ text: '', extraction_mode: 'TEXT', trimmed: false });
-
-  const [targetRole, setTargetRole] = useState('');
-  const [userType, setUserType] = useState<UserType>('fresher'); // Default to fresher
-  const [scoringMode, setScoringMode] = useState<ScoringMode>('general');
-  const [autoScoreOnUpload, setAutoScoreOnUpload] = useState(true);
-
   const [optimizedResume, setOptimizedResume] = useState<ResumeData | null>({
     name: '', phone: '', email: '', linkedin: '', github: '',
     education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: []
@@ -165,10 +158,6 @@ const asText = (v: any): string => {
   // NEW STATE: To control visibility of the new ExportOptionsModal
   const [showExportOptionsModal, setShowExportOptionsModal] = useState(false);
 
-  // ADDED: Missing state variables that are being used in the component
-  const [jobDescription, setJobDescription] = useState('');
-  const [targetRole, setTargetRole] = useState('');
-  const [userType, setUserType] = useState<UserType>('fresher');
 
   const userName = (user as any)?.user_metadata?.name || '';
   const userEmail = user?.email || ''; // Correctly accesses email from user object
@@ -204,7 +193,6 @@ const asText = (v: any): string => {
       name: '', phone: '', email: '', linkedin: '', github: '',
       education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: []
     });
-    setExtractionResult({ text: '', extraction_mode: 'TEXT', trimmed: false });
     setJobDescription('');
     setTargetRole('');
     setUserType('fresher'); // Reset to default
@@ -241,12 +229,6 @@ const asText = (v: any): string => {
       setLoadingSubscription(false);
     }
   }, [isAuthenticated, user, checkSubscriptionStatus]); // Add checkSubscriptionStatus to dependencies
-
-  // useEffect(() => {
-  //   if (extractionResult.text.trim().length > 0 && currentStep === 0) {
-  //     setCurrentStep(1);
-  //   }
-  // }, [extractionResult.text, currentStep]);
 
   const checkForMissingSections = useCallback((resumeData: ResumeData): string[] => { // Memoize
     const missing: string[] = [];
@@ -657,7 +639,7 @@ const asText = (v: any): string => {
       loadingMessage = 'Processing Your Information...';
       subMessage = "We're updating your resume with the new sections you provided.";
     }
-    return <LoadingAnimation message={loadingMessage} submessage={subMessage} />;
+    return <LoadingAnimation message={loadingMessage} subMessage={subMessage} />;
   }
 
   // --- NEW: Navigation Handlers ---
@@ -1074,6 +1056,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
           );
         }
         setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
+        setShowAIBulletOptions(true);
       } catch (error) {
         console.error('Error regenerating bullets:', error);
         alert('Failed to regenerate bullets. Please try again.');
@@ -1355,16 +1338,13 @@ const handleGenerateProjectBullets = async (
   };
 
   const handleSelectAICertifications = (certs: string[]) => {
-    console.log('Selecting AI certifications:', certs);
-    setOptimizedResume(prev => {
-      const updatedResume = {
-        ...prev!,
-        // Map each string to a Certification object with title and empty description
-        certifications: certs.map(c => ({ title: c, description: '' }))
-      };
-      console.log('OptimizedResume after selecting certifications:', updatedResume.certifications); // Log the new certs
-      return updatedResume;
-    });
+    if (currentBulletGenerationIndex !== null && currentBulletGenerationSection === 'certifications') {
+      setOptimizedResume(prev => {
+        const updatedCertifications = [...(prev?.certifications || [])];
+        updatedCertifications[currentBulletGenerationIndex] = { title: certs[0], description: '' }; // Assuming first option is the selected one
+        return { ...prev!, certifications: updatedCertifications };
+      });
+    }
     setShowAIBulletOptions(false);
     setAIGeneratedBullets([]);
     setCurrentBulletGenerationIndex(null);
@@ -1531,28 +1511,7 @@ const handleGenerateProjectBullets = async (
   // --- End Objective/Summary AI Generation Handlers ---
 
   // --- Review Section State ---
-  const toggleReviewSection = (sectionKey: string) => {
-    setExpandedReviewSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionKey)) {
-        newSet.delete(sectionKey);
-      } else {
-        newSet.add(sectionKey);
-      }
-      return newSet;
-    });
-  };
 
-  const reviewSectionMap: { [key: string]: number } = {
-    'profile': 1,
-    'objective_summary': 2,
-    'education': 3,
-    'work_experience': 4,
-    'projects': 5,
-    'skills': 6,
-    'certifications': 7,
-    'additional_sections': 8,
-  };
   // --- End Review Section State ---
 
   // --- NEW: Conditional Section Rendering ---
@@ -1747,7 +1706,7 @@ const handleGenerateProjectBullets = async (
             {(optimizedResume.education || []).map((edu, index) => (
               <div key={index} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Entry #{index + 1}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Education Entry #{index + 1}</h3>
                   <button
                     onClick={() => handleRemoveEducation(index)}
                     className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -1829,7 +1788,7 @@ const handleGenerateProjectBullets = async (
             {(optimizedResume.workExperience || []).map((work, workIndex) => (
               <div key={workIndex} className="space-y-4 border border-gray-200 p-4 rounded-lg mb-4 dark:border-dark-300">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Entry #{workIndex + 1}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Work Experience Entry #{workIndex + 1}</h3>
                   <button
                     onClick={() => handleRemoveWorkExperience(workIndex)}
                     className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -1871,54 +1830,56 @@ const handleGenerateProjectBullets = async (
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Description</label>
                   {(work.bullets || []).map((bullet, bulletIndex) => (
-                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                     <textarea
-   value={bullet}
-  onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
-  onFocus={() => {
-    setCurrentBulletGenerationSection('workExperience');
-    setCurrentBulletGenerationIndex(workIndex);
-    setSelectedBulletOptionIndex(bulletIndex);
-  }}
-  onClick={() => {
-    setCurrentBulletGenerationSection('workExperience');
-    setCurrentBulletGenerationIndex(workIndex);
-    setSelectedBulletOptionIndex(bulletIndex);
-  }}
-  placeholder="Describe your achievement or responsibility"
-  className="input-base flex-grow resize-y"
-  rows={2}
-/>
-
-
-                      <button
-                        onClick={() => handleRemoveWorkBullet(workIndex, bulletIndex)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                    <div key={bulletIndex} className="mb-2">
+                      <div className="flex items-center space-x-2">
+                        <textarea
+                          value={bullet}
+                          onChange={(e) => handleUpdateWorkBullet(workIndex, bulletIndex, e.target.value)}
+                          onFocus={() => {
+                            setCurrentBulletGenerationSection('workExperience');
+                            setCurrentBulletGenerationIndex(workIndex);
+                            setSelectedBulletOptionIndex(bulletIndex);
+                          }}
+                          onClick={() => {
+                            setCurrentBulletGenerationSection('workExperience');
+                            setCurrentBulletGenerationIndex(workIndex);
+                            setSelectedBulletOptionIndex(bulletIndex);
+                          }}
+                          placeholder="Describe your achievement or responsibility"
+                          className="input-base flex-grow resize-y"
+                          rows={2}
+                        />
+                        <button
+                          onClick={() => handleRemoveWorkBullet(workIndex, bulletIndex)}
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                      {bullet.trim().length > 0 && (
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => handleGenerateWorkExperienceBullets(workIndex, bulletIndex)}
+                            className="btn-secondary flex items-center space-x-2 text-sm"
+                            disabled={isGeneratingBullets && currentBulletGenerationIndex === workIndex && selectedBulletOptionIndex === bulletIndex}
+                          >
+                            {isGeneratingBullets && currentBulletGenerationIndex === workIndex && selectedBulletOptionIndex === bulletIndex ? (
+                              <RotateCcw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4" />
+                            )}
+                            <span>{isGeneratingBullets && currentBulletGenerationIndex === workIndex && selectedBulletOptionIndex === bulletIndex ? 'Generating...' : 'Generate with AI'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAddWorkBullet(workIndex)} className="btn-secondary flex items-center space-x-2">
-                      <Plus className="w-5 h-5" />
-                      <span>Add Bullet</span>
-                    </button>
-                    <button
-                      onClick={() => handleGenerateWorkExperienceBullets(workIndex)}
-                      className="btn-primary flex items-center space-x-2"
-                      disabled={isGeneratingBullets}
-                    >
-                      {isGeneratingBullets && currentBulletGenerationIndex === workIndex ? (
-                        <RotateCcw className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-5 h-5" />
-                      )}
-                      <span>{isGeneratingBullets && currentBulletGenerationIndex === workIndex ? 'Generating...' : 'Generate with AI'}</span>
-                    </button>
-                  </div>
+                  <button onClick={() => handleAddWorkBullet(workIndex)} className="btn-secondary flex items-center space-x-2">
+                    <Plus className="w-5 h-5" />
+                    <span>Add Description</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -1961,55 +1922,56 @@ const handleGenerateProjectBullets = async (
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Description</label>
                   {(project.bullets || []).map((bullet, bulletIndex) => (
-                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                    <textarea
-  value={bullet}
-  onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
-  onFocus={() => {
-    setCurrentBulletGenerationSection('projects');
-    setCurrentBulletGenerationIndex(projectIndex);
-    setSelectedBulletOptionIndex(bulletIndex);
-  }}
-  onClick={() => {
-    setCurrentBulletGenerationSection('projects');
-    setCurrentBulletGenerationIndex(projectIndex);
-    setSelectedBulletOptionIndex(bulletIndex);
-  }}
-  placeholder="Describe your project's features or impact"
-  className="input-base flex-grow resize-y"
-  rows={2}
-/>
-
-
-
-                      <button
-                        onClick={() => handleRemoveProjectBullet(projectIndex, bulletIndex)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                    <div key={bulletIndex} className="mb-2">
+                      <div className="flex items-center space-x-2">
+                        <textarea
+                          value={bullet}
+                          onChange={(e) => handleUpdateProjectBullet(projectIndex, bulletIndex, e.target.value)}
+                          onFocus={() => {
+                            setCurrentBulletGenerationSection('projects');
+                            setCurrentBulletGenerationIndex(projectIndex);
+                            setSelectedBulletOptionIndex(bulletIndex);
+                          }}
+                          onClick={() => {
+                            setCurrentBulletGenerationSection('projects');
+                            setCurrentBulletGenerationIndex(projectIndex);
+                            setSelectedBulletOptionIndex(bulletIndex);
+                          }}
+                          placeholder="Describe your project's features or impact"
+                          className="input-base flex-grow resize-y"
+                          rows={2}
+                        />
+                        <button
+                          onClick={() => handleRemoveProjectBullet(projectIndex, bulletIndex)}
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                      {bullet.trim().length > 0 && (
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => handleGenerateProjectBullets(projectIndex, bulletIndex)}
+                            className="btn-secondary flex items-center space-x-2 text-sm"
+                            disabled={isGeneratingBullets && currentBulletGenerationIndex === projectIndex && selectedBulletOptionIndex === bulletIndex}
+                          >
+                            {isGeneratingBullets && currentBulletGenerationIndex === projectIndex && selectedBulletOptionIndex === bulletIndex ? (
+                              <RotateCcw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4" />
+                            )}
+                            <span>{isGeneratingBullets && currentBulletGenerationIndex === projectIndex && selectedBulletOptionIndex === bulletIndex ? 'Generating...' : 'Generate with AI'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAddProjectBullet(projectIndex)} className="btn-secondary flex items-center space-x-2">
-                      <Plus className="w-5 h-5" />
-                      <span>Add Bullet</span>
-                    </button>
-                    <button
-                      onClick={() => handleGenerateProjectBullets(projectIndex)}
-                      className="btn-primary flex items-center space-x-2"
-                      disabled={isGeneratingBullets}
-                    >
-                      {isGeneratingBullets && currentBulletGenerationIndex === projectIndex ? (
-                        <RotateCcw className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-5 h-5" />
-                      )}
-                      <span>{isGeneratingBullets && currentBulletGenerationIndex === projectIndex ? 'Generating...' : 'Generate with AI'}</span>
-                    </button>
-                  </div>
+                  <button onClick={() => handleAddProjectBullet(projectIndex)} className="btn-secondary flex items-center space-x-2">
+                    <Plus className="w-5 h-5" />
+                    <span>Add Description</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -2148,8 +2110,8 @@ const handleGenerateProjectBullets = async (
                     {isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'certifications' ? (
                       <RotateCcw className="w-5 h-5 animate-spin" />
                     ) : (
-                        <Sparkles className="w-5 h-5" />
-                      )}
+                      <Sparkles className="w-5 h-5" />
+                    )}
                     <span>{isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'certifications' ? 'Generating...' : 'Generate with AI'}</span>
                   </button>
                 </div>
@@ -2194,56 +2156,56 @@ const handleGenerateProjectBullets = async (
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Bullet Points</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Description</label>
                   {(section.bullets || []).map((bullet, bulletIndex) => (
-                    <div key={bulletIndex} className="flex items-center space-x-2 mb-2">
-                   <textarea
-  value={bullet}
-  onChange={(e) => handleUpdateAdditionalBullet(index, bulletIndex, e.target.value)}
-  onFocus={() => {
-    setCurrentBulletGenerationSection('additionalSections');
-    setCurrentBulletGenerationIndex(index);
-    setSelectedBulletOptionIndex(bulletIndex);
-  }}
-  onClick={() => {
-    setCurrentBulletGenerationSection('additionalSections');
-    setCurrentBulletGenerationIndex(index);
-    setSelectedBulletOptionIndex(bulletIndex);
-  }}
-  placeholder="Describe your achievement or experience"
-  className="input-base flex-grow resize-y"
-  rows={2}
-/>
-
-
-
-
-                      <button
-                        onClick={() => handleRemoveAdditionalBullet(index, bulletIndex)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                    <div key={bulletIndex} className="mb-2">
+                      <div className="flex items-center space-x-2">
+                        <textarea
+                          value={bullet}
+                          onChange={(e) => handleUpdateAdditionalBullet(index, bulletIndex, e.target.value)}
+                          onFocus={() => {
+                            setCurrentBulletGenerationSection('additionalSections');
+                            setCurrentBulletGenerationIndex(index);
+                            setSelectedBulletOptionIndex(bulletIndex);
+                          }}
+                          onClick={() => {
+                            setCurrentBulletGenerationSection('additionalSections');
+                            setCurrentBulletGenerationIndex(index);
+                            setSelectedBulletOptionIndex(bulletIndex);
+                          }}
+                          placeholder="Describe your achievement or experience"
+                          className="input-base flex-grow resize-y"
+                          rows={2}
+                        />
+                        <button
+                          onClick={() => handleRemoveAdditionalBullet(index, bulletIndex)}
+                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                      {bullet.trim().length > 0 && (
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => handleGenerateAdditionalBullets(index, bulletIndex)}
+                            className="btn-secondary flex items-center space-x-2 text-sm"
+                            disabled={isGeneratingBullets && currentBulletGenerationIndex === index && selectedBulletOptionIndex === bulletIndex}
+                          >
+                            {isGeneratingBullets && currentBulletGenerationIndex === index && selectedBulletOptionIndex === bulletIndex ? (
+                              <RotateCcw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-4 h-4" />
+                            )}
+                            <span>{isGeneratingBullets && currentBulletGenerationIndex === index && selectedBulletOptionIndex === bulletIndex ? 'Generating...' : 'Generate with AI'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAddAdditionalBullet(index)} className="btn-secondary flex items-center space-x-2">
-                      <Plus className="w-5 h-5" />
-                      <span>Add Bullet</span>
-                    </button>
-                    <button
-                      onClick={() => handleGenerateAdditionalBullets(index)}
-                      className="btn-primary flex items-center space-x-2"
-                      disabled={isGeneratingBullets}
-                    >
-                      {isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'additionalSections' ? (
-                        <RotateCcw className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-5 h-5" />
-                      )}
-                      <span>{isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'additionalSections' ? 'Generating...' : 'Generate with AI'}</span>
-                    </button>
-                  </div>
+                  <button onClick={() => handleAddAdditionalBullet(index)} className="btn-secondary flex items-center space-x-2">
+                    <Plus className="w-5 h-5" />
+                    <span>Add Description</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -2496,7 +2458,7 @@ const handleGenerateProjectBullets = async (
       <button
         onClick={onShowAuth}
         className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3
-          bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white shadow-xl hover:shadow-2xl cursor-pointer"
+            bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 hover:from-neon-cyan-400 hover:to-neon-blue-400 text-white shadow-xl hover:shadow-2xl cursor-pointer"
         type="button"
       >
         <User className="w-6 h-6" />
@@ -2557,22 +2519,25 @@ const handleGenerateProjectBullets = async (
 
             {/* Navigation Buttons */}
             <div className="flex justify-between items-center bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
-              <button
-                onClick={handlePreviousSection}
-                disabled={currentSectionIndex === 0}
-                className="btn-secondary flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Previous</span>
-              </button>
-              <button
-                onClick={handleNextSection}
-                // The disabled state will now be handled by the validation inside handleNextSection
-                className="btn-primary flex items-center space-x-2"
-              >
-                <span>Next</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
+              {currentSectionIndex > 0 && ( // Conditionally render Previous button
+                <button
+                  onClick={handlePreviousSection}
+                  className="btn-secondary flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Previous</span>
+                </button>
+              )}
+              {currentSectionIndex < resumeSections.length - 1 && ( // Conditionally render Next button
+                <button
+                  onClick={handleNextSection}
+                  // The disabled state will now be handled by the validation inside handleNextSection
+                  className="btn-primary flex items-center space-x-2"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
