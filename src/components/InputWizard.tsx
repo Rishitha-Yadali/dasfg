@@ -159,29 +159,29 @@ export const InputWizard: React.FC<InputWizardProps> = ({
             {/* Fresher/New Graduate Button */}
             <button
               onClick={() => setUserType('fresher')}
-              className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
+              className={\`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
                 userType === 'fresher'
                   ? 'border-green-500 bg-green-50 shadow-md dark:border-green-600 dark:bg-green-900/20'
                   : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
               }`}
             >
-              <User className={`w-8 h-8 mb-3 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
-              <span className={`font-semibold text-lg mb-2 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Fresher/New Graduate</span>
-              <span className={`text-sm text-gray-500 text-center dark:text-gray-300`}>Recent graduate or entry-level professional</span>
+              <User className={\`w-8 h-8 mb-3 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+              <span className={\`font-semibold text-lg mb-2 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Fresher/New Graduate</span>
+              <span className={\`text-sm text-gray-500 text-center dark:text-gray-300`}>Recent graduate or entry-level professional</span>
             </button>
 
             {/* Experienced Professional Button */}
             <button
               onClick={() => setUserType('experienced')}
-              className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
+              className={\`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all cursor-pointer ${
                 userType === 'experienced'
                   ? 'border-green-500 bg-green-50 shadow-md dark:border-green-600 dark:bg-green-900/20'
                   : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
               }`}
             >
-              <Briefcase className={`w-8 h-8 mb-3 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
-              <span className={`font-semibold text-lg mb-2 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Experienced Professional</span>
-              <span className={`text-sm text-gray-500 text-center dark:text-gray-300`}>Professional with 1+ years of work experience</span>
+              <Briefcase className={\`w-8 h-8 mb-3 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+              <span className={\`font-semibold text-lg mb-2 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Experienced Professional</span>
+              <span className={\`text-sm text-gray-500 text-center dark:text-gray-300`}>Professional with 1+ years of work experience</span>
             </button>
           </div>
         </div>
@@ -406,3 +406,5 @@ export const InputWizard: React.FC<InputWizardProps> = ({
     </div>
   );
 };
+```
+```
