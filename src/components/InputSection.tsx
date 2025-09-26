@@ -1,4 +1,4 @@
-```tsx
+```
 import React from 'react';
 import { FileText, Briefcase, AlertCircle } from 'lucide-react';
 
