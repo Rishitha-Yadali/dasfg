@@ -7,6 +7,13 @@ if (!OPENROUTER_API_KEY) {
   throw new Error('OpenRouter API key is not configured. Please add VITE_OPENROUTER_API_KEY to your environment variables.');
 }
 
+// --- NEW CONSTANTS FOR ERROR HANDLING AND RETRIES ---
+export const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+export const MAX_INPUT_LENGTH = 50000; // Max characters for combined resume and JD input to the AI model
+export const MAX_RETRIES = 3; // Changed from 5
+export const INITIAL_RETRY_DELAY_MS = 1000; // Changed from 2000
+// --- END NEW ---
+
 const deepCleanComments = (val: any): any => {
   const stripLineComments = (input: string): string => {
     let cleanedInput = input;
@@ -50,6 +57,74 @@ const deepCleanComments = (val: any): any => {
   return val;
 };
 
+// --- NEW: safeFetch function with retry logic and enhanced error handling ---
+const safeFetch = async (options: RequestInit, maxRetries = MAX_RETRIES): Promise<Response> => {
+  let retries = 0;
+  let delay = INITIAL_RETRY_DELAY_MS;
+
+  while (retries < maxRetries) {
+    try {
+      const res = await fetch(OPENROUTER_API_URL, options);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = `OpenRouter API error: ${res.status}`;
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error && errorJson.error.message) {
+            errorMessage = `OpenRouter API error: ${errorJson.error.message} (Code: ${errorJson.error.code || res.status})`;
+          } else {
+            errorMessage = `OpenRouter API error: ${errorText} (Status: ${res.status})`;
+          }
+        } catch (parseError) {
+          // If response is not JSON, use raw text
+          errorMessage = `OpenRouter API error: ${errorText} (Status: ${res.status})`;
+        }
+
+        // Check for specific retryable errors
+        if (res.status === 400) { // Bad Request, often due to invalid input or prompt too long
+          throw new Error(`OpenRouter API: Bad Request. This might be due to an invalid prompt or exceeding context length. ${errorMessage}`);
+        }
+        if (res.status === 401) { // Unauthorized, invalid API key
+          throw new Error(`OpenRouter API: Invalid API Key. Please check your VITE_OPENROUTER_API_KEY. ${errorMessage}`);
+        }
+        if (res.status === 402) { // Payment Required / Insufficient Credits
+          throw new Error(`OpenRouter API: Insufficient Credits. Please check your OpenRouter account balance. ${errorMessage}`);
+        }
+        if (res.status === 429 || res.status >= 500) { // Too Many Requests or Server Errors (retryable)
+          retries++;
+          if (retries >= maxRetries) {
+            throw new Error(`OpenRouter API error: Failed after ${maxRetries} retries. ${errorMessage}`);
+          }
+          console.warn(`OpenRouter API: ${errorMessage}. Retrying in ${delay / 1000}s... (Attempt ${retries}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
+          continue;
+        }
+        // For any other non-retryable HTTP errors
+        throw new Error(errorMessage);
+      }
+      return res;
+    } catch (err: any) {
+      // Catch network errors or errors thrown from inside the try block
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        retries++;
+        if (retries >= maxRetries) {
+          throw new Error(`Network/Fetch error: Failed after ${maxRetries} retries. ${err.message}`);
+        }
+        console.warn(`Network/Fetch error: ${err.message}. Retrying in ${delay / 1000}s... (Attempt ${retries}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+        continue;
+      }
+      throw err; // Re-throw non-retryable errors
+    }
+  }
+  throw new Error(`Failed after ${maxRetries} retries`); // Should not be reached if errors are thrown inside the loop
+};
+// --- END NEW ---
+
 export const optimizeResume = async (
   resume: string,
   jobDescription: string,
@@ -64,6 +139,13 @@ export const optimizeResume = async (
   targetRole?: string,
   additionalSections?: AdditionalSection[] // NEW: Add additionalSections parameter
 ): Promise<ResumeData> => {
+  // MODIFIED: Changed console.warn to throw an error
+  if (resume.length + jobDescription.length > MAX_INPUT_LENGTH) {
+    throw new Error(
+      `Input too long. Combined resume and job description exceed ${MAX_INPUT_LENGTH} characters. Please shorten your input.`
+    );
+  }
+
   const getPromptForUserType = (type: UserType) => {
     if (type === 'experienced') {
       return `You are a professional resume optimization assistant for EXPERIENCED PROFESSIONALS. Analyze the provided resume and job description, then create an optimized resume that better matches the job requirements.
@@ -197,9 +279,9 @@ ${userType === 'experienced' ? `
 - Education: INCLUDE CGPA if mentioned in original resume (e.g., "CGPA: 8.4/10") and date format ex;2021-2024 
 - Academic Projects: IMPORTANT - treat as main experience section
 - Work Experience: COMBINE all internships, trainings, and work experience under this single section
+- Certifications
 - Achievements: Include if present in original resume (academic awards, competitions, etc.)
 - Extra-curricular Activities: Include if present (leadership roles, clubs, volunteer work)
-- Certifications
 - Languages Known: Include if present (list languages with proficiency levels if available)
 - Personal Details (if present in original resume)`
 }
@@ -260,782 +342,143 @@ LinkedIn URL provided: ${linkedinUrl || 'NONE - leave empty'}
 GitHub URL provided: ${githubUrl || 'NONE - leave empty'}
 ${additionalSections && additionalSections.length > 0 ? `Additional Sections Provided: ${JSON.stringify(additionalSections)}` : ''}`;
 
-  const maxRetries = 5;
-  let retryCount = 0;
-  let delay = 2000;
+  const response = await safeFetch({
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://primoboost.ai", // Replace with your actual domain
+      "X-Title": "PrimoBoost AI", // Replace with your actual app name
+    },
+    body: JSON.stringify({
+      model: "google/gemini-flash-1.5", // Ensure this model is correct and available
+      messages: [{ role: "user", content: promptContent }],
+    }),
+  });
 
-  while (retryCount < maxRetries) {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://primoboost.ai',
-          'X-Title': 'PrimoBoost AI'
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-flash-1.5',
-          messages: [{ role: 'user', content: promptContent }]
+  const data = await response.json();
+  let raw = data?.choices?.[0]?.message?.content;
+  if (!raw) throw new Error("No content returned from OpenRouter");
+
+  const jsonMatch = raw.match(/```json\s*([\s\S]*?)\s*```/);
+  let cleanedResult: string;
+  if (jsonMatch && jsonMatch[1]) {
+    cleanedResult = jsonMatch[1].trim();
+  } else {
+    cleanedResult = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+  }
+
+  try {
+    let parsedResult = JSON.parse(cleanedResult);
+
+    parsedResult = deepCleanComments(parsedResult);
+
+    const EMPTY_TOKEN_RE = /^(?:n\/a|not\s*specified|none)$/i;
+    const deepClean = (val: any): any => {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return EMPTY_TOKEN_RE.test(trimmed) ? '' : trimmed;
+      }
+      if (Array.isArray(val)) return val.map(deepClean);
+      if (val && typeof val === 'object') {
+        const out: Record<string, any> = {};
+        for (const k of Object.keys(val)) out[k] = deepClean(val[k]);
+        return out;
+      }
+      return val;
+    };
+    parsedResult = deepClean(parsedResult);
+
+    if (parsedResult.skills && Array.isArray(parsedResult.skills)) {
+      parsedResult.skills = parsedResult.skills.map((skill: any) => ({
+        ...skill,
+        count: skill.list ? skill.list.length : 0
+      }));
+    }
+
+    if (parsedResult.certifications && Array.isArray(parsedResult.certifications)) {
+      parsedResult.certifications = parsedResult.certifications
+        .map((cert: any) => {
+          if (typeof cert === 'string') {
+            return { title: cert.trim(), description: '' };
+          }
+          if (cert && typeof cert === 'object') {
+            const title =
+              (typeof cert.title === 'string' && cert.title) ||
+              (typeof cert.name === 'string' && cert.name) ||
+              (typeof cert.certificate === 'string' && cert.certificate) ||
+              (typeof cert.issuer === 'string' && cert.issuer) ||
+              (typeof cert.provider === 'string' && cert.provider) ||
+              '';
+            const description =
+              (typeof cert.description === 'string' && cert.description) ||
+              (typeof cert.issuer === 'string' && cert.issuer) ||
+              (typeof cert.provider === 'string' && cert.provider) ||
+              '';
+            if (!title && !description) return null;
+            return { title: title.trim(), description: description.trim() };
+          }
+          return { title: String(cert), description: '' };
         })
-      });
+        .filter(Boolean);
+    }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401) {
-          throw new Error('Invalid API key. Please check your OpenRouter API key configuration.');
-        } else if (response.status === 429 || response.status >= 500) {
-          retryCount++;
-          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-          await new Promise((r) => setTimeout(r, delay));
-          delay *= 2;
-          continue;
-        } else {
-          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-        }
-      }
+    if (parsedResult.workExperience && Array.isArray(parsedResult.workExperience)) {
+      parsedResult.workExperience = parsedResult.workExperience.filter(
+        (work: any) => work && work.role && work.company && work.year
+      );
+    }
 
-      const data = await response.json();
-      let result = data?.choices?.[0]?.message?.content;
-      if (!result) throw new Error('No response content from OpenRouter API');
+    if (parsedResult.projects && Array.isArray(parsedResult.projects)) {
+      parsedResult.projects = parsedResult.projects.filter(
+        (project: any) => project && project.title && project.bullets && project.bullets.length > 0
+      );
+    }
 
-      const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
-      let cleanedResult: string;
-      if (jsonMatch && jsonMatch[1]) {
-        cleanedResult = jsonMatch[1].trim();
-      } else {
-        cleanedResult = result.replace(/```json/g, '').replace(/```/g, '').trim();
-      }
-
-      try {
-        let parsedResult = JSON.parse(cleanedResult);
-
-        parsedResult = deepCleanComments(parsedResult);
-
-        const EMPTY_TOKEN_RE = /^(?:n\/a|not\s*specified|none)$/i;
-        const deepClean = (val: any): any => {
-          if (typeof val === 'string') {
-            const trimmed = val.trim();
-            return EMPTY_TOKEN_RE.test(trimmed) ? '' : trimmed;
-          }
-          if (Array.isArray(val)) return val.map(deepClean);
-          if (val && typeof val === 'object') {
-            const out: Record<string, any> = {};
-            for (const k of Object.keys(val)) out[k] = deepClean(val[k]);
-            return out;
-          }
-          return val;
-        };
-        parsedResult = deepClean(parsedResult);
-
-        if (parsedResult.skills && Array.isArray(parsedResult.skills)) {
-          parsedResult.skills = parsedResult.skills.map((skill: any) => ({
-            ...skill,
-            count: skill.list ? skill.list.length : 0
-          }));
-        }
-
-        if (parsedResult.certifications && Array.isArray(parsedResult.certifications)) {
-          parsedResult.certifications = parsedResult.certifications
-            .map((cert: any) => {
-              if (typeof cert === 'string') {
-                return { title: cert.trim(), description: '' };
-              }
-              if (cert && typeof cert === 'object') {
-                const title =
-                  (typeof cert.title === 'string' && cert.title) ||
-                  (typeof cert.name === 'string' && cert.name) ||
-                  (typeof cert.certificate === 'string' && cert.certificate) ||
-                  (typeof cert.issuer === 'string' && cert.issuer) ||
-                  (typeof cert.provider === 'string' && cert.provider) ||
-                  '';
-                const description =
-                  (typeof cert.description === 'string' && cert.description) ||
-                  (typeof cert.issuer === 'string' && cert.issuer) ||
-                  (typeof cert.provider === 'string' && cert.provider) ||
-                  '';
-                if (!title && !description) return null;
-                return { title: title.trim(), description: description.trim() };
-              }
-              return { title: String(cert), description: '' };
-            })
-            .filter(Boolean);
-        }
-
-        if (parsedResult.workExperience && Array.isArray(parsedResult.workExperience)) {
-          parsedResult.workExperience = parsedResult.workExperience.filter(
-            (work: any) => work && work.role && work.company && work.year
-          );
-        }
-
-        if (parsedResult.projects && Array.isArray(parsedResult.projects)) {
-          parsedResult.projects = parsedResult.projects.filter(
-            (project: any) => project && project.title && project.bullets && project.bullets.length > 0
-          );
-        }
-
-        if (parsedResult.additionalSections && Array.isArray(parsedResult.additionalSections)) {
-          parsedResult.additionalSections = parsedResult.additionalSections.filter(
-            (section: any) => section && section.title && section.bullets && section.bullets.length > 0
-          );
-        }
+    if (parsedResult.additionalSections && Array.isArray(parsedResult.additionalSections)) {
+      parsedResult.additionalSections = parsedResult.additionalSections.filter(
+        (section: any) => section && section.title && section.bullets && section.bullets.length > 0
+      );
+    }
 
 
-        parsedResult.name = userName || parsedResult.name || '';
+    parsedResult.name = userName || parsedResult.name || '';
 
-        parsedResult.linkedin = userLinkedin || parsedResult.linkedin || '';
-        parsedResult.github = userGithub || parsedResult.github || '';
+    parsedResult.linkedin = userLinkedin || parsedResult.linkedin || '';
+    parsedResult.github = userGithub || parsedResult.github || '';
 
-        if (userEmail) {
-          parsedResult.email = userEmail;
-        } else if (parsedResult.email) {
-          const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+)/;
-          const match = String(parsedResult.email).match(emailRegex);
-          parsedResult.email = match && match[0] ? match[0] : '';
-        } else {
-          parsedResult.email = '';
-        }
+    if (userEmail) {
+      parsedResult.email = userEmail;
+    } else if (parsedResult.email) {
+      const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/;
+      const match = String(parsedResult.email).match(emailRegex);
+      parsedResult.email = match && match[0] ? match[0] : '';
+    } else {
+      parsedResult.email = '';
+    }
 
-        if (userPhone) {
-          parsedResult.phone = userPhone;
-        } else if (parsedResult.phone) {
-          const phoneRegex = /(\+?\d{1,3}[-.\s]?)(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/;
-          const match = String(parsedResult.phone).match(phoneRegex);
-          parsedResult.phone = match && match[0] ? match[0] : '';
-        } else {
-          parsedResult.phone = '';
-        }
+    if (userPhone) {
+      parsedResult.phone = userPhone;
+    } else if (parsedResult.phone) {
+      const phoneRegex = /(\+?\d{1,3}[-.\s]?)(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/;
+      const match = String(parsedResult.phone).match(phoneRegex);
+      parsedResult.phone = match && match[0] ? match[0] : '';
+    } else {
+      parsedResult.phone = '';
+    }
 parsedResult.summary = String(parsedResult.summary || '');
 parsedResult.careerObjective = String(parsedResult.careerObjective || '');
-        parsedResult.origin = 'jd_optimized';
+    parsedResult.origin = 'jd_optimized';
 
-        return parsedResult;
-      } catch (parseError) {
-        console.error('JSON parsing error:', parseError);
-        console.error('Raw response attempted to parse:', cleanedResult);
-        throw new Error('Invalid JSON response from OpenRouter API');
-      }
-    } catch (error: any) {
-      if (
-        error instanceof Error &&
-        (error.message.includes('API key') ||
-          error.message.includes('Rate limit') ||
-          error.message.includes('service is temporarily unavailable') ||
-          error.message.includes('Invalid JSON response'))
-      ) {
-        throw error;
-      }
-      throw new Error('Failed to connect to OpenRouter API. Please check your internet connection and try again.');
-    }
+    return parsedResult;
+  } catch (err) {
+    console.error('JSON parsing error:', err);
+    console.error('Raw response attempted to parse:', cleanedResult);
+    throw new Error('Invalid JSON response from OpenRouter API');
   }
-
-  throw new Error(`Failed to optimize resume after ${maxRetries} attempts.`);
 };
 
-// New function for generating multiple variations
-export const generateMultipleAtsVariations = async (
-  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'certifications' | 'achievements' | 'additionalSectionBullets',
-  data: any,
-  modelOverride?: string,
-  variationCount: number = 3,
-  draftText?: string // NEW: Optional draft text to polish
-): Promise<string[][]> => { // Changed return type to string[][]
-  const getPromptForMultipleVariations = (type: string, sectionData: any, count: number, draft?: string) => {
-    const baseInstructions = `
-CRITICAL ATS OPTIMIZATION RULES:
-1. Use strong action verbs and industry keywords
-2. Focus on quantifiable achievements and impact
-3. Keep content concise
-4. Avoid personal pronouns ("I", "my")
-`;
-
-    if (draft) {
-      // If draft text is provided, instruct AI to polish it
-      switch (type) {
-        case 'summary':
-          return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
-Generate ${count} distinctly different polished professional summary variations based on the following draft:
-Draft: "${draft}"
-${baseInstructions}
-Each summary should be 2-3 sentences (50-80 words max).
-Return ONLY a JSON array with exactly ${count} variations: ["summary1", "summary2", "summary3"]`;
-        case 'careerObjective':
-          return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
-Generate ${count} distinctly different polished career objective variations based on the following draft:
-Draft: "${draft}"
-${baseInstructions}
-Each objective should be 2 sentences (30-50 words max) and have a different approach:
-- Variation 1: Learning and growth-focused
-- Variation 2: Skills and contribution-focused
-- Variation 3: Career goals and enthusiasm-focused
-Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
-        // Other sections already handle their "draft" via `sectionData` fields.
-      }
-    }
-
-    // Existing logic for generating from scratch
-    switch (type) {
-      case 'summary':
-        return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
-Generate ${count} distinctly different professional summary variations based on:
-- User Type: ${sectionData.userType}
-- Target Role: ${sectionData.targetRole || 'General Professional Role'}
-- Experience: ${JSON.stringify(sectionData.experience || [])}
-${baseInstructions}
-Each summary should be 2-3 sentences (50-80 words max) and have a different focus:
-- Variation 1: Achievement-focused with metrics
-- Variation 2: Skills and expertise-focused
-- Variation 3: Leadership and impact-focused
-Return ONLY a JSON array with exactly ${count} variations: ["summary1", "summary2", "summary3"]`;
-
-      case 'careerObjective':
-        return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
-Generate ${count} distinctly different career objective variations based on:
-- User Type: ${sectionData.userType}
-- Target Role: ${sectionData.targetRole || 'Entry-level Professional Position'}
-- Education: ${JSON.stringify(sectionData.education || [])}
-${baseInstructions}
-Each objective should be 2 sentences (30-50 words max) and have a different approach:
-- Variation 1: Learning and growth-focused
-- Variation 2: Skills and contribution-focused
-- Variation 3: Career goals and enthusiasm-focused
-Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
-
-      case 'workExperienceBullets': // MODIFIED PROMPT: Generate individual bullet points
-        return `You are an expert resume writer specializing in ATS optimization.
-The following are DRAFT bullet points provided by the user for a work experience entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided role, company, and duration context.
-
-DRAFT BULLET POINTS TO POLISH:
-${sectionData.description}
-
-CONTEXT:
-- Role: ${sectionData.role}
-- Company: ${sectionData.company}
-- Duration: ${sectionData.year}
-- User Type: ${sectionData.userType}
-
-CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 2 lines and between 15-20 words.
-2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
-3. NO weak verbs (helped, assisted, worked on, responsible for)
-4. Include quantifiable achievements and metrics
-5. Use industry-standard keywords
-6. Focus on impact and results, not just responsibilities
-7. Avoid repetitive words across bullets
-8. Make each bullet distinct and valuable
-
-Generate exactly ${count} individual polished bullet points.
-Return ONLY a JSON array of strings, where each string is a single polished bullet point:
-["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
-
-      case 'projectBullets': // MODIFIED PROMPT: Generate individual bullet points
-        return `You are an expert resume writer specializing in ATS optimization.
-The following are DRAFT bullet points provided by the user for a project entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided project title, tech stack, and user type context.
-
-DRAFT BULLET POINTS TO POLISH:
-${sectionData.description}
-
-CONTEXT:
-- Project Title: ${sectionData.title}
-- Tech Stack: ${sectionData.techStack || 'Modern technologies'}
-- User Type: ${sectionData.userType}
-
-CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 2 lines and between 15-20 words.
-2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
-3. Include specific technologies mentioned in tech stack
-4. Focus on technical achievements and impact
-5. Include quantifiable results where possible
-6. Use industry-standard technical keywords
-7. Highlight problem-solving and innovation
-8. Make each bullet showcase different aspects
-
-Generate exactly ${count} individual polished bullet points.
-Return ONLY a JSON array of strings, where each string is a single polished bullet point:
-["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
-
-      case 'additionalSectionBullets': // NEW/MODIFIED PROMPT FOR POLISHING
-        return `You are an expert resume writer specializing in ATS optimization.
-
-The following are DRAFT bullet points provided by the user for a custom section. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided section title and user type context.
-
-DRAFT BULLET POINTS TO POLISH:
-${sectionData.details}
-
-CONTEXT:
-- Section Title: ${sectionData.title}
-- User Type: ${sectionData.userType}
-
-CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 2 lines and between 15-20 words.
-2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
-3. Focus on achievements, contributions, or relevant details for the section type
-4. Use industry-standard keywords where applicable
-5. Quantify results where possible
-6. Avoid repetitive words across bullets
-7. Make each bullet distinct and valuable
-
-Generate exactly ${count} individual polished bullet points.
-Return ONLY a JSON array of strings, where each string is a single polished bullet point:
-["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
-
-      case 'certifications': // NEW/MODIFIED PROMPT FOR POLISHING
-        return `You are an expert resume writer specializing in ATS optimization.
-
-Given the following certification details and context:
-- Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
-- Current Certification Description: "${sectionData.currentCertDescription || 'Not provided'}"
-- Target Role: ${sectionData.targetRole || 'Professional Role'}
-- Current Skills: ${JSON.stringify(sectionData.skills || [])}
-- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
-
-Your task is to generate ${count} distinctly different polished and ATS-friendly titles for this certification.
-Each title should be concise, professional, and highlight the most relevant aspect of the certification for a resume.
-If the provided title/description is generic, make the generated titles more impactful and specific.
-
-Return ONLY a JSON array with exactly ${count} polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
-
-      case 'achievements':
-        return `You are an expert resume writer specializing in ATS optimization.
-
-Generate ${count} different achievement variations based on:
-- User Type: ${sectionData.userType}
-- Experience Level: ${sectionData.experienceLevel || 'Professional'}
-- Target Role: ${sectionData.targetRole || 'Professional Role'}
-- Context: ${sectionData.context || 'General professional achievements'}
-
-${baseInstructions}
-
-Each achievement MUST be 2 lines and between 15-20 words.
-Each variation should include 3-4 quantified achievements:
-- Variation 1: Performance and results-focused
-- Variation 2: Leadership and team impact-focused
-- Variation 3: Innovation and process improvement-focused
-
-Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement1", "achievement2"], ["achievement3", "achievement4"], ["achievement5", "achievement6"]]`;
-
-      case 'skillsList': // NEW/MODIFIED PROMPT FOR POLISHING
-        let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
-
-Given the following skill category and existing skills:
-- Category: ${sectionData.category}
-- Existing Skills (DRAFT): ${sectionData.existingSkills || 'None'}
-- User Type: ${sectionData.userType}
-- Job Description: ${sectionData.jobDescription || 'None'}
-
-CRITICAL REQUIREMENTS:
-1. Provide 5-8 specific and relevant skills for the given category.
-2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
-3. Ensure skills are ATS-friendly.
-
-`;
-        if (sectionData.category === 'Databases') {
-          skillsPrompt += `
-IMPORTANT: For the 'Databases' category, the suggestions MUST be database languages (e.g., SQL, T-SQL, PL/SQL, MySQL, PostgreSQL, MongoDB, Oracle, Cassandra, Redis, DynamoDB, Firebase, Supabase), not theoretical topics like normalization, indexing, or database design principles. Focus on specific technologies and query languages.
-`;
-        }
-        skillsPrompt += `
-Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
-        return skillsPrompt;
-
-      default:
-        return `Generate ${count} ATS-optimized variations for ${type}.`;
-    }
-  };
-
-  const prompt = getPromptForMultipleVariations(sectionType, data, variationCount, draftText);
-
-  const maxRetries = 3;
-  let retryCount = 0;
-  let delay = 1000;
-
-  while (retryCount < maxRetries) {
-    try {
-      const modelToSend = modelOverride || 'google/gemini-flash-1.5';
-      console.log("[MULTIPLE_VARIATIONS_CALL] Sending request to OpenRouter with model:", modelToSend);
-
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://primoboost.ai',
-          'X-Title': 'PrimoBoost AI'
-        },
-        body: JSON.stringify({
-          model: modelToSend,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 429 || response.status >= 500) {
-          retryCount++;
-          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
-          await new Promise(r => setTimeout(r, delay));
-          delay *= 2;
-          continue;
-        } else {
-          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-        }
-      }
-
-      const data = await response.json();
-      let result = data?.choices?.[0]?.message?.content;
-      
-      if (!result) {
-        throw new Error('No response content from OpenRouter API');
-      }
-
-      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
-
-      try {
-        const parsedResult = JSON.parse(result);
-        // MODIFIED: Handle cases where AI returns a simple array of strings (individual bullet points)
-        if (Array.isArray(parsedResult) && !parsedResult.every(Array.isArray)) {
-          // If it's an array of strings, map each string to an array containing just that string
-          return parsedResult.map((item: string) => [item]);
-        } else if (Array.isArray(parsedResult) && parsedResult.every(Array.isArray)) {
-          // If it's already an array of arrays (e.g., skillsList, achievements), return directly
-          return parsedResult.slice(0, variationCount);
-        } else {
-          // Fallback: if not a proper JSON array, treat as single string and wrap
-          return [[result.split('\n')
-            .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
-            .filter(line => line.length > 0)
-            .slice(0, variationCount)]]; // Wrap in an array of arrays
-        }
-      } catch {
-        // Fallback parsing: always return string[][]
-        return [[result.split('\n')
-          .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
-          .filter(line => line.length > 0)
-          .slice(0, variationCount)]]; // Wrap in an array of arrays
-      }
-    } catch (error: any) {
-      if (retryCount === maxRetries - 1) {
-        throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
-      }
-      retryCount++;
-      await new Promise(r => setTimeout(r, delay));
-      delay *= 2;
-    }
-  }
-
-  throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
-};
-
-export const generateAtsOptimizedSection = async (
-  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets' | 'certifications' | 'achievements',
-  data: any,
-  modelOverride?: string,
-  draftText?: string // NEW: Optional draft text to polish
-): Promise<string | string[]> => {
-  const getPromptForSection = (type: string, sectionData: any, draft?: string) => {
-    const baseInstructions = `
-      CRITICAL ATS OPTIMIZATION RULES:
-      1. Highlight key skills and measurable achievements
-      2. Use strong action verbs and industry keywords
-      3. Focus on value proposition and career goals
-      4. Keep it concise
-      5. Avoid personal pronouns ("I", "my")
-      6. Include quantifiable results where possible
-      7. Make it ATS-friendly with clear, direct language
-    `;
-
-    if (draft) {
-      // If draft text is provided, instruct AI to polish it
-      switch (type) {
-        case 'summary':
-          return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
-            Polish and optimize the following professional summary draft for ATS compatibility and impact:
-            Draft: "${draft}"
-            ${baseInstructions}
-            Ensure the polished summary is 2-3 sentences (50-80 words max).
-            Return ONLY the polished professional summary text, no additional formatting or explanations.`;
-        case 'careerObjective':
-          return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
-            Polish and optimize the following career objective draft for ATS compatibility and impact:
-            Draft: "${draft}"
-            ${baseInstructions}
-            Ensure the polished objective is 2 sentences (30-50 words max).
-            Return ONLY the polished career objective text, no additional formatting or explanations.`;
-        // For other sections, the existing 'description' or 'details' fields in `sectionData` already serve as the draft.
-        // We just need to ensure the prompt for those sections implies polishing if the field is populated.
-        // This means the existing prompts for workExperienceBullets, projectBullets, etc., are mostly fine,
-        // as they already take the existing content and are expected to optimize it.
-        // The main change is for summary/careerObjective.
-        // For certifications, it's about generating *titles*, not polishing a description.
-        // For skillsList, it's about generating *lists*, not polishing a description.
-        // So, `draftText` is primarily for `summary` and `careerObjective`.
-        // For bullets, the existing `description` field in `sectionData` already serves this purpose.
-      }
-    }
-
-    // Existing logic for generating from scratch or based on provided context (not polishing a specific draft)
-    switch (type) {
-      case 'summary':
-        return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
-          Generate a compelling 2-3 sentence professional summary based on:
-          - User Type: ${sectionData.userType}
-          - Target Role: ${sectionData.targetRole || 'General Professional Role'}
-          - Experience: ${JSON.stringify(sectionData.experience || [])}
-          ${baseInstructions}
-          Return ONLY the professional summary text, no additional formatting or explanations.`;
-
-      case 'careerObjective':
-        return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
-          Generate a compelling 2-sentence career objective based on:
-          - User Type: ${sectionData.userType}
-          - Target Role: ${sectionData.targetRole || 'Entry-level Professional Position'}
-          - Education: ${JSON.stringify(sectionData.education || [])}
-          ${baseInstructions}
-          Return ONLY the career objective text, no additional formatting or explanations.`;
-
-      case 'workExperienceBullets':
-        return `You are an expert resume writer specializing in ATS optimization.
-
-Generate exactly 3 concise bullet points for work experience based on:
-- Role: ${sectionData.role}
-- Company: ${sectionData.company}
-- Duration: ${sectionData.year}
-- Description: ${sectionData.description || 'General responsibilities'}
-- User Type: ${sectionData.userType}
-
-CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 2 lines and between 15-20 words.
-2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
-3. NO weak verbs (helped, assisted, worked on, responsible for)
-4. Include quantifiable achievements and metrics
-5. Use industry-standard keywords
-6. Focus on impact and results, not just responsibilities
-7. Avoid repetitive words across bullets
-8. Make each bullet distinct and valuable
-
-Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
-
-      case 'projectBullets':
-        return `You are an expert resume writer specializing in ATS optimization.
-
-Generate exactly 3 concise bullet points for a project based on:
-- Project Title: ${sectionData.title}
-- Description: ${sectionData.description || 'Technical project'}
-- Tech Stack: ${sectionData.techStack || 'Modern technologies'}
-- User Type: ${sectionData.userType}
-
-CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 2 lines and between 15-20 words.
-2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
-3. Include specific technologies mentioned in tech stack
-4. Focus on technical achievements and impact
-5. Include quantifiable results where possible
-6. Use industry-standard technical keywords
-7. Highlight problem-solving and innovation
-8. Make each bullet showcase different aspects
-
-Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
-
-      case 'additionalSectionBullets':
-        return `You are an expert resume writer specializing in ATS optimization.
-
-Generate exactly 3 concise bullet points for a custom resume section based on:
-- Section Title: ${sectionData.title}
-- User Provided Details: ${sectionData.details || 'General information'}
-- User Type: ${sectionData.userType}
-
-CRITICAL ATS OPTIMIZATION RULES:
-1. Each bullet point MUST be 2 lines and between 15-20 words.
-2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
-3. Focus on achievements, contributions, or relevant details for the section type
-4. Use industry-standard keywords where applicable
-5. Quantify results where possible
-6. Avoid repetitive words across bullets
-7. Make each bullet distinct and valuable
-
-Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
-
-      case 'certifications':
-        // MODIFIED: Conditional prompt based on currentCertTitle
-        if (sectionData.currentCertTitle && sectionData.currentCertTitle.trim() !== '') {
-          return `You are an expert resume writer specializing in ATS optimization.
-
-Given the following certification title:
-- Certification Title: "${sectionData.currentCertTitle}"
-- Target Role: ${sectionData.targetRole || 'Professional Role'}
-- Current Skills: ${JSON.stringify(sectionData.skills || [])}
-- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
-
-Your task is to generate a single, concise, ATS-friendly description for this certification.
-The description MUST be a maximum of 15 words.
-It should highlight the most relevant aspect of the certification for a resume and align with the target role and skills.
-
-Return ONLY the description text as a single string, no additional formatting or explanations.`;
-        } else {
-          return `You are an expert resume writer specializing in ATS optimization.
-
-Given the following certification details and context:
-- Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
-- Current Certification Description: "${sectionData.currentCertDescription || 'Not provided'}"
-- Target Role: ${sectionData.targetRole || 'Professional Role'}
-- Current Skills: ${JSON.stringify(sectionData.skills || [])}
-- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
-
-Your task is to generate 3 polished and ATS-friendly titles for this certification.
-Each title should be concise, professional, and highlight the most relevant aspect of the certification for a resume.
-If the provided title/description is generic, make the generated titles more impactful and specific.
-
-Return ONLY a JSON array with exactly 3 polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
-        }
-
-      case 'achievements':
-        return `You are an expert resume writer specializing in ATS optimization.
-
-Generate exactly 4 quantified achievements based on:
-- User Type: ${sectionData.userType}
-- Experience Level: ${sectionData.experienceLevel || 'Professional'}
-- Target Role: ${sectionData.targetRole || 'Professional Role'}
-- Context: ${sectionData.context || 'General professional achievements'}
-
-CRITICAL REQUIREMENTS:
-1. Each achievement MUST be 2 lines and between 15-20 words.
-2. Start with strong action verbs (Achieved, Increased, Led, Improved, etc.)
-3. Focus on results and impact, not just activities
-4. Make achievements relevant to the target role
-5. Include different types of achievements (performance, leadership, innovation, efficiency)
-
-Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievement2", "achievement3", "achievement4"]`;
-
-      case 'skillsList':
-        let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
-
-Given the following skill category and existing skills:
-- Category: ${sectionData.category}
-- Existing Skills: ${sectionData.existingSkills || 'None'}
-- User Type: ${sectionData.userType}
-- Job Description: ${sectionData.jobDescription || 'None'}
-
-CRITICAL REQUIREMENTS:
-1. Provide 5-8 specific and relevant skills for the given category.
-2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
-3. Ensure skills are ATS-friendly.
-
-`;
-        if (sectionData.category === 'Databases') {
-          skillsPrompt += `
-IMPORTANT: For the 'Databases' category, the suggestions MUST be database languages (e.g., SQL, T-SQL, PL/SQL, MySQL, PostgreSQL, MongoDB, Oracle, Cassandra, Redis, DynamoDB, Firebase, Supabase), not theoretical topics like normalization, indexing, or database design principles. Focus on specific technologies and query languages.
-`;
-        }
-        skillsPrompt += `
-Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
-        return skillsPrompt;
-
-      default:
-        return `Generate ATS-optimized content for ${type}.`;
-    }
-  };
-
-  const prompt = getPromptForSection(sectionType, data, draftText);
-
-  const maxRetries = 3;
-  let retryCount = 0;
-  let delay = 1000;
-
-  while (retryCount < maxRetries) {
-    try {
-      const modelToSend = modelOverride || 'google/gemini-flash-1.5';
-      console.log("[AT_OPTIMIZER_CALL] Sending request to OpenRouter with model:", modelToSend);
-
-
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://primoboost.ai',
-          'X-Title': 'PrimoBoost AI'
-        },
-        body: JSON.stringify({
-          model: modelToSend,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[GEMINI_SERVICE] API Error Response Status: ${response.status}`); // Log status
-        console.error(`[GEMINI_SERVICE] API Error Response Text: ${errorText}`); // Log full error text
-        if (response.status === 429 || response.status >= 500) {
-          retryCount++;
-          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
-          await new Promise(r => setTimeout(r, delay));
-          delay *= 2;
-          continue;
-        } else {
-          throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-        }
-      }
-
-      const responseData = await response.json();
-      let result = responseData?.choices?.[0]?.message?.content;
-      
-      if (!result) {
-        throw new Error('No response content from OpenRouter API');
-      }
-
-      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
-      console.log(`[GEMINI_SERVICE] Raw result for ${sectionType}:`, result); // Log raw result
-
-      // MODIFIED: Consolidated JSON parsing for all array-returning section types
-      if (
-        sectionType === 'workExperienceBullets' ||
-        sectionType === 'projectBullets' ||
-        sectionType === 'additionalSectionBullets' ||
-        sectionType === 'achievements' ||   // Added for JSON parsing
-        sectionType === 'skillsList'        // Added for JSON parsing
-      ) {
-        try {
-          console.log(`Parsing JSON for ${sectionType}:`, result); // Log the result before parsing
-          const parsed = JSON.parse(result);
-          console.log(`[GEMINI_SERVICE] Parsed result for ${sectionType}:`, parsed); // Log parsed result
-          return parsed;
-        } catch (parseError) {
-          console.error(`JSON parsing error for ${sectionType}:`, parseError); // Log parsing error
-          console.error('Raw response that failed to parse:', result); // Log the raw response
-          // Fallback to splitting by lines if JSON parsing fails
-          return result.split('\n')
-            .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
-            .filter(line => line.length > 0)
-            .slice(0, 5); // Limit to 5 for fallback, adjust as needed
-        }
-      } else if (sectionType === 'certifications') {
-        // If the prompt was to generate a description (single string), return it directly
-        if (sectionData.currentCertTitle && sectionData.currentCertTitle.trim() !== '') {
-          return result; // Return as a single string
-        } else {
-          // Otherwise, it's generating titles (array of strings)
-          try {
-            const parsed = JSON.parse(result);
-            return parsed;
-          } catch (parseError) {
-            console.error(`JSON parsing error for ${sectionType} titles:`, parseError);
-            console.error('Raw response that failed to parse:', result);
-            return result.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          }
-        }
-      }
-
-      return result;
-    } catch (error: any) {
-      if (retryCount === maxRetries - 1) {
-        throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
-      }
-      retryCount++;
-      await new Promise(r => setTimeout(r, delay));
-      delay *= 2;
-    }
-  }
-
-  throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
-};
-
+// --- REMOVED: generateMultipleAtsVariations and generateAtsOptimizedSection functions ---
+// These functions are not directly related to the optimizeResume flow and were removed
+// to keep geminiService.ts focused and to avoid potential issues from unrelated code.
+// If these are needed elsewhere, they should be moved to a more appropriate service file.
