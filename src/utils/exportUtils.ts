@@ -283,17 +283,22 @@ function drawWorkExperience(state: PageState, workExperience: any[], userType: U
     const combinedTitle = `${job.role} | ${job.company}${isValidField(job.location) ? `, ${job.location}` : ''}`;
 
     const yearText = job.year;
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Changed to normal
-    state.doc.setFontSize(PDF_CONFIG.fonts.year.size);
-    const yearWidth = state.doc.getTextWidth(yearText);
-    const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
-    const yearY = initialYForJob + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
+    
+    // MODIFIED: Added isValidField check for job.year
+    if (isValidField(yearText)) {
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Changed to normal
+      state.doc.setFontSize(PDF_CONFIG.fonts.year.size);
+      const yearWidth = state.doc.getTextWidth(yearText);
+      const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
+      const yearY = initialYForJob + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
+      state.doc.text(yearText, yearX, yearY);
+    }
 
     drawText(state, combinedTitle, PDF_CONFIG.margins.left, PDF_CONFIG, {
       fontSize: PDF_CONFIG.fonts.jobTitle.size,
       fontWeight: 'bold', // Changed to bold
-      maxWidth: PDF_CONFIG.contentWidth - yearWidth - 5
+      maxWidth: PDF_CONFIG.contentWidth - (isValidField(yearText) ? state.doc.getTextWidth(yearText) : 0) - 5 // Adjust maxWidth if year is present
     });
 
     state.currentY += PDF_CONFIG.spacing.bulletListSpacing;
@@ -605,7 +610,7 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
         drawCertifications(state, resumeData.certifications, PDF_CONFIG);
         drawAchievementsAndExtras(state, resumeData, PDF_CONFIG);
     } else { // Fresher
-        drawEducation(state, resumeData.education, userType, PDF_CONFIG);
+        drawEducation(state, resumeData.education, PDF_CONFIG);
         drawWorkExperience(state, resumeData.workExperience, userType, PDF_CONFIG);
         drawProjects(state, resumeData.projects, PDF_CONFIG);
         drawSkills(state, resumeData.skills, PDF_CONFIG);
