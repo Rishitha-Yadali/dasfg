@@ -651,9 +651,9 @@ const asText = (v: any): string => {
       subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      submessage = "We're updating your resume with the new sections you provided.";
+      subMessage = "We're updating your resume with the new sections you provided.";
     }
-    return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
+    return <LoadingAnimation message={loadingMessage} submessage={subMessage} />;
   }
 
   // --- NEW: Navigation Handlers ---
@@ -2144,8 +2144,8 @@ const handleGenerateProjectBullets = async (
                     {isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'certifications' ? (
                       <RotateCcw className="w-5 h-5 animate-spin" />
                     ) : (
-                      <Sparkles className="w-5 h-5" />
-                    )}
+                        <Sparkles className="w-5 h-5" />
+                      )}
                     <span>{isGeneratingBullets && currentBulletGenerationIndex === index && currentBulletGenerationSection === 'certifications' ? 'Generating...' : 'Generate with AI'}</span>
                   </button>
                 </div>
@@ -2801,7 +2801,7 @@ const handleGenerateProjectBullets = async (
       {/* AI Bullet Options Modal */}
       {showAIBulletOptions && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-dark-100 dark:text-gray-100">
             <div className="p-6">
               <div className="text-center mb-6">
                 <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -2883,7 +2883,7 @@ const handleGenerateProjectBullets = async (
       {/* AI Options Modal for Objective/Summary */}
       {showAIOptionsModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-dark-100 dark:text-gray-100">
             <div className="p-6">
               <div className="text-center mb-6">
                 <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
