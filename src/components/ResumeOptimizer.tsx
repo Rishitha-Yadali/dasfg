@@ -238,8 +238,16 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
         await checkSubscriptionStatus();
         setWalletRefreshKey(prevKey => prevKey + 1);
         // ADDED: Increment resumes_created_count after successful optimization
-        await authService.incrementResumesCreatedCount(user!.id);
-        await revalidateUserSession(); // Revalidate session to update user context with new count
+        if (user) {
+          try {
+            console.log('ResumeOptimizer: Incrementing resume count for user:', user.id);
+            await authService.incrementResumesCreatedCount(user.id);
+            await revalidateUserSession(); // Revalidate session to update user context with new count
+            console.log('ResumeOptimizer: Resume count incremented and session revalidated');
+          } catch (countError) {
+            console.error('ResumeOptimizer: Failed to increment resume count:', countError);
+          }
+        }
       } else {
         console.error('Failed to decrement optimization usage:', optimizationResult.error);
       }

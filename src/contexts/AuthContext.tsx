@@ -135,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               if (!mounted) return; // Check mounted status again inside setTimeout
               const fullProfile = await authService.fetchUserProfile(session.user.id);
               console.log('AuthContext: Full user profile fetched:', fullProfile ? fullProfile.full_name : 'none');
+              console.log('AuthContext: User resume count from profile:', fullProfile?.resumes_created_count);
 
               setAuthState(prev => ({
                 ...prev,

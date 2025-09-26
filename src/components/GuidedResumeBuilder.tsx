@@ -410,6 +410,18 @@ const asText = (v: any): string => {
         // After successful optimization, ensure the UI transitions to the final_resume step
         setCurrentSectionIndex(resumeSections.indexOf('final_resume'));
 
+        // Increment resume count after successful generation
+        if (user) {
+          try {
+            console.log('GuidedResumeBuilder: Incrementing resume count for user:', user.id);
+            await authService.incrementResumesCreatedCount(user.id);
+            await revalidateUserSession(); // Refresh user data to get updated count
+            console.log('GuidedResumeBuilder: Resume count incremented and session revalidated');
+          } catch (error) {
+            console.error('Failed to increment resume count:', error);
+          }
+        }
+
       } catch (error: any) {
         console.error('Error optimizing resume:', error);
         alert('Failed to optimize resume. Please try again.');
