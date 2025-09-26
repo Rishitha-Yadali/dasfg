@@ -471,7 +471,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Message Configuration</h2>
-            <p className="text-gray-600 dark:text-gray-300">Customize your message tone and purpose</p>
+            <p className="text-gray-600 dark:text-gray-300">Customize your message tone </p>
           </div>
 
           <div className="space-y-6">
