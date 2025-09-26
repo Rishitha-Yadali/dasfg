@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, CreditCard as Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -274,7 +274,7 @@ const asText = (v: any): string => {
       setIsOptimizing(true);
       const finalOptimizedResume = await optimizeResume(
         reconstructResumeText(resumeData),
-        String(jobDescription || ''),
+        jobDescription,
         userType,
         userName,
         userEmail,
@@ -283,13 +283,13 @@ const asText = (v: any): string => {
         userGithub,
         undefined,
         undefined,
-        String(targetRole || '')
+        targetRole
       );
       const beforeScoreData = generateBeforeScore(reconstructResumeText(resumeData));
       setBeforeScore(beforeScoreData);
-      const finalScore = await getDetailedResumeScore(finalOptimizedResume, String(jobDescription || ''), setIsCalculatingScore);
+      const finalScore = await getDetailedResumeScore(finalOptimizedResume, jobDescription, setIsCalculatingScore);
       setFinalResumeScore(finalScore);
-      const afterScoreData = await generateAfterScore(finalOptimizedResume, String(jobDescription || ''));
+      const afterScoreData = await generateAfterScore(finalOptimizedResume, jobDescription);
       setAfterScore(afterScoreData);
       setChangedSections(['workExperience', 'education', 'projects', 'skills', 'certifications']);
       const optimizationResult = await paymentService.useOptimization(user!.id);
@@ -316,7 +316,7 @@ const asText = (v: any): string => {
   const handleInitialResumeProcessing = useCallback(async (resumeData: ResumeData, accessToken: string) => { // Memoize
     try {
       setIsCalculatingScore(true);
-      const initialScore = await getDetailedResumeScore(resumeData, String(jobDescription || ''), setIsCalculatingScore);
+      const initialScore = await getDetailedResumeScore(resumeData, jobDescription, setIsCalculatingScore);
       setInitialResumeScore(initialScore);
       setOptimizedResume(resumeData);
       setParsedResumeData(resumeData);
@@ -515,7 +515,7 @@ const asText = (v: any): string => {
       if (initialResumeScore) {
         await proceedWithFinalOptimization(updatedResume, initialResumeScore, sessionData?.session?.access_token || '');
       } else {
-        const newInitialScore = await getDetailedResumeScore(updatedResume, String(jobDescription || ''), setIsCalculatingScore);
+        const newInitialScore = await getDetailedResumeScore(updatedResume, jobDescription, setIsCalculatingScore);
         await proceedWithFinalOptimization(updatedResume, newInitialScore, sessionData?.session?.access_token || '');
       }
     } catch (error) {
@@ -529,7 +529,7 @@ const asText = (v: any): string => {
   const generateScoresAfterProjectAdd = useCallback(async (updatedResume: ResumeData, accessToken: string) => { // Memoize
     try {
       setIsCalculatingScore(true);
-      const freshInitialScore = await getDetailedResumeScore(updatedResume, String(jobDescription || ''), setIsCalculatingScore);
+      const freshInitialScore = await getDetailedResumeScore(updatedResume, jobDescription, setIsCalculatingScore);
       setInitialResumeScore(freshInitialScore);
       await proceedWithFinalOptimization(updatedResume, freshInitialScore, accessToken);
     } catch (error) {
@@ -867,7 +867,6 @@ const handleNextSection = () => {
         year: currentWork.year,
         description: seed,
         userType,
-        jobDescription: String(jobDescription || ''), // Add defensive access
       },
       undefined,
       3
@@ -1068,7 +1067,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
               category: currentCategory.category,
               existingSkills: currentCategory.list.join(', '), // Pass existing skills as existingSkills
               userType: userType,
-              jobDescription: String(jobDescription || ''), // Pass JD for relevance with defensive access
+              jobDescription: jobDescription, // Pass JD for relevance
             },
             undefined, // modelOverride
             3 // Request 3 variations
@@ -1079,7 +1078,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
         console.error('Error regenerating bullets:', error);
         alert('Failed to regenerate bullets. Please try again.');
       } finally {
-              jobDescription: String(jobDescription || ''),
+        setIsGeneratingBullets(false);
       }
     }
   };
@@ -1175,7 +1174,6 @@ const handleGenerateProjectBullets = async (
         title: currentProject.title,
         description: seed, // use targeted seed
         userType,
-        jobDescription: String(jobDescription || ''), // Add defensive access
       },
       undefined,
       3
@@ -1254,7 +1252,7 @@ const handleGenerateProjectBullets = async (
           category: currentCategory.category,
           existingSkills: currentCategory.list.join(', '), // Pass existing skills as existingSkills
           userType: userType,
-          jobDescription: String(jobDescription || ''), // Pass JD for relevance with defensive access
+          jobDescription: jobDescription, // Pass JD for relevance
         },
         undefined, // modelOverride
         3 // Request 3 variations
@@ -1318,7 +1316,7 @@ const handleGenerateProjectBullets = async (
     const currentCert = optimizedResume.certifications[index]; // Get current cert data
 
     // --- NEW: Context check and warning ---
-    const hasJobDescription = String(jobDescription || '').trim().length > 0;
+    const hasJobDescription = jobDescription.trim().length > 0;
     const hasSkills = optimizedResume.skills && optimizedResume.skills.length > 0 && optimizedResume.skills.some(s => s.list && s.list.length > 0);
 
     if (!hasJobDescription && !hasSkills) {
@@ -1329,7 +1327,7 @@ const handleGenerateProjectBullets = async (
     try {
       console.log('Generating certifications with context:', {
         userType: userType,
-        jobDescription: String(jobDescription || ''),
+        jobDescription: jobDescription,
         skills: optimizedResume.skills,
         currentCertTitle: currentCert.title, // Pass current title
         currentCertDescription: currentCert.description
@@ -1338,7 +1336,7 @@ const handleGenerateProjectBullets = async (
         'certifications',
         {
           userType: userType,
-          jobDescription: String(jobDescription || ''),
+          jobDescription: jobDescription,
           skills: optimizedResume.skills,
           currentCertTitle: currentCert.title,
           currentCertDescription: currentCert.description
@@ -1470,7 +1468,6 @@ const handleGenerateProjectBullets = async (
         title: currentSection.title,
         details: seed, // seed with the targeted bullet
         userType,
-        jobDescription: String(jobDescription || ''), // Add defensive access
       },
       undefined,
       3
@@ -1500,10 +1497,10 @@ const handleGenerateProjectBullets = async (
         sectionType,
         {
           userType: userType,
-          targetRole: String(targetRole || ''), // Pass target role if available with defensive access
+          targetRole: targetRole, // Pass target role if available
           experience: optimizedResume.workExperience,
           education: optimizedResume.education,
-          jobDescription: String(jobDescription || ''), // Pass jobDescription here with defensive access
+        },
         undefined, // modelOverride
         3, // Request 3 variations
         currentDraft || '' // Pass current draft text
@@ -1531,6 +1528,7 @@ const handleGenerateProjectBullets = async (
   const handleRegenerateAIOptions = () => {
     handleGenerateObjectiveSummary(); // Simply call the generation function again
   };
+  // --- End Objective/Summary AI Generation Handlers ---
 
   // --- Review Section State ---
   const toggleReviewSection = (sectionKey: string) => {
