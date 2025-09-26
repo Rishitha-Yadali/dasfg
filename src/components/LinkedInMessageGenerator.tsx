@@ -528,7 +528,7 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
       {/* Top Bar */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 dark:bg-dark-50 dark:border-dark-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 px-1 sm:px-0">
+         <div className="flex items-center justify-between h-16 px-1 sm:px-0">
   <div className="flex items-center space-x-3">
     <button
       onClick={() => {
