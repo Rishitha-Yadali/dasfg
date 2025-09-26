@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, CreditCard as Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';

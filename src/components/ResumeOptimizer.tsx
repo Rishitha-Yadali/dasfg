@@ -242,10 +242,12 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
           try {
             console.log('ResumeOptimizer: Incrementing resume count for user:', user.id);
             await authService.incrementResumesCreatedCount(user.id);
+            // ADDED: Increment global resumes created count
+            await authService.incrementGlobalResumesCreatedCount();
             await revalidateUserSession(); // Revalidate session to update user context with new count
-            console.log('ResumeOptimizer: Resume count incremented and session revalidated');
+            console.log('ResumeOptimizer: Both individual and global resume counts incremented and session revalidated');
           } catch (countError) {
-            console.error('ResumeOptimizer: Failed to increment resume count:', countError);
+            console.error('ResumeOptimizer: Failed to increment resume counts:', countError);
           }
         }
       } else {

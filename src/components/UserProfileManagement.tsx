@@ -19,6 +19,8 @@ import {
   Banknote,
   Copy,
   Gift,
+  TrendingUp,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
@@ -283,13 +285,13 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
         setError('UPI ID is required.');
         return;
       }
-      redeemData = { method: 'upi', details: { upi_id: redeemDetails.upi_id } };
+      redemptionData = { method: 'upi', details: { upi_id: redeemDetails.upi_id } };
     } else { // bank_transfer
       if (!redeemDetails.account_holder_name || !redeemDetails.bank_account || !redeemDetails.ifsc_code) {
         setError('All bank transfer details are required.');
         return;
       }
-      redeemData = { method: 'bank_transfer', details: redeemDetails };
+      redemptionData = { method: 'bank_transfer', details: redeemDetails };
     }
 
     setIsRedeeming(true);
@@ -560,6 +562,55 @@ export const UserProfileManagement: React.FC<UserProfileManagementProps> = ({
                         {errors.github_profile.message}
                       </p>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Usage Statistics Section - Show individual user stats */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                  <TrendingUp className="w-5 h-5 mr-2 text-blue-600 dark:text-neon-cyan-400" />
+                  Usage Statistics
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Personal Resume Count */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 dark:from-neon-cyan-500/10 dark:to-neon-blue-500/10 dark:border-neon-cyan-400/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-700 dark:text-neon-cyan-300">My Resumes Created</p>
+                        <p className="text-2xl font-bold text-blue-900 dark:text-neon-cyan-400">
+                          {user?.resumesCreatedCount || 0}
+                        </p>
+                      </div>
+                      <div className="bg-blue-100 p-3 rounded-full dark:bg-neon-cyan-500/20">
+                        <FileText className="w-6 h-6 text-blue-600 dark:text-neon-cyan-400" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-gray-300 mt-2">
+                      Your personal resume creation journey
+                    </p>
+                  </div>
+
+                  {/* Member Since */}
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4 dark:from-neon-purple-500/10 dark:to-neon-pink-500/10 dark:border-neon-purple-400/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-purple-700 dark:text-neon-purple-300">Member Since</p>
+                        <p className="text-xl font-bold text-purple-900 dark:text-neon-purple-400">
+                          {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short' 
+                          }) : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-purple-100 p-3 rounded-full dark:bg-neon-purple-500/20">
+                        <User className="w-6 h-6 text-purple-600 dark:text-neon-purple-400" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-purple-600 dark:text-gray-300 mt-2">
+                      Part of the PrimoBoost family
+                    </p>
                   </div>
                 </div>
               </div>
