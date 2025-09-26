@@ -1,6 +1,6 @@
 // src/components/ResumePreview.tsx
 
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react'; // Import useRef, useEffect, useState
 import { ResumeData, UserType } from '../types/resume';
 
 // --- FIX: Define necessary types and defaults locally to resolve import error ---
@@ -98,6 +98,29 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   // Use defaultExportOptions if exportOptions is not provided
   const currentExportOptions = exportOptions || defaultExportOptions;
   const PDF_CONFIG = createPDFConfigForPreview(currentExportOptions);
+
+  const contentWrapperRef = useRef<HTMLDivElement>(null);
+  const [scaleFactor, setScaleFactor] = useState(1);
+
+  useEffect(() => {
+    const calculateScale = () => {
+      if (contentWrapperRef.current) {
+        const availableWidth = contentWrapperRef.current.offsetWidth; // Width of the scrollable container
+        const resumeNaturalWidthPx = mmToPx(PDF_CONFIG.pageWidth); // The target width of the resume page
+
+        if (resumeNaturalWidthPx > availableWidth) {
+          setScaleFactor(availableWidth / resumeNaturalWidthPx);
+        } else {
+          setScaleFactor(1); // No scaling needed if content fits
+        }
+      }
+    };
+
+    calculateScale();
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
+  }, [PDF_CONFIG.pageWidth]); // Recalculate if page width changes (e.g., A4 to Letter)
+
 
   // Debug logging to check what data we're receiving
   console.log('ResumePreview received data:', resumeData);
@@ -365,11 +388,11 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
             <h2 style={sectionTitleStyle}>TECHNICAL SKILLS</h2>
             <div style={sectionUnderlineStyle}></div>
-            {resumeData.skills.map((skill, index) => (
+            {resumeData.skills.map((skillCategory, index) => (
               <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>
                 <span style={{ fontSize: ptToPx(PDF_CONFIG.fonts.body.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
-                  <strong style={{ fontWeight: 'bold' }}>{skill.category}:</strong>{' '}
-                  {skill.list && skill.list.join(', ')}
+                  <strong style={{ fontWeight: 'bold' }}>{skillCategory.category}:</strong>{' '}
+                  {skillCategory.list && skillCategory.list.join(', ')}
                 </span>
               </div>
             ))}
@@ -505,7 +528,10 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     <div className={`card dark:bg-dark-100 dark:border-dark-300 resume-one-column ${currentExportOptions.layoutType === 'compact' ? 'resume-compact' : 'resume-standard'
       } ${currentExportOptions.paperSize === 'letter' ? 'resume-letter' : 'resume-a4'
       }`}>
-      <div className="max-h-[70vh] sm:max-h-[80vh] lg:max-h-[800px] overflow-y-auto">
+      <div
+        ref={contentWrapperRef} // Attach ref to the scrollable container
+        className="max-h-[70vh] sm:max-h-[80vh] lg:max-h-[800px] overflow-y-auto overflow-x-hidden" // Add overflow-x-hidden
+      >
         <div
           style={{
             fontFamily: `${PDF_CONFIG.fontFamily}, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif`,
@@ -516,6 +542,10 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
             paddingBottom: mmToPx(PDF_CONFIG.margins.bottom),
             paddingLeft: mmToPx(PDF_CONFIG.margins.left),
             paddingRight: mmToPx(PDF_CONFIG.margins.right),
+            width: mmToPx(PDF_CONFIG.pageWidth), // Explicitly set the natural width of the page
+            transform: `scale(${scaleFactor})`,
+            transformOrigin: 'top left', // Scale from top-left corner
+            boxSizing: 'border-box', // Ensure padding is included in the width calculation
           }}
         >
           {/* Header */}
@@ -562,3 +592,4 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     </div>
   );
 };
+
