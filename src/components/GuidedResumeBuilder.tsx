@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
+import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, CreditCard as Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
 import { ProjectAnalysisModal } from './ProjectAnalysisModal';
@@ -409,18 +409,6 @@ const asText = (v: any): string => {
 
         // After successful optimization, ensure the UI transitions to the final_resume step
         setCurrentSectionIndex(resumeSections.indexOf('final_resume'));
-
-        // Increment resume count after successful generation
-        if (user) {
-          try {
-            console.log('GuidedResumeBuilder: Incrementing resume count for user:', user.id);
-            await authService.incrementResumesCreatedCount(user.id);
-            await revalidateUserSession(); // Refresh user data to get updated count
-            console.log('GuidedResumeBuilder: Resume count incremented and session revalidated');
-          } catch (error) {
-            console.error('Failed to increment resume count:', error);
-          }
-        }
 
       } catch (error: any) {
         console.error('Error optimizing resume:', error);
