@@ -1,4 +1,4 @@
-```
+
 import React from 'react';
 import { FileText, Briefcase, AlertCircle } from 'lucide-react';
 
@@ -91,4 +91,3 @@ export const InputSection: React.FC<InputSectionProps> = ({
     </div>
   );
 };
-```
