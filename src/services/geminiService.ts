@@ -478,7 +478,561 @@ parsedResult.careerObjective = String(parsedResult.careerObjective || '');
   }
 };
 
-// --- REMOVED: generateMultipleAtsVariations and generateAtsOptimizedSection functions ---
-// These functions are not directly related to the optimizeResume flow and were removed
-// to keep geminiService.ts focused and to avoid potential issues from unrelated code.
-// If these are needed elsewhere, they should be moved to a more appropriate service file.
+// --- RE-ADDED: generateMultipleAtsVariations function ---
+export const generateMultipleAtsVariations = async (
+  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'certifications' | 'achievements' | 'additionalSectionBullets',
+  data: any,
+  modelOverride?: string,
+  variationCount: number = 3,
+  draftText?: string // NEW: Optional draft text to polish
+): Promise<string[][]> => { // Changed return type to string[][]
+  // --- NEW: Input Length Validation ---
+  const combinedInputLength = JSON.stringify(data).length + (draftText?.length || 0);
+  if (combinedInputLength > MAX_INPUT_LENGTH) {
+    throw new Error(
+      `Input for variations too long (${combinedInputLength} characters). ` +
+      `The maximum allowed is ${MAX_INPUT_LENGTH} characters. Please shorten your input.`
+    );
+  }
+  // --- END NEW ---
+
+  const getPromptForMultipleVariations = (type: string, sectionData: any, count: number, draft?: string) => {
+    const baseInstructions = `
+CRITICAL ATS OPTIMIZATION RULES:
+1. Use strong action verbs and industry keywords
+2. Focus on quantifiable achievements and impact
+3. Keep content concise
+4. Avoid personal pronouns ("I", "my")
+`;
+
+    if (draft) {
+      // If draft text is provided, instruct AI to polish it
+      switch (type) {
+        case 'summary':
+          return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
+Generate ${count} distinctly different polished professional summary variations based on the following draft:
+Draft: "${draft}"
+${baseInstructions}
+Each summary should be 2-3 sentences (50-80 words max).
+Return ONLY a JSON array with exactly ${count} variations: ["summary1", "summary2", "summary3"]`;
+        case 'careerObjective':
+          return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
+Generate ${count} distinctly different polished career objective variations based on the following draft:
+Draft: "${draft}"
+${baseInstructions}
+Each objective should be 2 sentences (30-50 words max) and have a different approach:
+- Variation 1: Learning and growth-focused
+- Variation 2: Skills and contribution-focused
+- Variation 3: Career goals and enthusiasm-focused
+Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
+        // Other sections already handle their "draft" via `sectionData` fields.
+      }
+    }
+
+    // Existing logic for generating from scratch
+    switch (type) {
+      case 'summary':
+        return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
+Generate ${count} distinctly different professional summary variations based on:
+- User Type: ${sectionData.userType}
+- Target Role: ${sectionData.targetRole || 'General Professional Role'}
+- Experience: ${JSON.stringify(sectionData.experience || [])}
+${baseInstructions}
+Each summary should be 2-3 sentences (50-80 words max) and have a different focus:
+- Variation 1: Achievement-focused with metrics
+- Variation 2: Skills and expertise-focused
+- Variation 3: Leadership and impact-focused
+Return ONLY a JSON array with exactly ${count} variations: ["summary1", "summary2", "summary3"]`;
+
+      case 'careerObjective':
+        return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
+Generate ${count} distinctly different career objective variations based on:
+- User Type: ${sectionData.userType}
+- Target Role: ${sectionData.targetRole || 'Entry-level Professional Position'}
+- Education: ${JSON.stringify(sectionData.education || [])}
+${baseInstructions}
+Each objective should be 2 sentences (30-50 words max) and have a different approach:
+- Variation 1: Learning and growth-focused
+- Variation 2: Skills and contribution-focused
+- Variation 3: Career goals and enthusiasm-focused
+Return ONLY a JSON array with exactly ${count} variations: ["objective1", "objective2", "objective3"]`;
+
+      case 'workExperienceBullets': // MODIFIED PROMPT: Generate individual bullet points
+        return `You are an expert resume writer specializing in ATS optimization.
+The following are DRAFT bullet points provided by the user for a work experience entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided role, company, and duration context.
+
+DRAFT BULLET POINTS TO POLISH:
+${sectionData.description}
+
+CONTEXT:
+- Role: ${sectionData.role}
+- Company: ${sectionData.company}
+- Duration: ${sectionData.year}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
+3. NO weak verbs (helped, assisted, worked on, responsible for)
+4. Include quantifiable achievements and metrics
+5. Use industry-standard keywords
+6. Focus on impact and results, not just responsibilities
+7. Avoid repetitive words across bullets
+8. Make each bullet distinct and valuable
+
+Generate exactly ${count} individual polished bullet points.
+Return ONLY a JSON array of strings, where each string is a single polished bullet point:
+["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
+
+      case 'projectBullets': // MODIFIED PROMPT: Generate individual bullet points
+        return `You are an expert resume writer specializing in ATS optimization.
+The following are DRAFT bullet points provided by the user for a project entry. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided project title, tech stack, and user type context.
+
+DRAFT BULLET POINTS TO POLISH:
+${sectionData.description}
+
+CONTEXT:
+- Project Title: ${sectionData.title}
+- Tech Stack: ${sectionData.techStack || 'Modern technologies'}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
+3. Include specific technologies mentioned in tech stack
+4. Focus on technical achievements and impact
+5. Include quantifiable results where possible
+6. Use industry-standard technical keywords
+7. Highlight problem-solving and innovation
+8. Make each bullet showcase different aspects
+
+Generate exactly ${count} individual polished bullet points.
+Return ONLY a JSON array of strings, where each string is a single polished bullet point:
+["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
+
+      case 'additionalSectionBullets': // NEW/MODIFIED PROMPT FOR POLISHING
+        return `You are an expert resume writer specializing in ATS optimization.
+
+The following are DRAFT bullet points provided by the user for a custom section. Your task is to POLISH and REWRITE these drafts, maintaining their core meaning and achievements, while strictly adhering to the ATS optimization rules. If the drafts are very short or generic, expand upon them using the provided section title and user type context.
+
+DRAFT BULLET POINTS TO POLISH:
+${sectionData.details}
+
+CONTEXT:
+- Section Title: ${sectionData.title}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
+3. Focus on achievements, contributions, or relevant details for the section type
+4. Use industry-standard keywords where applicable
+5. Quantify results where possible
+6. Avoid repetitive words across bullets
+7. Make each bullet distinct and valuable
+
+Generate exactly ${count} individual polished bullet points.
+Return ONLY a JSON array of strings, where each string is a single polished bullet point:
+["polished_bullet_point_1", "polished_bullet_point_2", "polished_bullet_point_3", ...]`;
+
+      case 'certifications': // NEW/MODIFIED PROMPT FOR POLISHING
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Given the following certification details and context:
+- Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
+- Current Certification Description: "${sectionData.currentCertDescription || 'Not provided'}"
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Current Skills: ${JSON.stringify(sectionData.skills || [])}
+- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
+
+Your task is to generate ${count} distinctly different polished and ATS-friendly titles for this certification.
+Each title should be concise, professional, and highlight the most relevant aspect of the certification for a resume.
+If the provided title/description is generic, make the generated titles more impactful and specific.
+
+Return ONLY a JSON array with exactly ${count} polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
+
+      case 'achievements':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate ${count} different achievement variations based on:
+- User Type: ${sectionData.userType}
+- Experience Level: ${sectionData.experienceLevel || 'Professional'}
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Context: ${sectionData.context || 'General professional achievements'}
+
+${baseInstructions}
+
+Each achievement MUST be 2 lines and between 15-20 words.
+Each variation should include 3-4 quantified achievements:
+- Variation 1: Performance and results-focused
+- Variation 2: Leadership and team impact-focused
+- Variation 3: Innovation and process improvement-focused
+
+Return ONLY a JSON array with exactly ${count} achievement lists: [["achievement1", "achievement2"], ["achievement3", "achievement4"], ["achievement5", "achievement6"]]`;
+
+      case 'skillsList': // NEW/MODIFIED PROMPT FOR POLISHING
+        let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
+
+Given the following skill category and existing skills:
+- Category: ${sectionData.category}
+- Existing Skills (DRAFT): ${sectionData.existingSkills || 'None'}
+- User Type: ${sectionData.userType}
+- Job Description: ${sectionData.jobDescription || 'None'}
+
+CRITICAL REQUIREMENTS:
+1. Provide 5-8 specific and relevant skills for the given category.
+2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
+3. Ensure skills are ATS-friendly.
+
+`;
+        if (sectionData.category === 'Databases') {
+          skillsPrompt += `
+IMPORTANT: For the 'Databases' category, the suggestions MUST be database languages (e.g., SQL, T-SQL, PL/SQL, MySQL, PostgreSQL, MongoDB, Oracle, Cassandra, Redis, DynamoDB, Firebase, Supabase), not theoretical topics like normalization, indexing, or database design principles. Focus on specific technologies and query languages.
+`;
+        }
+        skillsPrompt += `
+Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
+        return skillsPrompt;
+
+      default:
+        return `Generate ${count} ATS-optimized variations for ${type}.`;
+    }
+  };
+
+  const prompt = getPromptForMultipleVariations(sectionType, data, variationCount, draftText);
+
+  const response = await safeFetch({
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://primoboost.ai",
+      "X-Title": "PrimoBoost AI",
+    },
+    body: JSON.stringify({
+      model: modelOverride || 'google/gemini-flash-1.5',
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const responseData = await response.json();
+  let result = responseData?.choices?.[0]?.message?.content;
+
+  if (!result) throw new Error('No response content from OpenRouter API');
+
+  result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+
+  try {
+    const parsedResult = JSON.parse(result);
+    // MODIFIED: Handle cases where AI returns a simple array of strings (individual bullet points)
+    if (Array.isArray(parsedResult) && !parsedResult.every(Array.isArray)) {
+      // If it's an array of strings, map each string to an array containing just that string
+      return parsedResult.map((item: string) => [item]);
+    } else if (Array.isArray(parsedResult) && parsedResult.every(Array.isArray)) {
+      // If it's already an array of arrays (e.g., skillsList, achievements), return directly
+      return parsedResult.slice(0, variationCount);
+    } else {
+      // Fallback: if not a proper JSON array, treat as single string and wrap
+      return [[result.split('\n')
+        .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+        .filter(line => line.length > 0)
+        .slice(0, variationCount)]]; // Wrap in an array of arrays
+    }
+  } catch (parseError) {
+    console.error(`JSON parsing error for ${sectionType}:`, parseError);
+    console.error('Raw response that failed to parse:', result);
+    // Fallback parsing: always return string[][]
+    return [[result.split('\n')
+      .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+      .filter(line => line.length > 0)
+      .slice(0, variationCount)]]; // Wrap in an array of arrays
+  }
+};
+
+// --- RE-ADDED: generateAtsOptimizedSection function ---
+export const generateAtsOptimizedSection = async (
+  sectionType: 'summary' | 'careerObjective' | 'workExperienceBullets' | 'projectBullets' | 'skillsList' | 'additionalSectionBullets' | 'certifications' | 'achievements',
+  data: any,
+  modelOverride?: string,
+  draftText?: string // NEW: Optional draft text to polish
+): Promise<string | string[]> => {
+  // --- NEW: Input Length Validation ---
+  const combinedInputLength = JSON.stringify(data).length + (draftText?.length || 0);
+  if (combinedInputLength > MAX_INPUT_LENGTH) {
+    throw new Error(
+      `Input for section optimization too long (${combinedInputLength} characters). ` +
+      `The maximum allowed is ${MAX_INPUT_LENGTH} characters. Please shorten your input.`
+    );
+  }
+  // --- END NEW ---
+
+  const getPromptForSection = (type: string, sectionData: any, draft?: string) => {
+    const baseInstructions = `
+      CRITICAL ATS OPTIMIZATION RULES:
+      1. Highlight key skills and measurable achievements
+      2. Use strong action verbs and industry keywords
+      3. Focus on value proposition and career goals
+      4. Keep it concise
+      5. Avoid personal pronouns ("I", "my")
+      6. Include quantifiable results where possible
+      7. Make it ATS-friendly with clear, direct language
+    `;
+
+    if (draft) {
+      // If draft text is provided, instruct AI to polish it
+      switch (type) {
+        case 'summary':
+          return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
+            Polish and optimize the following professional summary draft for ATS compatibility and impact:
+            Draft: "${draft}"
+            ${baseInstructions}
+            Ensure the polished summary is 2-3 sentences (50-80 words max).
+            Return ONLY the polished professional summary text, no additional formatting or explanations.`;
+        case 'careerObjective':
+          return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
+            Polish and optimize the following career objective draft for ATS compatibility and impact:
+            Draft: "${draft}"
+            ${baseInstructions}
+            Ensure the polished objective is 2 sentences (30-50 words max).
+            Return ONLY the polished career objective text, no additional formatting or explanations.`;
+        // For other sections, the existing 'description' or 'details' fields in `sectionData` already serve as the draft.
+        // We just need to ensure the prompt for those sections implies polishing if the field is populated.
+        // This means the existing prompts for workExperienceBullets, projectBullets, etc., are mostly fine,
+        // as they already take the existing content and are expected to optimize it.
+        // The main change is for summary/careerObjective.
+        // For certifications, it's about generating *titles*, not polishing a description.
+        // For skillsList, it's about generating *lists*, not polishing a description.
+        // So, `draftText` is primarily for `summary` and `careerObjective`.
+        // For bullets, the existing `description` field in `sectionData` already serves this purpose.
+      }
+    }
+
+    // Existing logic for generating from scratch or based on provided context (not polishing a specific draft)
+    switch (type) {
+      case 'summary':
+        return `You are an expert resume writer specializing in ATS optimization for experienced professionals.
+          Generate a compelling 2-3 sentence professional summary based on:
+          - User Type: ${sectionData.userType}
+          - Target Role: ${sectionData.targetRole || 'General Professional Role'}
+          - Experience: ${JSON.stringify(sectionData.experience || [])}
+          ${baseInstructions}
+          Return ONLY the professional summary text, no additional formatting or explanations.`;
+
+      case 'careerObjective':
+        return `You are an expert resume writer specializing in ATS optimization for entry-level professionals and students.
+          Generate a compelling 2-sentence career objective based on:
+          - User Type: ${sectionData.userType}
+          - Target Role: ${sectionData.targetRole || 'Entry-level Professional Position'}
+          - Education: ${JSON.stringify(sectionData.education || [])}
+          ${baseInstructions}
+          Return ONLY the career objective text, no additional formatting or explanations.`;
+
+      case 'workExperienceBullets':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 3 concise bullet points for work experience based on:
+- Role: ${sectionData.role}
+- Company: ${sectionData.company}
+- Duration: ${sectionData.year}
+- Description: ${sectionData.description || 'General responsibilities'}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start each bullet with STRONG ACTION VERBS (Developed, Implemented, Led, Managed, Optimized, Achieved, Increased, Reduced)
+3. NO weak verbs (helped, assisted, worked on, responsible for)
+4. Include quantifiable achievements and metrics
+5. Use industry-standard keywords
+6. Focus on impact and results, not just responsibilities
+7. Avoid repetitive words across bullets
+8. Make each bullet distinct and valuable
+
+Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
+
+      case 'projectBullets':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 3 concise bullet points for a project based on:
+- Project Title: ${sectionData.title}
+- Description: ${sectionData.description || 'Technical project'}
+- Tech Stack: ${sectionData.techStack || 'Modern technologies'}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start with STRONG ACTION VERBS (Developed, Built, Implemented, Designed, Created, Architected)
+3. Include specific technologies mentioned in tech stack
+4. Focus on technical achievements and impact
+5. Include quantifiable results where possible
+6. Use industry-standard technical keywords
+7. Highlight problem-solving and innovation
+8. Make each bullet showcase different aspects
+
+Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
+
+      case 'additionalSectionBullets':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 3 concise bullet points for a custom resume section based on:
+- Section Title: ${sectionData.title}
+- User Provided Details: ${sectionData.details || 'General information'}
+- User Type: ${sectionData.userType}
+
+CRITICAL ATS OPTIMIZATION RULES:
+1. Each bullet point MUST be 2 lines and between 15-20 words.
+2. Start with STRONG ACTION VERBS (e.g., Awarded, Recognized, Achieved, Led, Volunteered, Fluent in)
+3. Focus on achievements, contributions, or relevant details for the section type
+4. Use industry-standard keywords where applicable
+5. Quantify results where possible
+6. Avoid repetitive words across bullets
+7. Make each bullet distinct and valuable
+
+Return ONLY a JSON array with exactly 3 bullet points: ["bullet1", "bullet2", "bullet3"]`;
+
+      case 'certifications':
+        // MODIFIED: Conditional prompt based on currentCertTitle
+        if (sectionData.currentCertTitle && sectionData.currentCertTitle.trim() !== '') {
+          return `You are an expert resume writer specializing in ATS optimization.
+
+Given the following certification title:
+- Certification Title: "${sectionData.currentCertTitle}"
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Current Skills: ${JSON.stringify(sectionData.skills || [])}
+- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
+
+Your task is to generate a single, concise, ATS-friendly description for this certification.
+The description MUST be a maximum of 15 words.
+It should highlight the most relevant aspect of the certification for a resume and align with the target role and skills.
+
+Return ONLY the description text as a single string, no additional formatting or explanations.`;
+        } else {
+          return `You are an expert resume writer specializing in ATS optimization.
+
+Given the following certification details and context:
+- Current Certification Title: "${sectionData.currentCertTitle || 'Not provided'}"
+- Current Certification Description: "${sectionData.currentCertDescription || 'Not provided'}"
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Current Skills: ${JSON.stringify(sectionData.skills || [])}
+- Job Description Context: ${sectionData.jobDescription || 'General professional context'}
+
+Your task is to generate 3 polished and ATS-friendly titles for this certification.
+Each title should be concise, professional, and highlight the most relevant aspect of the certification for a resume.
+If the provided title/description is generic, make the generated titles more impactful and specific.
+
+Return ONLY a JSON array with exactly 3 polished certification titles: ["Polished Title 1", "Polished Title 2", "Polished Title 3"]`;
+        }
+
+      case 'achievements':
+        return `You are an expert resume writer specializing in ATS optimization.
+
+Generate exactly 4 quantified achievements based on:
+- User Type: ${sectionData.userType}
+- Experience Level: ${sectionData.experienceLevel || 'Professional'}
+- Target Role: ${sectionData.targetRole || 'Professional Role'}
+- Context: ${sectionData.context || 'General professional achievements'}
+
+CRITICAL REQUIREMENTS:
+1. Each achievement MUST be 2 lines and between 15-20 words.
+2. Start with strong action verbs (Achieved, Increased, Led, Improved, etc.)
+3. Focus on results and impact, not just activities
+4. Make achievements relevant to the target role
+5. Include different types of achievements (performance, leadership, innovation, efficiency)
+
+Return ONLY a JSON array with exactly 4 achievements: ["achievement1", "achievement2", "achievement3", "achievement4"]`;
+
+      case 'skillsList':
+        let skillsPrompt = `You are an expert resume writer specializing in ATS optimization.
+
+Given the following skill category and existing skills:
+- Category: ${sectionData.category}
+- Existing Skills: ${sectionData.existingSkills || 'None'}
+- User Type: ${sectionData.userType}
+- Job Description: ${sectionData.jobDescription || 'None'}
+
+CRITICAL REQUIREMENTS:
+1. Provide 5-8 specific and relevant skills for the given category.
+2. Prioritize skills mentioned in the job description or commonly associated with the user type and category.
+3. Ensure skills are ATS-friendly.
+
+`;
+        if (sectionData.category === 'Databases') {
+          skillsPrompt += `
+IMPORTANT: For the 'Databases' category, the suggestions MUST be database languages (e.g., SQL, T-SQL, PL/SQL, MySQL, PostgreSQL, MongoDB, Oracle, Cassandra, Redis, DynamoDB, Firebase, Supabase), not theoretical topics like normalization, indexing, or database design principles. Focus on specific technologies and query languages.
+`;
+        }
+        skillsPrompt += `
+Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "skill5"]`;
+        return skillsPrompt;
+
+      default:
+        return `Generate ATS-optimized content for ${type}.`;
+    }
+  };
+
+  const prompt = getPromptForSection(sectionType, data, draftText);
+
+  const response = await safeFetch({
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://primoboost.ai",
+      "X-Title": "PrimoBoost AI",
+    },
+    body: JSON.stringify({
+      model: modelOverride || 'google/gemini-flash-1.5',
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const responseData = await response.json();
+  let result = responseData?.choices?.[0]?.message?.content;
+  
+  if (!result) {
+    throw new Error('No response content from OpenRouter API');
+  }
+
+  result = result.replace(/```json/g, '').replace(/```/g, '').trim();
+  console.log(`[GEMINI_SERVICE] Raw result for ${sectionType}:`, result); // Log raw result
+
+  // MODIFIED: Consolidated JSON parsing for all array-returning section types
+  if (
+    sectionType === 'workExperienceBullets' ||
+    sectionType === 'projectBullets' ||
+    sectionType === 'additionalSectionBullets' ||
+    sectionType === 'achievements' ||   // Added for JSON parsing
+    sectionType === 'skillsList'        // Added for JSON parsing
+  ) {
+    try {
+      console.log(`Parsing JSON for ${sectionType}:`, result); // Log the result before parsing
+      const parsed = JSON.parse(result);
+      console.log(`[GEMINI_SERVICE] Parsed result for ${sectionType}:`, parsed); // Log parsed result
+      return parsed;
+    } catch (parseError) {
+      console.error(`JSON parsing error for ${sectionType}:`, parseError); // Log parsing error
+      console.error('Raw response that failed to parse:', result); // Log the raw response
+      // Fallback to splitting by lines if JSON parsing fails
+      return result.split('\n')
+        .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+        .filter(line => line.length > 0)
+        .slice(0, 5); // Limit to 5 for fallback, adjust as needed
+    }
+  } else if (sectionType === 'certifications') {
+    // If the prompt was to generate a description (single string), return it directly
+    if (data.currentCertTitle && data.currentCertTitle.trim() !== '') { // Use data.currentCertTitle for check
+      return result; // Return as a single string
+    } else {
+      // Otherwise, it's generating titles (array of strings)
+      try {
+        const parsed = JSON.parse(result);
+        return parsed;
+      } catch (parseError) {
+        console.error(`JSON parsing error for ${sectionType} titles:`, parseError);
+        console.error('Raw response that failed to parse:', result);
+        return result.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      }
+    }
+  }
+
+  return result;
+};
