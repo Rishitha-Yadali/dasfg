@@ -58,9 +58,6 @@ type ManualProject = {
   oneLiner: string;
 };
 
-// --- NEW CONSTANT ---
-const MAX_OPTIMIZER_INPUT_LENGTH = 50000; // Match the constant in geminiService.ts
-
 const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
   isAuthenticated,
   onShowAuth,
@@ -287,6 +284,36 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
     }
   }, [handleInitialResumeProcessing]); // Dependencies for memoized function
 
+  const handleMissingSectionsProvided = useCallback(async (data: any) => {
+    setIsProcessingMissingSections(true);
+    try {
+      if (!pendingResumeData) {
+        throw new Error('No pending resume data to update.');
+      }
+      const updatedResume: ResumeData = {
+        ...pendingResumeData,
+        ...(data.workExperience && data.workExperience.length > 0 && { workExperience: data.workExperience }),
+        ...(data.projects && data.projects.length > 0 && { projects: data.projects }),
+        ...(data.skills && data.skills.length > 0 && { skills: data.skills }),
+        ...(data.education && data.education.length > 0 && { education: data.education }),
+        ...(data.certifications && data.certifications.length > 0 && { certifications: data.certifications }), // Add certifications
+        ...(data.summary && { summary: data.summary })
+      };
+      setShowMissingSectionsModal(false);
+      setMissingSections([]);
+      setPendingResumeData(null);
+      setIsOptimizing(false);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token || '';
+      await handleInitialResumeProcessing(updatedResume, accessToken);
+    } catch (error) {
+      console.error('Error processing missing sections:', error);
+      alert('Failed to process the provided information. Please try again.');
+    } finally {
+      setIsProcessingMissingSections(false);
+    }
+  }, [pendingResumeData, handleInitialResumeProcessing]);
+
   const handleOptimize = useCallback(async () => { // Memoize
     if (!extractionResult.text.trim() || !jobDescription.trim()) {
       alert('Please provide both resume content and job description');
@@ -297,17 +324,6 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
       onShowAuth();
       return;
     }
-
-    // --- NEW: Input Length Validation ---
-    const combinedInputLength = extractionResult.text.length + jobDescription.length;
-    if (combinedInputLength > MAX_OPTIMIZER_INPUT_LENGTH) {
-      alert(
-        `Your combined resume and job description are too long (${combinedInputLength} characters). ` +
-        `The maximum allowed is ${MAX_OPTIMIZER_INPUT_LENGTH} characters. Please shorten your input.`
-      );
-      return;
-    }
-    // --- END NEW ---
 
     // Clear any previous interruption state at the start of optimization attempt
     setOptimizationInterrupted(false);
@@ -344,7 +360,7 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
         } else {
           // Parse from extractionResult.text via AI as before
           const parsedResume = await optimizeResume(
-           extractionResult.text, // This is where the cleaned text should be passed if you want to use it
+           extractionResult.text,
             jobDescription,
             userType,
             userName,
@@ -904,3 +920,4 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
 };
 
 export default ResumeOptimizer;
+
