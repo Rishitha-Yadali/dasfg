@@ -560,7 +560,7 @@ function App() {
           onClose={() => setShowWelcomeOffer(false)}
           // MODIFIED LINES 302-305: Updated onAction to navigate to /optimizer
           onAction={() => {
-            navigate('/guided-builder');
+            navigate('/optimizer');
             setShowWelcomeOffer(false);
           }}
         />
