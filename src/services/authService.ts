@@ -451,6 +451,46 @@ class AuthService {
       throw error;
     }
   }
+
+  // ADDED: New method to increment global resumes created count
+  async incrementGlobalResumesCreatedCount(): Promise<number> {
+    console.log('AuthService: Incrementing global resumes created count...');
+    try {
+      const { data, error } = await supabase.rpc('increment_total_resumes_created');
+      if (error) {
+        console.error('AuthService: Error incrementing global resumes count:', error);
+        throw new Error('Failed to increment global resume count.');
+      }
+      console.log('AuthService: Global resumes count incremented successfully. New count:', data);
+      return data;
+    } catch (error) {
+      console.error('AuthService: Error in incrementGlobalResumesCreatedCount catch block:', error);
+      throw error;
+    }
+  }
+
+  // ADDED: New method to fetch global resumes created count
+  async getGlobalResumesCreatedCount(): Promise<number> {
+    console.log('AuthService: Fetching global resumes created count...');
+    try {
+      const { data, error } = await supabase
+        .from('app_metrics')
+        .select('metric_value')
+        .eq('metric_name', 'total_resumes_created')
+        .single();
+      
+      if (error) {
+        console.error('AuthService: Error fetching global resumes count:', error);
+        return 50000; // Return default if fetch fails
+      }
+      
+      console.log('AuthService: Global resumes count fetched successfully:', data.metric_value);
+      return data.metric_value;
+    } catch (error) {
+      console.error('AuthService: Error in getGlobalResumesCreatedCount catch block:', error);
+      return 50000; // Return default if fetch fails
+    }
+  }
 }
 
 export const authService = new AuthService();
