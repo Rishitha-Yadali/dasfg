@@ -1,3 +1,4 @@
+```tsx
 // src/components/InputWizard.tsx
 import React, { useState } from 'react';
 import {
@@ -91,7 +92,7 @@ export const InputWizard: React.FC<InputWizardProps> = ({
           />
         </div>
       ),
-      isValid: extractionResult.text.trim().length > 0 && jobDescription.trim().length >= 250
+     isValid: extractionResult.text.trim().length > 0 && jobDescription.trim().length >= 250
     },
     {
       id: 'social',
@@ -164,17 +165,9 @@ export const InputWizard: React.FC<InputWizardProps> = ({
                   : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
               }`}
             >
-              <User className={`w-8 h-8 mb-3 ${
-                userType === 'fresher'
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-500 dark:text-gray-300'
-              }`} />
-              <span className={`font-semibold text-lg mb-2 ${
-                userType === 'fresher'
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-900 dark:text-gray-100'
-              }`}>Fresher/New Graduate</span>
-              <span className="text-sm text-gray-500 text-center dark:text-gray-300">Recent graduate or entry-level professional</span>
+              <User className={`w-8 h-8 mb-3 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+              <span className={`font-semibold text-lg mb-2 ${userType === 'fresher' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Fresher/New Graduate</span>
+              <span className={`text-sm text-gray-500 text-center dark:text-gray-300`}>Recent graduate or entry-level professional</span>
             </button>
 
             {/* Experienced Professional Button */}
@@ -186,17 +179,9 @@ export const InputWizard: React.FC<InputWizardProps> = ({
                   : 'border-gray-200 hover:border-green-300 hover:bg-green-50 dark:border-dark-200 dark:hover:border-green-900 dark:hover:bg-green-900/10'
               }`}
             >
-              <Briefcase className={`w-8 h-8 mb-3 ${
-                userType === 'experienced'
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-500 dark:text-gray-300'
-              }`} />
-              <span className={`font-semibold text-lg mb-2 ${
-                userType === 'experienced'
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-900 dark:text-gray-100'
-              }`}>Experienced Professional</span>
-              <span className="text-sm text-gray-500 text-center dark:text-gray-300">Professional with 1+ years of work experience</span>
+              <Briefcase className={\`w-8 h-8 mb-3 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-300'}`} />
+              <span className={\`font-semibold text-lg mb-2 ${userType === 'experienced' ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'}`}>Experienced Professional</span>
+              <span className={\`text-sm text-gray-500 text-center dark:text-gray-300`}>Professional with 1+ years of work experience</span>
             </button>
           </div>
         </div>
@@ -261,7 +246,7 @@ export const InputWizard: React.FC<InputWizardProps> = ({
                 }
               }}
               disabled={!extractionResult.text.trim() || (scoringMode === 'jd_based' && (!jobDescription.trim() || !targetRole.trim()))}
-              className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 ${
+              className={\`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center space-x-3 ${
                 !extractionResult.text.trim() || (scoringMode === 'jd_based' && (!jobDescription.trim() || !targetRole.trim()))
                   ? 'bg-gray-400 cursor-not-allowed text-white'
                   : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl cursor-pointer'
@@ -318,7 +303,7 @@ export const InputWizard: React.FC<InputWizardProps> = ({
   const currentStepData = steps[currentStep];
 
   return (
-    <div className="container-responsive space-y-12">
+     <div className="container-responsive space-y-12">
       {/* Progress Indicator */}
       <div className="bg-white rounded-xl shadow-lg p-3 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
         <div className="flex items-center justify-between mb-6">
@@ -332,13 +317,13 @@ export const InputWizard: React.FC<InputWizardProps> = ({
         <div className="relative overflow-x-auto overflow-hidden w-[320px] mx-auto md:w-auto">
           <div
             className="flex items-center space-x-4 mb-6 transition-transform duration-300"
-            style={{ transform: `translateX(${translateX}px)` }}
+            style={{ transform: \`translateX(${translateX}px)` }}
           >
             {steps.map((step, index) => (
               <React.Fragment key={step.id}>
                 <div className="flex flex-col items-center w-24 flex-shrink-0">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    className={\`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                       index < currentStep
                         ? 'bg-green-500 text-white'
                         : index === currentStep
@@ -378,4 +363,48 @@ export const InputWizard: React.FC<InputWizardProps> = ({
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-50 dark:border-dark-400">
         <div className="flex justify-between items-center gap-2">
           <button
-            onClick
+            onClick={handlePrevious}
+            disabled={currentStep === 0}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 sm:w-auto flex-shrink-0 ${
+              currentStep === 0
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-dark-200 dark:text-gray-500'
+                : 'bg-gray-600 hover:bg-gray-700 text-white shadow-lg hover:shadow-xl dark:bg-gray-700 dark:hover:bg-gray-800'
+            }`}
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Previous</span>
+          </button>
+
+          <div className="text-center flex-grow sm:w-48 flex-shrink-0">
+            <div className="text-sm text-gray-500 mb-1 dark:text-gray-400">Progress</div>
+            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-dark-200">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {currentStep < steps.length - 1 ? (
+            <button
+              onClick={handleNext}
+              disabled={!currentStepData.isValid}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 sm:w-auto flex-shrink-0 ${
+                !currentStepData.isValid
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-dark-200 dark:text-gray-500'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl dark:bg-blue-700 dark:hover:bg-blue-800'
+              }`}
+            >
+              <span>Next</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="sm:w-24 flex-shrink-0" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+```
