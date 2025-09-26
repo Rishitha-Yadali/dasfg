@@ -58,6 +58,9 @@ type ManualProject = {
   oneLiner: string;
 };
 
+// --- NEW CONSTANT ---
+const MAX_OPTIMIZER_INPUT_LENGTH = 50000; // Match the constant in geminiService.ts
+
 const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
   isAuthenticated,
   onShowAuth,
@@ -325,6 +328,17 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
       return;
     }
 
+    // --- NEW: Input Length Validation ---
+    const combinedInputLength = extractionResult.text.length + jobDescription.length;
+    if (combinedInputLength > MAX_OPTIMIZER_INPUT_LENGTH) {
+      alert(
+        `Your combined resume and job description are too long (${combinedInputLength} characters). ` +
+        `The maximum allowed is ${MAX_OPTIMIZER_INPUT_LENGTH} characters. Please shorten your input.`
+      );
+      return;
+    }
+    // --- END NEW ---
+
     // Clear any previous interruption state at the start of optimization attempt
     setOptimizationInterrupted(false);
     try {
@@ -360,7 +374,7 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
         } else {
           // Parse from extractionResult.text via AI as before
           const parsedResume = await optimizeResume(
-           extractionResult.text,
+           extractionResult.text, // This is where the cleaned text should be passed if you want to use it
             jobDescription,
             userType,
             userName,
@@ -920,4 +934,3 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
 };
 
 export default ResumeOptimizer;
-
