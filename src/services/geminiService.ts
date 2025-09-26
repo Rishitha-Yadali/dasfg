@@ -351,7 +351,7 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
       "X-Title": "PrimoBoost AI", // Replace with your actual app name
     },
     body: JSON.stringify({
-      model: "google/gemini-flash-2.5", // Set to google/gemini-flash-1.5
+      model: "google/gemini-2.5-flash", // Set to google/gemini-flash-1.5
       messages: [{ role: "user", content: promptContent }],
     }),
   });
