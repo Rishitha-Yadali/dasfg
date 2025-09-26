@@ -549,7 +549,8 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
     </h1>
   </div>
   <div className="w-6 sm:w-16" />
-
+</div
+  </div>
 
       </div>
 
