@@ -175,8 +175,8 @@ export const HomePage: React.FC<HomePageProps> = ({
   ];
 
   const stats = [
-    { 
-      number: globalResumesCreated >= 50000 ? `${Math.floor(globalResumesCreated / 1000)}K+` : `${globalResumesCreated.toLocaleString()}`, 
+    {
+      number: globalResumesCreated.toLocaleString(),
       label: 'Resumes Created', 
       icon: <FileText className="w-5 h-5" />, 
       microcopy: 'Trusted by thousands of job seekers worldwide' 
