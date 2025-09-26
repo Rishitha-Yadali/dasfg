@@ -96,13 +96,6 @@ const asText = (v: any): string => {
   return v == null ? '' : String(v);
 };
 
-  const [extractionResult, setExtractionResult] = useState<ExtractionResult>({ text: '', extraction_mode: 'TEXT', trimmed: false });
-  const [jobDescription, setJobDescription] = useState('');
-  const [targetRole, setTargetRole] = useState('');
-  const [userType, setUserType] = useState<UserType>('fresher'); // Default to fresher
-  const [scoringMode, setScoringMode] = useState<ScoringMode>('general');
-  const [autoScoreOnUpload, setAutoScoreOnUpload] = useState(true);
-
   const [optimizedResume, setOptimizedResume] = useState<ResumeData | null>({
     name: '', phone: '', email: '', linkedin: '', github: '',
     education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: []
@@ -200,7 +193,6 @@ const asText = (v: any): string => {
       name: '', phone: '', email: '', linkedin: '', github: '',
       education: [], workExperience: [], projects: [], skills: [], certifications: [], additionalSections: []
     });
-    setExtractionResult({ text: '', extraction_mode: 'TEXT', trimmed: false });
     setJobDescription('');
     setTargetRole('');
     setUserType('fresher'); // Reset to default
@@ -237,12 +229,6 @@ const asText = (v: any): string => {
       setLoadingSubscription(false);
     }
   }, [isAuthenticated, user, checkSubscriptionStatus]); // Add checkSubscriptionStatus to dependencies
-
-  // useEffect(() => {
-  //   if (extractionResult.text.trim().length > 0 && currentStep === 0) {
-  //     setCurrentStep(1);
-  //   }
-  // }, [extractionResult.text, currentStep]);
 
   const checkForMissingSections = useCallback((resumeData: ResumeData): string[] => { // Memoize
     const missing: string[] = [];
@@ -1070,6 +1056,7 @@ const handleSelectAIGeneratedOption = (selectedOption: string[]) => {
           );
         }
         setAIGeneratedBullets(generated as string[][]); // Pass directly, it's already string[][]
+        setShowAIBulletOptions(true);
       } catch (error) {
         console.error('Error regenerating bullets:', error);
         alert('Failed to regenerate bullets. Please try again.');
@@ -1524,28 +1511,7 @@ const handleGenerateProjectBullets = async (
   // --- End Objective/Summary AI Generation Handlers ---
 
   // --- Review Section State ---
-  const toggleReviewSection = (sectionKey: string) => {
-    setExpandedReviewSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionKey)) {
-        newSet.delete(sectionKey);
-      } else {
-        newSet.add(sectionKey);
-      }
-      return newSet;
-    });
-  };
-
-  const reviewSectionMap: { [key: string]: number } = {
-    'profile': 1,
-    'objective_summary': 2,
-    'education': 3,
-    'work_experience': 4,
-    'projects': 5,
-    'skills': 6,
-    'certifications': 7,
-    'additional_sections': 8,
-  };
+  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
   // --- End Review Section State ---
 
   // --- NEW: Conditional Section Rendering ---
@@ -2553,22 +2519,25 @@ const handleGenerateProjectBullets = async (
 
             {/* Navigation Buttons */}
             <div className="flex justify-between items-center bg-white rounded-xl shadow-lg p-6 border border-gray-200 dark:bg-dark-100 dark:border-dark-300">
-              <button
-                onClick={handlePreviousSection}
-                disabled={currentSectionIndex === 0}
-                className="btn-secondary flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Previous</span>
-              </button>
-              <button
-                onClick={handleNextSection}
-                // The disabled state will now be handled by the validation inside handleNextSection
-                className="btn-primary flex items-center space-x-2"
-              >
-                <span>Next</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
+              {currentSectionIndex > 0 && ( // Conditionally render Previous button
+                <button
+                  onClick={handlePreviousSection}
+                  className="btn-secondary flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Previous</span>
+                </button>
+              )}
+              {currentSectionIndex < resumeSections.length - 1 && ( // Conditionally render Next button
+                <button
+                  onClick={handleNextSection}
+                  // The disabled state will now be handled by the validation inside handleNextSection
+                  className="btn-primary flex items-center space-x-2"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
