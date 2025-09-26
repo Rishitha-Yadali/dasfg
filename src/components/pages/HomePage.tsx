@@ -236,7 +236,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             >
               <Sparkles className="w-6 h-6 mr-2" />
               Start Building My Resume
-              <ArrowRight className="w-6 h-6 ml-2" />
+             
             </button>
 
             {/* Quick Stats */}
