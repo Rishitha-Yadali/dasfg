@@ -489,22 +489,22 @@ export const LinkedInMessageGenerator: React.FC<LinkedInMessageGeneratorProps> =
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tone</label>
-              <div className="flex rounded-xl gap-1 bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300">
-                {(['professional', 'casual', 'friendly'] as MessageTone[]).map((tone) => (
-                  <button
-                    key={tone}
-                    onClick={() => handleInputChange('tone', tone)}
-                   className={`flex-1 text-center py-2 px-2 rounded-lg font-medium transition-all duration-300 capitalize ${
-  formData.tone === tone
-    ? 'bg-blue-600 text-white shadow-md dark:bg-neon-cyan-500 dark:text-gray-900'
-    : 'text-gray-600 hover:text-blue-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-neon-cyan-400 dark:hover:bg-dark-200'
-}`}
+              <div className="flex flex-wrap justify-center gap-2 rounded-xl bg-gray-100 border border-gray-200 shadow-inner dark:bg-dark-200 dark:border-dark-300">
+  {(['professional', 'casual', 'friendly'] as MessageTone[]).map((tone) => (
+    <button
+      key={tone}
+      onClick={() => handleInputChange('tone', tone)}
+      className={`px-5 py-2 rounded-lg font-medium transition-all duration-300 capitalize whitespace-nowrap ${
+        formData.tone === tone
+          ? 'bg-blue-600 text-white shadow-md dark:bg-neon-cyan-500 dark:text-gray-900'
+          : 'text-gray-600 hover:text-blue-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-neon-cyan-400 dark:hover:bg-dark-300'
+      }`}
+    >
+      {tone}
+    </button>
+  ))}
+</div>
 
-                  >
-                    {tone}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {formData.messageType !== 'referral' && (
