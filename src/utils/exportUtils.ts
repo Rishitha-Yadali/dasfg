@@ -143,7 +143,7 @@ function addNewPage(state: PageState, PDF_CONFIG: any): void {
 
   // Add page number
   const pageText = `Page ${state.currentPage}`;
-  state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
+  state.doc.setFont(PDF_CONFIG.fontFamily, 'bold');
   state.doc.setFontSize(9);
   state.doc.setTextColor(128, 128, 128); // Gray
 
