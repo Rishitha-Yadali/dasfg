@@ -38,7 +38,7 @@ const ptToPx = (pt: number) => pt * 1.333; // 1pt = 1.333px at 96 DPI
 const createPDFConfigForPreview = (options: ExportOptions) => {
   const layoutConfig = options.layoutType === 'compact' ?
     { margins: { top: 10, bottom: 10, left: 15, right: 15 } } :
-    { margins: { top: 15, bottom: 15, left: 20, right: 20 } };
+    { margins: { top: 15, bottom: 10, left: 20, right: 20 } }; // MODIFIED: Changed bottom margin to 10 for standard
 
   const paperConfig = options.paperSize === 'letter' ?
     { pageWidth: 216, pageHeight: 279 } :
@@ -416,7 +416,8 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
       // --- DYNAMIC ADDITIONAL SECTIONS LOGIC ---
       case 'additionalSections':
-        if (!resumeData.additionalSections || resumeData.additionalSections.length === 0) return null;
+        // MODIFIED: Add a check to ensure additionalSections is an array
+        if (!resumeData.additionalSections || !Array.isArray(resumeData.additionalSections) || resumeData.additionalSections.length === 0) return null;
         return (
           <>
             {resumeData.additionalSections.map((section, index) => {
