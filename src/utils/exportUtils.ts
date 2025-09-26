@@ -143,7 +143,7 @@ function addNewPage(state: PageState, PDF_CONFIG: any): void {
 
   // Add page number
   const pageText = `Page ${state.currentPage}`;
-  state.doc.setFont(PDF_CONFIG.fontFamily, 'bold');
+  state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
   state.doc.setFontSize(9);
   state.doc.setTextColor(128, 128, 128); // Gray
 
@@ -338,7 +338,7 @@ function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): num
     const schoolText = `${edu.school}${isValidField(edu.location) ? `, ${edu.location}` : ''}`;
     const schoolHeight = drawText(state, schoolText, PDF_CONFIG.margins.left, PDF_CONFIG, {
       fontSize: PDF_CONFIG.fonts.company.size,
-      fontWeight: 'bold', // Changed to bold
+      fontWeight: 'normal', // Changed to normal
       color: PDF_CONFIG.colors.primary
     });
     let cgpaHeight = 0;
@@ -350,13 +350,13 @@ function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): num
       });
     }
     // Removed edu.relevantCoursework block
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Changed to normal
+    state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Changed to bold
     state.doc.setFontSize(PDF_CONFIG.fonts.year.size);
     state.doc.setTextColor(PDF_CONFIG.colors.primary[0], PDF_CONFIG.colors.primary[1], PDF_CONFIG.colors.primary[2]);
     const yearWidth = state.doc.getTextWidth(edu.year);
     const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
     const yearY = initialYForEdu + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Changed to normal
+    state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Changed to bold
     state.doc.text(edu.year, yearX, yearY);
     state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
     totalHeight += degreeHeight + schoolHeight + cgpaHeight;
@@ -582,10 +582,9 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
     
     state.currentY += 3;
 
-    if (resumeData.summary && resumeData.summary.trim() !== '') {
+    if (userType === 'experienced' && resumeData.summary && resumeData.summary.trim() !== '') {
       drawProfessionalSummary(state, resumeData.summary, PDF_CONFIG);
-    }
-    if (userType === 'student' && resumeData.careerObjective && resumeData.careerObjective.trim() !== '') {
+    } else if ((userType === 'student' || userType === 'fresher') && resumeData.careerObjective && resumeData.careerObjective.trim() !== '') {
       drawCareerObjective(state, resumeData.careerObjective, PDF_CONFIG);
     }
 
@@ -603,7 +602,7 @@ export const exportToPDF = async (resumeData: ResumeData, userType: UserType = '
         drawCertifications(state, resumeData.certifications, PDF_CONFIG);
         drawAchievementsAndExtras(state, resumeData, PDF_CONFIG);
     } else { // Fresher
-        drawEducation(state, resumeData.education, PDF_CONFIG);
+        drawEducation(state, resumeData.education, userType, PDF_CONFIG);
         drawWorkExperience(state, resumeData.workExperience, userType, PDF_CONFIG);
         drawProjects(state, resumeData.projects, PDF_CONFIG);
         drawSkills(state, resumeData.skills, PDF_CONFIG);
@@ -710,11 +709,11 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
           <tr>
             <td style="padding: 0; vertical-align: top; text-align: left;">
               <div class="degree" style="font-size: 9.5pt; font-weight: bold; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${edu.degree}</div>
-              <div class="school" style="font-size: 9.5pt; font-weight: bold; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${edu.school}${isValidField(edu.location) ? `, ${edu.location}` : ''}</div>
+              <div class="school" style="font-size: 9.5pt; font-weight: normal; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${edu.school}${isValidField(edu.location) ? `, ${edu.location}` : ''}</div>
               ${isValidField(edu.cgpa) ? `<div style="font-size: 9.5pt; color: #4B5563; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">CGPA: ${edu.cgpa}</div>` : ''}
             </td>
             <td style="padding: 0; vertical-align: top; text-align: right; white-space: nowrap;">
-              <div class="year" style="font-size: 9.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: normal;">${edu.year}</div>
+              <div class="year" style="font-size: 9.5pt; font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: bold;">${edu.year}</div>
             </td>
           </tr>
         </table>
@@ -837,7 +836,7 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
     `;
   } else { // Fresher
     sectionOrderHtml = `
-      ${summaryHtml}
+      ${careerObjectiveHtml}
       ${educationHtml}
       ${workExperienceHtml}
       ${projectsHtml}
