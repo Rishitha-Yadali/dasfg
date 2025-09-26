@@ -2514,6 +2514,16 @@ const handleGenerateProjectBullets = async (
         {/* Removed the !optimizedResume conditional block to always show the guided builder */}
         {/* Removed the "Back to Home" button from here as it will be part of the navigation */}
 
+        {/* NEW: Back to Home Button */}
+        <button
+          onClick={onNavigateBack}
+          className="mb-6 bg-gradient-to-r from-neon-cyan-500 to-neon-blue-500 text-white hover:from-neon-cyan-400 hover:to-neon-blue-400 active:from-neon-cyan-600 active:to-neon-blue-600 shadow-md hover:shadow-neon-cyan py-3 px-5 rounded-xl inline-flex items-center space-x-2 transition-all duration-200"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="hidden sm:block">Back to Home</span>
+        </button>
+        {/* END NEW */}
+
         <div className="max-w-7xl mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6">
           {/* Left Column: Guided Builder Sections & Navigation */}
           <div className="lg:col-span-1 space-y-6">
