@@ -782,7 +782,7 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Choose Project Addition Method</h2>
                 <p className="text-gray-600">How would you like to add a relevant project to your resume?</p>
               </div>
-              <div className="space-y-3">
+              <div className="space-x-3">
                 <button onClick={() => handleProjectOptionSelect('manual')} className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2">
                   <FileText className="w-5 h-5" />
                   <span>Manual Add - I'll provide project details</span>
