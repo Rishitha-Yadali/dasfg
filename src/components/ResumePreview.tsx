@@ -251,7 +251,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     } else if (userType === 'student') {
       return ['careerObjective', 'education', 'skills', 'projects', 'workExperience', 'certifications', 'achievementsAndExtras'];
     } else { // 'fresher'
-      return ['summary', 'education', 'workExperience', 'projects', 'skills', 'certifications', 'achievementsAndExtras'];
+      return ['careerObjective', 'education', 'skills', 'projects', 'workExperience', 'certifications', 'achievementsAndExtras'];
     }
   };
 
@@ -331,7 +331,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                     <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.jobTitle.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
                       {edu.degree}
                     </div>
-                    <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.company.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}> {/* Changed to bold */}
+                    <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.company.size), fontWeight: 'normal', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}> {/* Changed to normal */}
                       {edu.school}{edu.location ? `, ${edu.location}` : ''}
                     </div>
                     {edu.cgpa && (
@@ -340,7 +340,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                       </div>
                     )}
                   </div>
-                  <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.year.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif`, fontWeight: 'normal' }}> {/* Changed to normal */}
+                  <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.year.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif`, fontWeight: 'bold' }}> {/* Changed to bold */}
                     {edu.year}
                   </div>
                 </div>
