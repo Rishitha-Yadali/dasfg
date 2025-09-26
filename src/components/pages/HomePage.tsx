@@ -50,6 +50,7 @@ interface HomePageProps {
 
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { useAuth } from '../../contexts/AuthContext'; // ADDED: Import useAuth
+import { authService } from '../../services/authService'; // ADDED: Import authService
 
 export const HomePage: React.FC<HomePageProps> = ({
   // REMOVED: onPageChange,

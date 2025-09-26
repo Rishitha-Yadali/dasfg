@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { authService } from '../services/authService';
 import { FileText, AlertCircle, Plus, Sparkles, ArrowLeft, X, ArrowRight, User, Mail, Phone, Linkedin, Github, GraduationCap, Briefcase, Code, Award, Lightbulb, CheckCircle, Trash2, RotateCcw, ChevronDown, ChevronUp, CreditCard as Edit3, Target, Download, Loader2 } from 'lucide-react'; // Added Download, Loader2
 import { ResumePreview } from './ResumePreview';
 import { ResumeExportSettings } from './ResumeExportSettings';
@@ -17,6 +16,7 @@ import { LoadingAnimation } from './LoadingAnimation';
 import { optimizeResume, generateAtsOptimizedSection, generateMultipleAtsVariations } from '../services/geminiService';
 import { generateBeforeScore, generateAfterScore, getDetailedResumeScore, reconstructResumeText } from '../services/scoringService';
 import { paymentService } from '../services/paymentService';
+import { authService } from '../services/authService';
 import { ResumeData, UserType, MatchScore, DetailedScore, ExtractionResult, ScoringMode } from '../types/resume';
 import { ExportOptions, defaultExportOptions } from '../types/export';
 import { exportToPDF, exportToWord } from '../utils/exportUtils';
@@ -410,6 +410,19 @@ const asText = (v: any): string => {
 
         // After successful optimization, ensure the UI transitions to the final_resume step
         setCurrentSectionIndex(resumeSections.indexOf('final_resume'));
+
+        // NEW: Increment user's personal resume count after successful guided build
+        if (user) {
+          try {
+            console.log('GuidedResumeBuilder: Incrementing resume count for user:', user.id);
+            await authService.incrementResumesCreatedCount(user.id);
+            // ADDED: Increment global resumes created count
+            await authService.incrementGlobalResumesCreatedCount();
+            console.log('GuidedResumeBuilder: Resume count incremented');
+          } catch (countError) {
+            console.error('GuidedResumeBuilder: Failed to increment resume counts:', countError);
+          }
+        }
 
       } catch (error: any) {
         console.error('Error optimizing resume:', error);
