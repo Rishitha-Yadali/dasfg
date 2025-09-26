@@ -16,6 +16,7 @@ import { LoadingAnimation } from './LoadingAnimation';
 import { optimizeResume } from '../services/geminiService';
 import { generateBeforeScore, generateAfterScore, getDetailedResumeScore, reconstructResumeText } from '../services/scoringService';
 import { paymentService } from '../services/paymentService';
+import { authService } from '../services/authService'; // ADDED: Import authService
 import { ResumeData, UserType, MatchScore, DetailedScore, ExtractionResult, ScoringMode } from '../types/resume';
 import { ExportOptions, defaultExportOptions } from '../types/export';
 import { exportToPDF, exportToWord } from '../utils/exportUtils';
@@ -68,7 +69,7 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
   toolProcessTrigger,
   setToolProcessTrigger
 }) => {
-  const { user } = useAuth();
+  const { user, revalidateUserSession } = useAuth(); // MODIFIED: Added revalidateUserSession
   const navigate = useNavigate();
 
   const [extractionResult, setExtractionResult] = useState<ExtractionResult>({ text: '', extraction_mode: 'TEXT', trimmed: false });
@@ -233,6 +234,9 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
       if (optimizationResult.success) {
         await checkSubscriptionStatus();
         setWalletRefreshKey(prevKey => prevKey + 1);
+        // ADDED: Increment resumes_created_count after successful optimization
+        await authService.incrementResumesCreatedCount(user!.id);
+        await revalidateUserSession(); // Revalidate session to update user context with new count
       } else {
         console.error('Failed to decrement optimization usage:', optimizationResult.error);
       }
@@ -248,7 +252,7 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
       setIsOptimizing(false);
       setIsCalculatingScore(false);
     }
-  }, [jobDescription, userType, userName, userEmail, userPhone, userLinkedin, userGithub, targetRole, user, checkSubscriptionStatus]); // Dependencies for memoized function
+  }, [jobDescription, userType, userName, userEmail, userPhone, userLinkedin, userGithub, targetRole, user, checkSubscriptionStatus, revalidateUserSession]); // Dependencies for memoized function
 
   const handleInitialResumeProcessing = useCallback(async (resumeData: ResumeData, accessToken: string) => { // Memoize
     try {
@@ -612,15 +616,15 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
 
   if (isOptimizing || isCalculatingScore || isProcessingMissingSections) {
     let loadingMessage = 'Optimizing Your Resume...';
-    let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
+    let submessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      subMessage = "We're updating your resume with the new sections you provided.";
+      submessage = "We're updating your resume with the new sections you provided.";
     }
-    return <LoadingAnimation message={loadingMessage} submessage={subMessage} />;
+    return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
   }
   return (
    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-16 dark:from-dark-50 dark:to-dark-200 transition-colors duration-300">
@@ -916,3 +920,4 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
 };
 
 export default ResumeOptimizer;
+
