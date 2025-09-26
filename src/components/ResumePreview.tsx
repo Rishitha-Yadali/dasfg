@@ -7,7 +7,7 @@ import { ResumeData, UserType } from '../types/resume';
 interface ExportOptions {
   layoutType: 'standard' | 'compact';
   paperSize: 'a4' | 'letter';
-  fontFamily: 'Helvetica' | 'Times' | 'Courier' | 'Roboto';
+  fontFamily: 'Helvetica' | 'Times' | 'Courier' | 'Roboto' | 'Calibri'; // Added Calibri
   nameSize: number;
   sectionHeaderSize: number;
   subHeaderSize: number;
@@ -19,7 +19,7 @@ interface ExportOptions {
 const defaultExportOptions: ExportOptions = {
   layoutType: 'standard',
   paperSize: 'a4',
-  fontFamily: 'Helvetica',
+  fontFamily: 'Calibri', // Changed default font
   nameSize: 22,
   sectionHeaderSize: 12,
   subHeaderSize: 10,
@@ -37,12 +37,12 @@ const ptToPx = (pt: number) => pt * 1.333; // 1pt = 1.333px at 96 DPI
 // Replicate PDF_CONFIG creation logic from exportUtils.ts
 const createPDFConfigForPreview = (options: ExportOptions) => {
   const layoutConfig = options.layoutType === 'compact' ?
-    { margins: { top: 10, bottom: 10, left: 15, right: 15 } } :
-    { margins: { top: 15, bottom: 10, left: 20, right: 20 } }; // MODIFIED: Changed bottom margin to 10 for standard
+    { margins: { top: 12, bottom: 12, left: 12, right: 12 } } : // Adjusted for compact
+    { margins: { top: 17.78, bottom: 17.78, left: 17.78, right: 17.78 } }; // Adjusted for standard
 
   const paperConfig = options.paperSize === 'letter' ?
     { pageWidth: 216, pageHeight: 279 } :
-    { pageWidth: 210, pageHeight: 297 };
+    { pageWidth: 210, pageHeight: 297 }; // Changed from 300 to 297
 
   return {
     pageWidth: paperConfig.pageWidth,
@@ -56,23 +56,23 @@ const createPDFConfigForPreview = (options: ExportOptions) => {
     },
     fonts: {
       name: { size: options.nameSize, weight: 'bold' as const },
-      contact: { size: options.bodyTextSize - 0.5, weight: 'bold' as const },
+      contact: { size: options.bodyTextSize - 0.5, weight: 'normal' as const },
       sectionTitle: { size: options.sectionHeaderSize, weight: 'bold' as const },
       jobTitle: { size: options.subHeaderSize, weight: 'bold' as const },
-      company: { size: options.subHeaderSize, weight: 'bold' as const },
-      year: { size: options.subHeaderSize, weight: 'normal' as const },
+      company: { size: options.subHeaderSize, weight: 'normal' as const }, // Changed to normal
+      year: { size: options.subHeaderSize, weight: 'normal' as const }, // Changed to normal
       body: { size: options.bodyTextSize, weight: 'normal' as const },
     },
     spacing: {
-      nameFromTop: 13,
+      nameFromTop: 10, // Changed from 13 to 10
       afterName: 0,
-      afterContact: 1,
+      afterContact: 2, // Changed from 1 to 2
       sectionSpacingBefore: options.sectionSpacing,
       sectionSpacingAfter: 2,
-      bulletListSpacing: options.entrySpacing * 0.3,
+      bulletListSpacing: 0.5, // Changed from options.entrySpacing * 0.3 to 0.5
       afterSubsection: 3,
       lineHeight: 1.2,
-      bulletIndent: 4,
+      bulletIndent: 5, // Changed from 4 to 5
       entrySpacing: options.entrySpacing,
     },
     colors: {
@@ -153,8 +153,8 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: ptToPx(PDF_CONFIG.fonts.sectionTitle.size),
     fontWeight: 'bold',
-    marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter),
-    marginTop: mmToPx(PDF_CONFIG.spacing.sectionSpacingBefore),
+    marginTop: mmToPx(PDF_CONFIG.spacing.sectionSpacingBefore), // Adjusted
+    marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter), // Adjusted
     fontFamily: `${PDF_CONFIG.fontFamily}, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif`,
     letterSpacing: '0.5pt',
     textTransform: 'uppercase',
@@ -162,7 +162,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
   const sectionUnderlineStyle: React.CSSProperties = {
     borderBottomWidth: '0.5pt',
-    borderColor: '#808080',
+    borderColor: '#404040', // Changed to darker gray
     height: '1px',
     marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter),
     width: `${mmToPx(PDF_CONFIG.contentWidth)}px`,
@@ -247,11 +247,11 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
   const getSectionOrder = () => {
     if (userType === 'experienced') {
-      return ['summary', 'workExperience', 'skills', 'projects', 'certifications', 'additionalSections', 'education'];
+      return ['summary', 'workExperience', 'projects', 'skills', 'certifications', 'education'];
     } else if (userType === 'student') {
-      return ['summary', 'education', 'skills', 'projects', 'workExperience', 'certifications', 'additionalSections', 'achievementsAndExtras'];
+      return ['careerObjective', 'education', 'skills', 'projects', 'workExperience', 'certifications', 'achievementsAndExtras'];
     } else { // 'fresher'
-      return ['summary', 'education', 'workExperience', 'projects', 'skills', 'certifications', 'additionalSections', 'achievementsAndExtras'];
+      return ['summary', 'education', 'workExperience', 'projects', 'skills', 'certifications', 'achievementsAndExtras'];
     }
   };
 
@@ -265,6 +265,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           return (
             <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
               <h2 style={sectionTitleStyle}>CAREER OBJECTIVE</h2>
+              <div style={sectionUnderlineStyle}></div>
               <p style={{ ...bodyTextStyle, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
                 {resumeData.careerObjective || ''}
               </p>
@@ -288,7 +289,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
             <h2 style={sectionTitleStyle}>
-              {userType === 'fresher' || userType === 'student' ? 'INTERNSHIPS & TRAINING' : 'PROFESSIONAL EXPERIENCE'}
+              {userType === 'fresher' ? 'WORK EXPERIENCE' : 'EXPERIENCE'}
             </h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.workExperience.map((job, index) => (
@@ -296,21 +297,17 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>
                   <div>
                     <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.jobTitle.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
-                      {job.role}
-                    </div>
-                    <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.company.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
-                      {job.company}{job.location ? `, ${job.location}` : ''}
+                      {job.role} | {job.company}{job.location ? `, ${job.location}` : ''}
                     </div>
                   </div>
-                  <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.year.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
+                  <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.year.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif`, fontWeight: 'normal' }}> {/* Changed to normal */}
                     {job.year}
                   </div>
                 </div>
                 {job.bullets && job.bullets.length > 0 && (
-                  <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none' }}>
+                  <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}> {/* Changed to disc */}
                     {job.bullets.map((bullet, bulletIndex) => (
                       <li key={bulletIndex} style={listItemStyle}>
-                        <span style={{ marginRight: '4px' }}>•</span>
                         <span>{typeof bullet === 'string' ? bullet : (bullet as any).description || JSON.stringify(bullet)}</span>
                       </li>
                     ))}
@@ -334,7 +331,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                     <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.jobTitle.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
                       {edu.degree}
                     </div>
-                    <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.company.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
+                    <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.company.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}> {/* Changed to bold */}
                       {edu.school}{edu.location ? `, ${edu.location}` : ''}
                     </div>
                     {edu.cgpa && (
@@ -343,7 +340,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                       </div>
                     )}
                   </div>
-                  <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.year.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
+                  <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.year.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif`, fontWeight: 'normal' }}> {/* Changed to normal */}
                     {edu.year}
                   </div>
                 </div>
@@ -357,22 +354,19 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
             <h2 style={sectionTitleStyle}>
-              {userType === 'fresher' || userType === 'student' ? 'ACADEMIC PROJECTS' : 'PROJECTS'}
+              PROJECTS
             </h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.projects.map((project, index) => (
               <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 2) }}>
-                <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.jobTitle.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif`, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>
+                <div style={{ fontSize: ptToPx(PDF_CONFIG.fonts.jobTitle.size), fontWeight: 'bold', fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif`, marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}> {/* Already bold */}
                   {project.title}
                 </div>
                 {project.bullets && project.bullets.length > 0 && (
-                  <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none' }}>
+                  <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}> {/* Changed to disc */}
                     {project.bullets.map((bullet, bulletIndex) => (
                       <li key={bulletIndex} style={listItemStyle}>
-                        <span style={{ marginRight: '4px' }}>•</span>
                       <span>{typeof bullet === 'string' ? bullet : (bullet as any).description || JSON.stringify(bullet)}</span>
-
-
                       </li>
                     ))}
                   </ul>
@@ -386,12 +380,12 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         if (!resumeData.skills || resumeData.skills.length === 0) return null;
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-            <h2 style={sectionTitleStyle}>TECHNICAL SKILLS</h2>
+            <h2 style={sectionTitleStyle}>SKILLS</h2>
             <div style={sectionUnderlineStyle}></div>
             {resumeData.skills.map((skillCategory, index) => (
               <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>
                 <span style={{ fontSize: ptToPx(PDF_CONFIG.fonts.body.size), fontFamily: `${PDF_CONFIG.fontFamily}, sans-serif` }}>
-                  <strong style={{ fontWeight: 'bold' }}>{skillCategory.category}:</strong>{' '}
+                  <strong style={{ fontWeight: 'bold' }}>{skillCategory.category}:</strong>{' '} {/* Already bold */}
                   {skillCategory.list && skillCategory.list.join(', ')}
                 </span>
               </div>
@@ -405,30 +399,22 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
             <h2 style={sectionTitleStyle}>CERTIFICATIONS</h2>
             <div style={sectionUnderlineStyle}></div>
-            <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none' }}>
+            <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}> {/* Changed to disc */}
               {resumeData.certifications.map((cert, index) => {
-                // --- FIX: Add a check for null or undefined cert objects ---
                 if (!cert) {
-                  return null; // Skip rendering if the cert item is null/undefined
+                  return null;
                 }
-                // --- END FIX ---
                 
                 let certText = '';
                 if (typeof cert === 'string') {
                   certText = cert;
-                } else if (cert && typeof cert === 'object') {
-                  if ('title' in cert && 'issuer' in cert) certText = `${String(cert.title)} - ${String(cert.issuer)}`;
-                  else if ('title' in cert && 'description' in cert) certText = `${String(cert.title)} - ${String(cert.description)}`;
-                  else if ('name' in cert) certText = String(cert.name);
-                  else if ('title' in cert) certText = String(cert.title);
-                  else if ('description' in cert) certText = (cert as any).description;
-                  else certText = Object.values(cert).filter(Boolean).join(' - ');
+                } else if (cert && typeof cert === 'object' && 'title' in cert) {
+                  certText = <><b style={{fontWeight: 'bold'}}>{cert.title}</b>{'description' in cert && cert.description ? `: ${cert.description}` : ''}</> as any; // Bold title
                 } else {
                   certText = String(cert);
                 }
                 return (
                   <li key={index} style={listItemStyle}>
-                    <span style={{ marginRight: '4px' }}>•</span>
                     <span>{certText}</span>
                   </li>
                 );
@@ -437,48 +423,10 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           </div>
         );
 
-      // --- DYNAMIC ADDITIONAL SECTIONS LOGIC ---
-      case 'additionalSections':
-        // FIXED: Comprehensive check to ensure additionalSections is a valid array
-        if (!resumeData.additionalSections || !Array.isArray(resumeData.additionalSections) || resumeData.additionalSections.length === 0) {
-          console.log('ResumePreview: Skipping additionalSections - not a valid array');
-          return null;
-        }
-        return (
-          <>
-            {resumeData.additionalSections.map((section, index) => {
-              if (!section || !section.title || !section.bullets || !Array.isArray(section.bullets)) {
-                console.log(`ResumePreview: Skipping section ${index} - invalid structure`);
-                return null;
-              }
-              return (
-                <div key={index} style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
-                  <h2 style={sectionTitleStyle}>
-                    {section.title.toUpperCase()}
-                  </h2>
-                  <div style={sectionUnderlineStyle}></div>
-                  {section.bullets.length > 0 && (
-                    <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none', marginTop: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
-                      {section.bullets.map((bullet, bulletIndex) => (
-                        <li key={bulletIndex} style={listItemStyle}>
-                          <span style={{ marginRight: '4px' }}>•</span>
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-          </>
-        );
-
       case 'achievementsAndExtras':
         const hasAchievements = resumeData.achievements && resumeData.achievements.length > 0;
-        const hasLanguages = resumeData.languagesKnown && resumeData.languagesKnown.length > 0;
-        const hasPersonalDetails = typeof resumeData.personalDetails === 'string' && resumeData.personalDetails.trim() !== '';
 
-        if (!hasAchievements && !hasLanguages && !hasPersonalDetails) return null;
+        if (!hasAchievements) return null;
 
         return (
           <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.sectionSpacingAfter) }}>
@@ -486,34 +434,13 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
             <div style={sectionUnderlineStyle}></div>
             {hasAchievements && (
               <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
-                <p style={{ ...bodyTextStyle, fontWeight: 'bold', marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>Achievements:</p>
-                <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none' }}>
+                <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'disc' }}> {/* Changed to disc */}
                   {resumeData.achievements!.map((item, index) => (
                     <li key={index} style={listItemStyle}>
-                      <span style={{ marginRight: '4px' }}>•</span>
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
-            {hasLanguages && (
-              <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
-                <p style={{ ...bodyTextStyle, fontWeight: 'bold', marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>Languages Known:</p>
-                <ul style={{ marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent), listStyleType: 'none' }}>
-                  {resumeData.languagesKnown!.map((item, index) => (
-                    <li key={index} style={listItemStyle}>
-                      <span style={{ marginRight: '4px' }}>•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {hasPersonalDetails && (
-              <div style={{ marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing) }}>
-                <p style={{ ...bodyTextStyle, fontWeight: 'bold', marginBottom: mmToPx(PDF_CONFIG.spacing.entrySpacing * 0.5) }}>Personal Details:</p>
-                <p style={{ ...bodyTextStyle, marginLeft: mmToPx(PDF_CONFIG.spacing.bulletIndent) }}>{resumeData.personalDetails}</p>
               </div>
             )}
           </div>
@@ -568,7 +495,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
                 fontFamily: `${PDF_CONFIG.fontFamily}, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif`,
                 marginBottom: mmToPx(PDF_CONFIG.spacing.afterContact),
                 display: 'flex',
-                justifyContent: 'center',
+                justifyContent: 'center', // Centered
                 alignItems: 'center',
                 flexWrap: 'wrap'
               }}>
@@ -578,7 +505,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
             <div style={{
               borderBottomWidth: '0.5pt',
-              borderColor: '#808080',
+              borderColor: '#404040', // Changed to darker gray
               height: '1px',
               margin: '0 auto',
               width: `${mmToPx(PDF_CONFIG.contentWidth)}px`,
