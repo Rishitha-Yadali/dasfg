@@ -1,3 +1,4 @@
+```tsx
 // src/components/InputWizard.tsx
 import React, { useState } from 'react';
 import {
@@ -91,7 +92,7 @@ export const InputWizard: React.FC<InputWizardProps> = ({
           />
         </div>
       ),
-     isValid: extractionResult.text.trim().length > 0 && (jobDescription.trim().length === 0 || jobDescription.trim().length >= 250)
+     isValid: extractionResult.text.trim().length > 0 && jobDescription.trim().length >= 250
     },
     {
       id: 'social',
@@ -119,7 +120,7 @@ export const InputWizard: React.FC<InputWizardProps> = ({
                 Specify the exact role title for more targeted project recommendations
               </p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 dark:bg-neon-cyan-500/10 dark:border-neon-cyan-400/50">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 dark:bg-neon-cyan-500/20 dark:border-neon-cyan-400/50">
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0 dark:bg-neon-cyan-400"></div>
                 <div className="text-sm text-blue-800 dark:text-neon-cyan-300">
@@ -403,3 +404,5 @@ export const InputWizard: React.FC<InputWizardProps> = ({
     </div>
   );
 };
+
+```

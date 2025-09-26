@@ -1,3 +1,4 @@
+```tsx
 import React from 'react';
 import { FileText, Briefcase, AlertCircle } from 'lucide-react';
 
@@ -56,7 +57,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
         <textarea
           value={jobDescription}
           onChange={(e) => onJobDescriptionChange(e.target.value)}
-          placeholder="Paste the complete job description here. Include requirements, responsibilities, and preferred qualifications for best optimization results..."
+          placeholder="Paste the complete job description here. Enter a minimum of 250 characters for best optimization results..."
           className="w-full h-32 sm:h-48 p-3 sm:p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-neon-blue-500 focus:border-neon-blue-500 resize-none transition-all duration-200 bg-gray-50 focus:bg-white text-sm sm:text-base dark:bg-dark-200 dark:border-dark-300 dark:text-gray-100 dark:focus:bg-dark-100"
         />
         <div className="flex justify-between items-center mt-2">
@@ -90,3 +91,4 @@ export const InputSection: React.FC<InputSectionProps> = ({
     </div>
   );
 };
+```
