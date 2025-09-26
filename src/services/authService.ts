@@ -438,7 +438,9 @@ class AuthService {
   async incrementResumesCreatedCount(userId: string): Promise<void> {
     console.log('AuthService: Incrementing resumes_created_count for user ID:', userId);
     try {
-      const { error } = await supabase.rpc('increment_resumes_created_count', { user_id_param: userId });
+      const { error } = await supabase.rpc('increment_resumes_created_count', { 
+        user_id_param: userId 
+      });
       if (error) {
         console.error('AuthService: Error incrementing resumes_created_count:', error);
         throw new Error('Failed to increment resume count.');

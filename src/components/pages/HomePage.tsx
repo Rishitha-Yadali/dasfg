@@ -158,8 +158,14 @@ export const HomePage: React.FC<HomePageProps> = ({
   ];
 
   const stats = [
-    // MODIFIED: Dynamically display resumesCreatedCount
-    { number: isAuthenticated && user?.resumesCreatedCount !== undefined ? `${user.resumesCreatedCount}+` : '1000+', label: 'Resumes Created', icon: <FileText className="w-5 h-5" />, microcopy: 'Trusted by thousands of job seekers' },
+    // MODIFIED: Show individual user's count when authenticated, otherwise show global count
+    { 
+      number: isAuthenticated && user?.resumesCreatedCount !== undefined ? 
+        `${user.resumesCreatedCount}` : '50,000+', 
+      label: isAuthenticated ? 'My Resumes Created' : 'Resumes Created', 
+      icon: <FileText className="w-5 h-5" />, 
+      microcopy: isAuthenticated ? 'Your personal resume count' : 'Trusted by thousands of job seekers' 
+    },
     { number: '95%', label: 'Success Rate', icon: <TrendingUp className="w-5 h-5" />, microcopy: 'Achieved by our AI-driven approach' },
     { number: '4.9/5', label: 'User Rating', icon: <Star className="w-5 h-5" />, microcopy: 'From satisfied professionals worldwide' },
     { number: '24/7', label: 'AI Support', icon: <Sparkles className="w-5 h-5" />, microcopy: 'Instant assistance whenever you need it' }
