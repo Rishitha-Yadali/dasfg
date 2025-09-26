@@ -1511,7 +1511,7 @@ const handleGenerateProjectBullets = async (
   // --- End Objective/Summary AI Generation Handlers ---
 
   // --- Review Section State ---
-  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
+
   // --- End Review Section State ---
 
   // --- NEW: Conditional Section Rendering ---
