@@ -616,13 +616,13 @@ const ResumeOptimizer: React.FC<ResumeOptimizerProps> = ({
 
   if (isOptimizing || isCalculatingScore || isProcessingMissingSections) {
     let loadingMessage = 'Optimizing Your Resume...';
-    let subMessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
+    let submessage = 'Please wait while our AI analyzes your resume and job description to generate the best possible match.';
     if (isCalculatingScore) {
       loadingMessage = 'OPTIMIZING RESUME...';
-      subMessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
+      submessage = 'Our AI is evaluating your resume based on comprehensive criteria.';
     } else if (isProcessingMissingSections) {
       loadingMessage = 'Processing Your Information...';
-      subMessage = "We're updating your resume with the new sections you provided.";
+      submessage = "We're updating your resume with the new sections you provided.";
     }
     return <LoadingAnimation message={loadingMessage} submessage={submessage} />;
   }
