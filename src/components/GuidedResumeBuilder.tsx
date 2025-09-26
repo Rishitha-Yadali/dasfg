@@ -185,7 +185,7 @@ const asText = (v: any): string => {
   // --- End AI Objective/Summary Generation States ---
 
   // --- Review Section State ---
-
+  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
   // --- End Review Section State ---
 
   const handleStartNewResume = useCallback(() => { // Memoize
