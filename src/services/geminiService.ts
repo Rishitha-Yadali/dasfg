@@ -1,7 +1,12 @@
 // src/services/geminiService.ts
 import { ResumeData, UserType, AdditionalSection } from '../types/resume'; // Import AdditionalSection
 
+// --- NEW: Centralized Constants for API Configuration ---
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MAX_RETRIES = 3; // Consistent number of retries for all API calls
+const INITIAL_RETRY_DELAY_MS = 1500; // Consistent initial delay in milliseconds
+// const MAX_INPUT_LENGTH = 30000; // Optional: A safeguard for prompt length
 
 if (!OPENROUTER_API_KEY) {
   throw new Error('OpenRouter API key is not configured. Please add VITE_OPENROUTER_API_KEY to your environment variables.');
@@ -36,7 +41,7 @@ const deepCleanComments = (val: any): any => {
     cleanedInput = lines.join('\n');
 
     // 4. Remove excessive newlines
-    cleanedInput = cleanedInput.replace(/\n{3,}/g, '\n\n'); // Fixed: changed 'cleanedOut' to 'cleanedInput'
+    cleanedInput = cleanedInput.replace(/\n{3,}/g, '\n\n');
 
     return cleanedInput.trim();
   };
@@ -160,9 +165,9 @@ CRITICAL REQUIREMENTS FOR BULLET POINTS:
 SKILLS REQUIREMENTS: (Generate comprehensive skills based on the resume content and job description)
 1. Include at least 6-8 distinct skill categories.
 2. Each category should contain 5-8 specific, relevant skills.
-4. Match skills to job requirements and industry standards
-5. Include both technical and soft skills relevant to the role
-6.TO GENERATE SOFT SKILLS according jd
+3. Match skills to job requirements and industry standards
+4. Include both technical and soft skills relevant to the role
+5.TO GENERATE SOFT SKILLS according jd
 CERTIFICATIONS REQUIREMENTS:
 1. For each certification, provide a concise 15 words description in the 'description' field.
 
@@ -260,13 +265,12 @@ LinkedIn URL provided: ${linkedinUrl || 'NONE - leave empty'}
 GitHub URL provided: ${githubUrl || 'NONE - leave empty'}
 ${additionalSections && additionalSections.length > 0 ? `Additional Sections Provided: ${JSON.stringify(additionalSections)}` : ''}`;
 
-  const maxRetries = 5;
   let retryCount = 0;
-  let delay = 2000;
+  let delay = INITIAL_RETRY_DELAY_MS; // MODIFIED
 
-  while (retryCount < maxRetries) {
+  while (retryCount < MAX_RETRIES) { // MODIFIED
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch(OPENROUTER_API_URL, { // MODIFIED
         method: 'POST',
         headers: {
           Authorization: `Bearer ${OPENROUTER_API_KEY}`,
@@ -286,7 +290,7 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
           throw new Error('Invalid API key. Please check your OpenRouter API key configuration.');
         } else if (response.status === 429 || response.status >= 500) {
           retryCount++;
-          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+          if (retryCount >= MAX_RETRIES) throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`); // MODIFIED
           await new Promise((r) => setTimeout(r, delay));
           delay *= 2;
           continue;
@@ -405,8 +409,8 @@ ${additionalSections && additionalSections.length > 0 ? `Additional Sections Pro
         } else {
           parsedResult.phone = '';
         }
-parsedResult.summary = String(parsedResult.summary || '');
-parsedResult.careerObjective = String(parsedResult.careerObjective || '');
+        parsedResult.summary = String(parsedResult.summary || '');
+        parsedResult.careerObjective = String(parsedResult.careerObjective || '');
         parsedResult.origin = 'jd_optimized';
 
         return parsedResult;
@@ -429,7 +433,7 @@ parsedResult.careerObjective = String(parsedResult.careerObjective || '');
     }
   }
 
-  throw new Error(`Failed to optimize resume after ${maxRetries} attempts.`);
+  throw new Error(`Failed to optimize resume after ${MAX_RETRIES} attempts.`); // MODIFIED
 };
 
 // New function for generating multiple variations
@@ -645,16 +649,15 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
 
   const prompt = getPromptForMultipleVariations(sectionType, data, variationCount, draftText);
 
-  const maxRetries = 3;
   let retryCount = 0;
-  let delay = 1000;
+  let delay = INITIAL_RETRY_DELAY_MS; // MODIFIED
 
-  while (retryCount < maxRetries) {
+  while (retryCount < MAX_RETRIES) { // MODIFIED
     try {
       const modelToSend = modelOverride || 'google/gemini-flash-1.5';
       console.log("[MULTIPLE_VARIATIONS_CALL] Sending request to OpenRouter with model:", modelToSend);
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch(OPENROUTER_API_URL, { // MODIFIED
         method: 'POST',
         headers: {
           Authorization: `Bearer ${OPENROUTER_API_KEY}`,
@@ -672,7 +675,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
         const errorText = await response.text();
         if (response.status === 429 || response.status >= 500) {
           retryCount++;
-          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
+          if (retryCount >= MAX_RETRIES) throw new Error(`OpenRouter API error: ${response.status}`); // MODIFIED
           await new Promise(r => setTimeout(r, delay));
           delay *= 2;
           continue;
@@ -714,8 +717,8 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
           .slice(0, variationCount)]]; // Wrap in an array of arrays
       }
     } catch (error: any) {
-      if (retryCount === maxRetries - 1) {
-        throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
+      if (retryCount === MAX_RETRIES - 1) { // MODIFIED
+        throw new Error(`Failed to generate ${sectionType} variations after ${MAX_RETRIES} attempts.`); // MODIFIED
       }
       retryCount++;
       await new Promise(r => setTimeout(r, delay));
@@ -723,7 +726,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
     }
   }
 
-  throw new Error(`Failed to generate ${sectionType} variations after ${maxRetries} attempts.`);
+  throw new Error(`Failed to generate ${sectionType} variations after ${MAX_RETRIES} attempts.`); // MODIFIED
 };
 
 export const generateAtsOptimizedSection = async (
@@ -761,15 +764,6 @@ export const generateAtsOptimizedSection = async (
             ${baseInstructions}
             Ensure the polished objective is 2 sentences (30-50 words max).
             Return ONLY the polished career objective text, no additional formatting or explanations.`;
-        // For other sections, the existing 'description' or 'details' fields in `sectionData` already serve as the draft.
-        // We just need to ensure the prompt for those sections implies polishing if the field is populated.
-        // This means the existing prompts for workExperienceBullets, projectBullets, etc., are mostly fine,
-        // as they already take the existing content and are expected to optimize it.
-        // The main change is for summary/careerObjective.
-        // For certifications, it's about generating *titles*, not polishing a description.
-        // For skillsList, it's about generating *lists*, not polishing a description.
-        // So, `draftText` is primarily for `summary` and `careerObjective`.
-        // For bullets, the existing `description` field in `sectionData` already serves this purpose.
       }
     }
 
@@ -937,17 +931,16 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
 
   const prompt = getPromptForSection(sectionType, data, draftText);
 
-  const maxRetries = 3;
   let retryCount = 0;
-  let delay = 1000;
+  let delay = INITIAL_RETRY_DELAY_MS; // MODIFIED
 
-  while (retryCount < maxRetries) {
+  while (retryCount < MAX_RETRIES) { // MODIFIED
     try {
       const modelToSend = modelOverride || 'google/gemini-flash-1.5';
       console.log("[AT_OPTIMIZER_CALL] Sending request to OpenRouter with model:", modelToSend);
 
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch(OPENROUTER_API_URL, { // MODIFIED
         method: 'POST',
         headers: {
           Authorization: `Bearer ${OPENROUTER_API_KEY}`,
@@ -967,7 +960,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
         console.error(`[GEMINI_SERVICE] API Error Response Text: ${errorText}`); // Log full error text
         if (response.status === 429 || response.status >= 500) {
           retryCount++;
-          if (retryCount >= maxRetries) throw new Error(`OpenRouter API error: ${response.status}`);
+          if (retryCount >= MAX_RETRIES) throw new Error(`OpenRouter API error: ${response.status}`); // MODIFIED
           await new Promise(r => setTimeout(r, delay));
           delay *= 2;
           continue;
@@ -992,7 +985,7 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
         sectionType === 'projectBullets' ||
         sectionType === 'additionalSectionBullets' ||
         sectionType === 'achievements' ||   // Added for JSON parsing
-        sectionType === 'skillsList'        // Added for JSON parsing
+        sectionType === 'skillsList'       // Added for JSON parsing
       ) {
         try {
           console.log(`Parsing JSON for ${sectionType}:`, result); // Log the result before parsing
@@ -1027,8 +1020,8 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
 
       return result;
     } catch (error: any) {
-      if (retryCount === maxRetries - 1) {
-        throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
+      if (retryCount === MAX_RETRIES - 1) { // MODIFIED
+        throw new Error(`Failed to generate ${sectionType} after ${MAX_RETRIES} attempts.`); // MODIFIED
       }
       retryCount++;
       await new Promise(r => setTimeout(r, delay));
@@ -1036,6 +1029,5 @@ Return ONLY a JSON array of strings: ["skill1", "skill2", "skill3", "skill4", "s
     }
   }
 
-  throw new Error(`Failed to generate ${sectionType} after ${maxRetries} attempts.`);
+  throw new Error(`Failed to generate ${sectionType} after ${MAX_RETRIES} attempts.`); // MODIFIED
 };
-
