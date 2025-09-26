@@ -37,7 +37,7 @@ export const OfferOverlay: React.FC<OfferOverlayProps> = ({
         <div className="mb-6">
           {/* MODIFIED LINE 30: Updated img src */}
           <img
-            src="https://res.cloudinary.com/dvue2zenh/image/upload/v1758805010/fgpap0m2tmjox3mshgzx.png"
+            src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=600"
             alt="Welcome Offer"
             className="w-full h-40 object-cover rounded-2xl shadow-md mx-auto"
           />

@@ -9,16 +9,17 @@ class AuthService {
   private static lastDeviceActivityLog: number = 0;
   private static readonly DEVICE_ACTIVITY_LOG_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-  // MODIFIED: Updated isValidGmail to validate any email address
-  private isValidEmail(email: string): boolean {
-    console.log('DEBUG: isValidEmail received email:', email);
-    const trimmedEmail = (email || '').trim();
-    console.log('DEBUG: isValidEmail trimmedEmail:', trimmedEmail);
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // General email regex
-    const isValid = emailRegex.test(trimmedEmail);
-    console.log('DEBUG: isValidEmail regex test result:', isValid);
-    return isValid;
-  }
+private isValidGmail(email: string): boolean {
+  console.log('DEBUG: isValidGmail received email:', email);
+  const trimmedEmail = (email || '').trim();
+  console.log('DEBUG: isValidGmail trimmedEmail:', trimmedEmail);
+  const gmailRegex = /^[^\s@]+@gmail\.com$/;
+  const isValid = gmailRegex.test(trimmedEmail);
+  console.log('DEBUG: isValidGmail regex test result:', isValid);
+  return isValid;
+}
+
+
 
   private validatePasswordStrength(password: string): { isValid: boolean; message?: string } {
     if (password.length < 8) return { isValid: false, message: 'Password must be at least 8 characters long' };
@@ -31,8 +32,7 @@ class AuthService {
 
   async login(credentials: LoginCredentials): Promise<User> {
     console.log('AuthService: Starting login for email:', credentials.email);
-    // MODIFIED: Call isValidEmail instead of isValidGmail
-    if (!this.isValidEmail(credentials.email)) throw new Error('Please enter a valid email address.');
+    if (!this.isValidGmail(credentials.email)) throw new Error('Please enter a valid Gmail address (@gmail.com)');
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email: credentials.email,
@@ -88,9 +88,8 @@ class AuthService {
     if (!credentials.name.trim()) throw new Error('Full name is required');
     if (credentials.name.trim().length < 2) throw new Error('Name must be at least 2 characters long');
     if (!/^[a-zA-Z\s]+$/.test(credentials.name.trim())) throw new Error('Name can only contain letters and spaces');
-    if (!credentials.email) throw new Error('Email address is required');
-    // MODIFIED: Call isValidEmail instead of isValidGmail
-    if (!this.isValidEmail(credentials.email)) throw new Error('Please enter a valid email address.');
+    if (!credentials.email) throw new Error('Gmail address is required');
+    if (!this.isValidGmail(credentials.email)) throw new Error('Please enter a valid Gmail address (@gmail.com)');
 
     const passwordValidation = this.validatePasswordStrength(credentials.password);
     if (!passwordValidation.isValid) throw new Error(passwordValidation.message!);
@@ -284,8 +283,7 @@ class AuthService {
 
   async forgotPassword(email: string): Promise<void> { // Changed parameter name and type
   console.log('AuthService: Starting forgotPassword for email:', email); // Use 'email' directly
-  // MODIFIED: Call isValidEmail instead of isValidGmail
-  if (!this.isValidEmail(email)) throw new Error('Please enter a valid email address.');
+  if (!this.isValidGmail(email)) throw new Error('Please enter a valid Gmail address (@gmail.com)'); // Use 'email' directly
  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
   if (error) {
     console.error('AuthService: resetPasswordForEmail error:', error);
