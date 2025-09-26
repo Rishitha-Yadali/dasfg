@@ -288,7 +288,6 @@ function drawWorkExperience(state: PageState, workExperience: any[], userType: U
     const yearWidth = state.doc.getTextWidth(yearText);
     const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
     const yearY = initialYForJob + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
-    state.doc.text(yearText, yearX, yearY);
     state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
 
     drawText(state, combinedTitle, PDF_CONFIG.margins.left, PDF_CONFIG, {
@@ -350,15 +349,19 @@ function drawEducation(state: PageState, education: any[], PDF_CONFIG: any): num
       });
     }
     // Removed edu.relevantCoursework block
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Changed to bold
+    // MODIFIED: Removed redundant setFont call and added isValidField check
     state.doc.setFontSize(PDF_CONFIG.fonts.year.size);
     state.doc.setTextColor(PDF_CONFIG.colors.primary[0], PDF_CONFIG.colors.primary[1], PDF_CONFIG.colors.primary[2]);
-    const yearWidth = state.doc.getTextWidth(edu.year);
-    const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth;
-    const yearY = initialYForEdu + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Changed to bold
-    state.doc.text(edu.year, yearX, yearY);
-    state.doc.setFont(PDF_CONFIG.fontFamily, 'normal');
+    
+    if (isValidField(edu.year)) { // ADDED: Check if edu.year is valid
+      const yearText = edu.year;
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'bold'); // Ensure year is bold
+      const yearWidth = state.doc.getTextWidth(yearText);
+      const yearX = PDF_CONFIG.margins.left + PDF_CONFIG.contentWidth - yearWidth; // CORRECTED calculation
+      const yearY = initialYForEdu + (PDF_CONFIG.fonts.jobTitle.size * 0.352778 * 0.5);
+      state.doc.text(yearText, yearX, yearY);
+      state.doc.setFont(PDF_CONFIG.fontFamily, 'normal'); // Reset font to normal after drawing year
+    }
     totalHeight += degreeHeight + schoolHeight + cgpaHeight;
     if (index < education.length - 1) {
       state.currentY += 1;
@@ -937,12 +940,12 @@ const generateWordHTMLContent = (data: ResumeData, userType: UserType = 'experie
         }
         .company, .school {
           font-size: 9.5pt !important;
-          font-weight: bold !important; /* Changed to bold */
+          font-weight: normal !important; /* Changed to normal */
           font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         .year {
           font-size: 9.5pt !important;
-          font-weight: normal !important;
+          font-weight: bold !important;
           font-family: Calibri, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
         .bullets {
